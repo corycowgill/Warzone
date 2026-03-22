@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WARZONE</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.172.0/build/three.module.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- Main Menu -->
+  <div id="main-menu">
+    <div class="menu-content">
+      <h1 class="menu-title">WARZONE</h1>
+      <p class="menu-subtitle">Strategic Command &amp; Control</p>
+      <div class="menu-buttons">
+        <button id="btn-1player" class="menu-btn">1 Player</button>
+        <button id="btn-2player" class="menu-btn">2 Player</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Nation Select -->
+  <div id="nation-select" class="hidden">
+    <div class="nation-select-content">
+      <h2 class="nation-select-title">SELECT NATIONS</h2>
+      <div class="nation-panels">
+        <div class="nation-panel allied-panel">
+          <h3 class="panel-header">Choose Your Nation</h3>
+          <div class="nation-grid" id="allied-nations">
+            <div class="nation-card" data-nation="america">
+              <div class="nation-flag" style="background-color: #3355ff;"></div>
+              <span class="nation-name">America</span>
+            </div>
+            <div class="nation-card" data-nation="britain">
+              <div class="nation-flag" style="background-color: #33aa33;"></div>
+              <span class="nation-name">Great Britain</span>
+            </div>
+            <div class="nation-card" data-nation="france">
+              <div class="nation-flag" style="background-color: #6666ff;"></div>
+              <span class="nation-name">France</span>
+            </div>
+          </div>
+        </div>
+        <div class="nation-panel enemy-panel">
+          <h3 class="panel-header">Enemy Nation</h3>
+          <div class="nation-grid" id="enemy-nations">
+            <div class="nation-card" data-nation="japan">
+              <div class="nation-flag" style="background-color: #ff3333;"></div>
+              <span class="nation-name">Japan</span>
+            </div>
+            <div class="nation-card" data-nation="germany">
+              <div class="nation-flag" style="background-color: #666666;"></div>
+              <span class="nation-name">Germany</span>
+            </div>
+            <div class="nation-card" data-nation="austria">
+              <div class="nation-flag" style="background-color: #cc6633;"></div>
+              <span class="nation-name">Austria</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="nation-select-actions">
+        <button id="btn-start-game" class="menu-btn" disabled>Start Battle</button>
+        <button id="btn-back-menu" class="menu-btn menu-btn-secondary">Back</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <!-- Resource Bar (top) -->
+    <div id="resource-bar">
+      <div class="resource-item">
+        <span class="resource-label">SP:</span>
+        <span id="sp-display" class="resource-value">500</span>
+      </div>
+      <div class="resource-item">
+        <span class="resource-label">Income:</span>
+        <span id="income-display" class="resource-value">+10/s</span>
+      </div>
+      <div class="resource-item">
+        <span class="resource-label">Units:</span>
+        <span id="unit-count-display" class="resource-value">0</span>
+      </div>
+      <div class="resource-item" style="margin-left:auto;">
+        <button id="btn-options" style="background:none;border:1px solid #555;color:#aaa;padding:4px 10px;cursor:pointer;border-radius:3px;font-size:12px;font-family:sans-serif;" title="Options">Options</button>
+        <button id="btn-help" style="background:none;border:1px solid #555;color:#aaa;padding:4px 10px;cursor:pointer;border-radius:3px;font-size:12px;font-family:sans-serif;margin-left:4px;" title="Controls (F1)">F1</button>
+      </div>
+    </div>
+
+    <!-- Options Panel -->
+    <div id="options-panel" class="hidden" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.95);border:2px solid #555;border-radius:8px;padding:30px;z-index:10001;min-width:300px;font-family:sans-serif;">
+      <h3 style="color:#fff;margin:0 0 20px 0;text-align:center;">Options</h3>
+      <div style="margin-bottom:15px;">
+        <label style="color:#aaa;font-size:13px;display:block;margin-bottom:4px;">Master Volume</label>
+        <input type="range" id="opt-volume" min="0" max="100" value="30" style="width:100%;">
+      </div>
+      <div style="margin-bottom:15px;">
+        <label style="color:#aaa;font-size:13px;display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" id="opt-sound" checked>
+          Sound Effects
+        </label>
+      </div>
+      <div style="margin-bottom:15px;">
+        <label style="color:#aaa;font-size:13px;display:block;margin-bottom:4px;">Camera Speed</label>
+        <input type="range" id="opt-camspeed" min="50" max="200" value="100" style="width:100%;">
+      </div>
+      <div style="text-align:center;margin-top:20px;">
+        <button id="btn-close-options" style="padding:8px 24px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer;font-size:14px;">Close</button>
+      </div>
+    </div>
+
+    <!-- Selection Panel (bottom-left) -->
+    <div id="selection-panel">
+      <div id="selection-info">
+        <span class="selection-placeholder">No selection</span>
+      </div>
+    </div>
+
+    <!-- Command Panel (bottom-center) -->
+    <div id="command-panel">
+      <button class="cmd-btn" id="cmd-move" title="Move (M)">Move</button>
+      <button class="cmd-btn" id="cmd-attack" title="Attack (A)">Attack</button>
+      <button class="cmd-btn" id="cmd-stop" title="Stop (S)">Stop</button>
+      <button class="cmd-btn" id="cmd-build" title="Build (B)">Build</button>
+    </div>
+
+    <!-- Minimap (bottom-right) -->
+    <div id="minimap-container">
+      <canvas id="minimap-canvas" width="200" height="200"></canvas>
+    </div>
+
+    <!-- Production Panel (right side) -->
+    <div id="production-panel" class="hidden">
+      <h4 class="production-title">Production</h4>
+      <div id="production-queue"></div>
+      <div id="production-options"></div>
+    </div>
+
+    <!-- Build Menu (right side, shown when building) -->
+    <div id="build-menu" class="hidden">
+      <h4 class="production-title">Build Structure</h4>
+      <div id="build-options"></div>
+    </div>
+  </div>
+
+  <!-- Game Over -->
+  <div id="game-over" class="hidden">
+    <div class="game-over-content">
+      <h1 id="game-over-title" class="game-over-title">VICTORY</h1>
+      <p id="game-over-message" class="game-over-message">You have conquered the enemy!</p>
+      <button id="btn-play-again" class="menu-btn">Play Again</button>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
