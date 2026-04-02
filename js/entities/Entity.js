@@ -109,6 +109,7 @@ export class Entity {
 
       setTimeout(() => {
         for (const entry of savedMaterials) {
+          if (!entry.mesh || !entry.mesh.parent) continue;
           // Dispose temporary flash material
           if (entry.mesh.material && entry.mesh.material !== entry.material) {
             entry.mesh.material.dispose();

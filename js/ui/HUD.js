@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { UNIT_STATS, BUILDING_STATS, TECH_TREE, NATIONS } from '../core/Constants.js';
+import { UNIT_STATS, BUILDING_STATS, TECH_TREE, NATIONS, GAME_CONFIG } from '../core/Constants.js';
 
 export class HUD {
   constructor(game) {
@@ -693,7 +693,7 @@ export class HUD {
 
   updateProductionPanel() {
     const selected = this.game.selectionManager?.getSelected() || [];
-    if (selected.length === 1 && selected[0].isBuilding) {
+    if (selected.length === 1 && selected[0].isBuilding && selected[0].alive) {
       this.showSingleEntityInfo(selected[0]);
     }
     // Also refresh build menu availability when resources change
@@ -774,15 +774,17 @@ export class HUD {
 
   handleAbilityClick(event) {
     const worldPos = this.game.inputManager.getWorldPosition(event.clientX, event.clientY);
-    if (!worldPos) return;
 
-    const selected = this.game.selectionManager.getSelected().filter(e => e.isUnit && e.ability);
-    for (const unit of selected) {
-      if (unit.canUseAbility()) {
-        this.game.combatSystem.executeAbility(unit, worldPos, null);
+    if (worldPos) {
+      const selected = this.game.selectionManager.getSelected().filter(e => e.isUnit && e.ability);
+      for (const unit of selected) {
+        if (unit.canUseAbility()) {
+          this.game.combatSystem.executeAbility(unit, worldPos, null);
+        }
       }
     }
 
+    // Always reset state even if worldPos was null
     this.game.commandSystem.abilityTargetMode = false;
     document.body.style.cursor = 'default';
   }

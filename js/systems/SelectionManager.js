@@ -179,9 +179,11 @@ export class SelectionManager {
       // Only allow selecting own team entities
       if (clickedEntity.team === ownTeam) {
         // Double-click: select all visible same-type units
-        if (this._lastClickedEntity === clickedEntity &&
-            (now - this._lastClickTime) < this._doubleClickThreshold) {
+        const isDoubleClick = (this._lastClickedEntity === clickedEntity &&
+            (now - this._lastClickTime) < this._doubleClickThreshold);
+        if (isDoubleClick) {
           this._lastClickedEntity = null;
+          this._lastClickTime = 0;
           this.selectAllSameTypeOnScreen(clickedEntity, camera, shiftHeld);
         } else if (shiftHeld) {
           // Toggle selection
@@ -193,26 +195,32 @@ export class SelectionManager {
             clickedEntity.setSelected(true);
             this.selected.push(clickedEntity);
           }
+          this._lastClickedEntity = clickedEntity;
+          this._lastClickTime = now;
         } else {
           // Replace selection
           this.clearSelection();
           clickedEntity.setSelected(true);
           this.selected.push(clickedEntity);
+          this._lastClickedEntity = clickedEntity;
+          this._lastClickTime = now;
         }
       } else {
         // Clicked an enemy entity - clear selection (or could command attack)
         if (!shiftHeld) {
           this.clearSelection();
         }
+        this._lastClickedEntity = null;
+        this._lastClickTime = now;
       }
     } else {
       // Clicked empty ground - clear selection
       if (!shiftHeld) {
         this.clearSelection();
       }
+      this._lastClickedEntity = null;
+      this._lastClickTime = now;
     }
-    this._lastClickTime = now;
-    this._lastClickedEntity = clickedEntity;
 
     this.game.eventBus.emit('selection:changed', { entities: [...this.selected] });
   }

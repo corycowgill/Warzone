@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { GAME_CONFIG } from '../core/Constants.js';
 
 export class Minimap {
@@ -61,7 +62,7 @@ export class Minimap {
     if (units.length === 0) return;
 
     const { x, z } = this.minimapToWorld(e);
-    const worldPos = { x, y: 0, z };
+    const worldPos = new THREE.Vector3(x, 0, z);
 
     if (this.game.commandSystem) {
       this.game.commandSystem.moveUnits(units, worldPos);
