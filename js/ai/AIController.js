@@ -75,6 +75,9 @@ export class AIController {
     // Grace period: AI won't attack during this time (seconds)
     this.gracePeriod = difficulty === 'easy' ? 120 : difficulty === 'hard' ? 45 : 75;
 
+    // GD-128: Exchange cooldown
+    this._exchangeCooldown = 0;
+
     // Choose initial strategy
     this.chooseStrategy();
 
@@ -146,6 +149,11 @@ export class AIController {
   update(delta) {
     if (this.game.state !== 'PLAYING') return;
     this.gameTime += delta;
+    // GD-128: Tick exchange cooldown
+    if (this._exchangeCooldown > 0) {
+      this._exchangeCooldown -= delta;
+      if (this._exchangeCooldown < 0) this._exchangeCooldown = 0;
+    }
 
     // Strategic layer
     this.strategicTimer += delta;
@@ -353,6 +361,21 @@ export class AIController {
             this.sendUnitsToTarget(harassUnits.slice(0, 2), target.getPosition().clone());
           }
         }
+      }
+    }
+
+    // GD-127: AI unit abilities every tactical tick
+    this.useUnitAbilities();
+
+    // GD-128: AI considers resource exchange
+    this.considerExchange();
+
+    // GD-128: AI builds Supply Exchange when it has excess SP
+    if (this.gameTime > 120 && this.game.teams[this.team].sp > 400) {
+      const hasExchange = this.game.getBuildings(this.team).some(b => b.type === 'supplyexchange' && b.alive);
+      const hasHQ = this.game.getBuildings(this.team).some(b => b.type === 'headquarters' && b.alive);
+      if (!hasExchange && hasHQ) {
+        this.tryBuildBuilding('supplyexchange');
       }
     }
 
@@ -978,6 +1001,9 @@ export class AIController {
     // Assess attack force - retreat if losing
     this.assessAttackForce();
 
+    // GD-130: Retreat damaged/valuable units
+    this.retreatDamagedUnits();
+
     // GD-058: Use nation ability
     this.considerNationAbility();
 
@@ -1391,6 +1417,157 @@ export class AIController {
           if (target) sw.fire(target);
         }
       }
+    }
+  }
+
+  // GD-127: AI Unit Ability Usage - called every ~3s in tactical layer
+  useUnitAbilities() {
+    const myUnits = this.game.getUnits(this.team);
+    const enemyUnits = this.game.getEntitiesByTeam(this.enemyTeam);
+
+    for (const unit of myUnits) {
+      if (!unit.ability || !unit.canUseAbility()) continue;
+      const abilityId = unit.ability.id;
+
+      // Mortar smoke: deploy when under heavy fire or retreating
+      if (unit.type === 'mortar' && abilityId === 'smoke_screen') {
+        if (unit.isRetreating || (unit.health < unit.maxHealth * 0.5 && unit.attackTarget)) {
+          const pos = unit.getPosition();
+          this.game.combatSystem.executeAbility(unit, pos, null);
+          continue;
+        }
+      }
+
+      // Tanks: siege mode when attacking buildings
+      if (unit.type === 'tank' && abilityId === 'siege_mode') {
+        if (unit.attackTarget && unit.attackTarget.isBuilding && unit.isInRange(unit.attackTarget) && !unit._siegeMode) {
+          this.game.combatSystem.executeAbility(unit);
+        } else if (unit._siegeMode && (!unit.attackTarget || !unit.attackTarget.isBuilding)) {
+          this.game.combatSystem.executeAbility(unit);
+        }
+        continue;
+      }
+
+      // Drones: EMP on heavy tanks or commanders
+      if (unit.type === 'drone' && abilityId === 'emp') {
+        const highValueTargets = enemyUnits.filter(e =>
+          e.alive && (e.type === 'heavytank' || e.type === 'commander') &&
+          unit.distanceTo(e) <= (unit.ability.range || 10) * 3
+        );
+        if (highValueTargets.length > 0) {
+          this.game.combatSystem.executeAbility(unit, null, highValueTargets[0]);
+          continue;
+        }
+      }
+
+      // Battleships: barrage on grouped enemies (3+)
+      if (unit.type === 'battleship' && abilityId === 'barrage') {
+        let bestPos = null;
+        let bestCount = 0;
+        for (const enemy of enemyUnits) {
+          if (!enemy.alive) continue;
+          const ePos = enemy.getPosition();
+          if (unit.getPosition().distanceTo(ePos) > (unit.ability.range || 18) * 3) continue;
+          let count = 0;
+          for (const other of enemyUnits) {
+            if (other.alive && other.getPosition().distanceTo(ePos) < 10) count++;
+          }
+          if (count >= 3 && count > bestCount) {
+            bestCount = count;
+            bestPos = ePos.clone();
+          }
+        }
+        if (bestPos) {
+          this.game.combatSystem.executeAbility(unit, bestPos, null);
+          continue;
+        }
+      }
+
+      // Scout cars: flare on unexplored areas near enemy base
+      if (unit.type === 'scoutcar' && abilityId === 'flare') {
+        const enemyHQ = this.game.getHQ(this.enemyTeam);
+        if (enemyHQ) {
+          const hqPos = enemyHQ.getPosition();
+          const flarePos = hqPos.clone();
+          flarePos.x += (Math.random() - 0.5) * 40;
+          flarePos.z += (Math.random() - 0.5) * 40;
+          if (unit.getPosition().distanceTo(flarePos) <= (unit.ability.range || 20) * 3) {
+            this.game.combatSystem.executeAbility(unit, flarePos, null);
+          }
+        }
+        continue;
+      }
+    }
+  }
+
+  // GD-130: AI Retreat and Unit Preservation
+  retreatDamagedUnits() {
+    const myUnits = this.game.getUnits(this.team);
+    const friendlyBuildings = this.game.getBuildings(this.team);
+
+    // No buildings = no retreat
+    if (friendlyBuildings.length === 0) return;
+
+    for (const unit of myUnits) {
+      // Skip already retreating units
+      if (unit.isRetreating) continue;
+
+      const hpRatio = unit.health / unit.maxHealth;
+
+      // Base threshold: retreat below 30% HP
+      let shouldRetreat = hpRatio < 0.3;
+
+      // On Hard difficulty, preserve veteran rank 2+ units more aggressively
+      if (this.difficulty === 'hard' && unit.veterancyRank >= 2 && hpRatio < 0.5) {
+        shouldRetreat = true;
+      }
+
+      // High-value units: commanders, heavy tanks
+      if ((unit.type === 'commander' || unit.type === 'heavytank') && hpRatio < 0.4) {
+        shouldRetreat = true;
+      }
+
+      if (shouldRetreat) {
+        // Find nearest friendly building
+        let nearestBuilding = null;
+        let nearestDist = Infinity;
+        for (const b of friendlyBuildings) {
+          const dist = unit.distanceTo(b);
+          if (dist < nearestDist) {
+            nearestDist = dist;
+            nearestBuilding = b;
+          }
+        }
+        if (nearestBuilding) {
+          unit.startRetreat(nearestBuilding.getPosition());
+        }
+      }
+    }
+  }
+
+  // GD-128: AI uses Supply Exchange when resources are imbalanced
+  considerExchange() {
+    const myBuildings = this.game.getBuildings(this.team);
+    const exchange = myBuildings.find(b => b.type === 'supplyexchange' && b.alive);
+    if (!exchange) return;
+
+    // Check exchange cooldown (use a simple timer)
+    if (this._exchangeCooldown > 0) return;
+
+    const sp = this.game.teams[this.team].sp;
+    const mu = this.game.teams[this.team].mu || 0;
+
+    // Convert SP to MU when SP is abundant and MU is scarce
+    if (sp > 500 && mu < 30) {
+      this.game.teams[this.team].sp -= 150;
+      this.game.teams[this.team].mu = (this.game.teams[this.team].mu || 0) + 50;
+      this._exchangeCooldown = 10;
+    }
+    // Convert MU to SP when MU is abundant and SP is scarce
+    else if (mu > 150 && sp < 200) {
+      this.game.teams[this.team].mu -= 50;
+      this.game.teams[this.team].sp += 100;
+      this._exchangeCooldown = 10;
     }
   }
 

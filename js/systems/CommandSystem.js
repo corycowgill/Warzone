@@ -522,6 +522,38 @@ export class CommandSystem {
         break;
       }
 
+      case 'r': {
+        // GD-125: Tactical Retreat - retreat selected units to nearest friendly building
+        const retreatUnits = selected.filter(e => e.isUnit);
+        if (retreatUnits.length > 0) {
+          const ownTeam = this.game.mode === '2P' ? this.game.activeTeam : 'player';
+          const friendlyBuildings = this.game.getBuildings(ownTeam);
+          if (friendlyBuildings.length > 0) {
+            for (const unit of retreatUnits) {
+              // Find nearest friendly building
+              let nearestBuilding = null;
+              let nearestDist = Infinity;
+              for (const building of friendlyBuildings) {
+                const dist = unit.distanceTo(building);
+                if (dist < nearestDist) {
+                  nearestDist = dist;
+                  nearestBuilding = building;
+                }
+              }
+              if (nearestBuilding) {
+                unit.startRetreat(nearestBuilding.getPosition());
+              }
+            }
+            this.game.eventBus.emit('command:retreat', { units: retreatUnits });
+            this.game.eventBus.emit('notification', { message: 'Retreating!', color: '#ffffff' });
+            if (this.game.soundManager) this.game.soundManager.play('move');
+          } else {
+            this.game.eventBus.emit('notification', { message: 'No buildings to retreat to!', color: '#ff4444' });
+          }
+        }
+        break;
+      }
+
       case '1':
       case '2':
       case '3': {

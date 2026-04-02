@@ -77,6 +77,18 @@ GD-109: Strategic Zoom (NATO military symbols via canvas-rendered sprites at zoo
 GD-111: Commander/Hero Units (1 per team from HQ, 600HP officer with gold accents, 3 nation-specific abilities with cooldowns, 90s respawn, AI produces commanders)
 GD-112: Weather System (Clear/Rain/Fog/Sandstorm cycling every 3-4min, vision/speed multipliers, particle systems, fog manipulation, sandstorm infantry DPS, map-specific weather pools)
 
+## Cycle 14 - Completed (10 features)
+GD-125: Tactical Retreat Command (R hotkey, +40% speed, -25% damage taken, white flash, nearest friendly building target)
+GD-126: Command Card UI Panel (3x4 context-sensitive grid replacing old command panel, unit abilities + building production buttons)
+GD-127: AI Unit Ability Usage (mortar smoke, tank siege vs buildings, drone EMP on high-value, battleship barrage on groups, scout flare)
+GD-128: Resource Market / Supply Exchange (new building, SP↔MU conversion with cooldown, AI trades when advantageous)
+GD-129: Improved Particle Effects (billboard sprites with pooling, enhanced explosions/muzzle flash/bullet impact, scorch marks)
+GD-130: AI Retreat and Unit Preservation (retreat below 30% HP, hard AI preserves rank 2+ veterans, prioritizes commanders/heavytanks)
+GD-133: Dynamic Shadows Under Units (flat shadow sprites scaled by unit type, updated every frame)
+GD-134: Challenge Scenarios (5 scenarios with star ratings, wave spawning, localStorage tracking, challenge select UI)
+GD-138: Early Game Acceleration (3 infantry + 1 scout car per team at game start)
+GD-139: Victory Condition Polish (auto-resolve button when enemy has no production, VICTORY/DEFEAT overlay, slow-motion effect)
+
 ## Pending / Deferred
 | ID | Priority | Status | Description |
 |----|----------|--------|-------------|
@@ -89,15 +101,15 @@ GD-112: Weather System (Clear/Rain/Fog/Sandstorm cycling every 3-4min, vision/sp
 | GD-028 | MEDIUM | DONE (as GD-035) | Smart Control Group Auto-Refill |
 | GD-029 | MEDIUM | WONT_DO | Last Seen Ghost Overlay (partially covered by GD-017 fog improvements; full ghost overlay not needed at 9.5/10) |
 
-## Total Features Implemented: 75
+## Total Features Implemented: 85
 ## Total QA Fixes: 52
-## Git Commits: 27
+## Git Commits: 28
 ## Game Designer Rating: 9.5/10 - "Exceptionally well-architected single-player military RTS"
 
 ---
 
 ## Current Status
-- **Total Features:** 75
+- **Total Features:** 85
 - **Total QA Fixes:** 52
-- **Total Cycles:** 13
+- **Total Cycles:** 14
 - **Game Designer Final Rating:** 9.5/10

@@ -1,4 +1,4 @@
-import { NATIONS } from '../core/Constants.js';
+import { NATIONS, CHALLENGE_SCENARIOS } from '../core/Constants.js';
 import { HUD } from './HUD.js';
 import { GameOverScreen } from './GameOverScreen.js';
 
@@ -216,6 +216,14 @@ export class UIManager {
       this.game.restart();
     });
 
+    // GD-134: Challenges button
+    document.getElementById('btn-challenges')?.addEventListener('click', () => {
+      this.showChallengeSelect();
+    });
+    document.getElementById('btn-challenge-back')?.addEventListener('click', () => {
+      this.showMainMenu();
+    });
+
     // Match history button
     document.getElementById('btn-history')?.addEventListener('click', () => {
       this.showMatchHistory();
@@ -387,6 +395,58 @@ export class UIManager {
     this.gameOverEl?.classList.add('hidden');
     this.pauseOverlay?.classList.add('hidden');
     this.matchHistoryEl?.classList.add('hidden');
+    document.getElementById('challenge-select')?.classList.add('hidden');
+  }
+
+  // GD-134: Show challenge scenario selection
+  showChallengeSelect() {
+    this.hideAll();
+    const el = document.getElementById('challenge-select');
+    if (!el) return;
+    el.classList.remove('hidden');
+
+    const listEl = document.getElementById('challenge-list');
+    if (!listEl) return;
+    listEl.innerHTML = '';
+
+    // Load saved scores
+    const saved = JSON.parse(localStorage.getItem('warzone_challenges') || '{}');
+
+    for (const [key, scenario] of Object.entries(CHALLENGE_SCENARIOS)) {
+      const best = saved[key] || { stars: 0, bestTime: null };
+      const starsStr = '\u2605'.repeat(best.stars) + '\u2606'.repeat(3 - best.stars);
+
+      const card = document.createElement('div');
+      card.style.cssText = `
+        background: rgba(22, 33, 62, 0.6);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 4px;
+        padding: 12px 16px;
+        cursor: pointer;
+        transition: all 0.2s;
+      `;
+      card.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <strong style="color:#00ff41;font-size:15px;">${scenario.name}</strong>
+          <span style="color:#ffcc00;font-size:18px;letter-spacing:2px;">${starsStr}</span>
+        </div>
+        <div style="color:#8a9aaa;font-size:12px;margin-top:4px;">${scenario.description}</div>
+        ${scenario.timeLimit > 0 ? `<div style="color:#ff8844;font-size:11px;margin-top:4px;">Time Limit: ${Math.floor(scenario.timeLimit / 60)}m</div>` : ''}
+        ${best.bestTime ? `<div style="color:#88ff88;font-size:11px;">Best: ${Math.floor(best.bestTime / 60)}m ${Math.floor(best.bestTime % 60)}s</div>` : ''}
+      `;
+      card.addEventListener('mouseenter', () => {
+        card.style.borderColor = '#00ff41';
+        card.style.background = 'rgba(0, 255, 65, 0.08)';
+      });
+      card.addEventListener('mouseleave', () => {
+        card.style.borderColor = 'rgba(255,255,255,0.1)';
+        card.style.background = 'rgba(22, 33, 62, 0.6)';
+      });
+      card.addEventListener('click', () => {
+        this.game.startChallenge(key);
+      });
+      listEl.appendChild(card);
+    }
   }
 
   showMainMenu() {
@@ -516,12 +576,88 @@ export class UIManager {
   }
 
   showGameOver(won) {
-    this.hideAll();
-    this.gameOverEl?.classList.remove('hidden');
+    // GD-139: Show dramatic VICTORY/DEFEAT overlay first
+    this._showVictoryOverlay(won, () => {
+      this.hideAll();
+      this.gameOverEl?.classList.remove('hidden');
+      if (!this.gameOverScreen) {
+        this.gameOverScreen = new GameOverScreen(this.game);
+      }
+      this.gameOverScreen.show(won);
+    });
+  }
 
-    if (!this.gameOverScreen) {
-      this.gameOverScreen = new GameOverScreen(this.game);
+  // GD-139: Dramatic text overlay before game over screen
+  _showVictoryOverlay(won, callback) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 10010;
+      pointer-events: none;
+      transition: opacity 0.5s;
+    `;
+
+    const text = document.createElement('div');
+    text.textContent = won ? 'VICTORY' : 'DEFEAT';
+    text.style.cssText = `
+      font-family: 'Impact', 'Arial Black', sans-serif;
+      font-size: 100px;
+      font-weight: 900;
+      letter-spacing: 12px;
+      color: ${won ? '#00ff44' : '#ff3333'};
+      text-shadow: 0 0 40px ${won ? 'rgba(0,255,65,0.6)' : 'rgba(255,0,0,0.6)'},
+                   0 0 80px ${won ? 'rgba(0,255,65,0.3)' : 'rgba(255,0,0,0.3)'},
+                   4px 4px 0 rgba(0,0,0,0.5);
+      transform: scale(0.5);
+      opacity: 0;
+      transition: all 0.8s cubic-bezier(0.2, 0.8, 0.3, 1);
+    `;
+    overlay.appendChild(text);
+    document.body.appendChild(overlay);
+
+    // Animate in
+    requestAnimationFrame(() => {
+      text.style.transform = 'scale(1)';
+      text.style.opacity = '1';
+    });
+
+    // Camera zoom effect
+    if (this.game.cameraController) {
+      const cam = this.game.cameraController;
+      if (won) {
+        // Zoom to surviving units
+        const units = this.game.getUnits('player');
+        if (units.length > 0) {
+          const pos = units[0].getPosition();
+          cam.moveTo(pos.x, pos.z);
+        }
+      } else {
+        // Zoom to destroyed HQ position
+        const mapSize = 30; // approx player HQ position
+        cam.moveTo(mapSize, mapSize);
+      }
     }
-    this.gameOverScreen.show(won);
+
+    // Slow motion effect
+    if (this.game) {
+      this.game._slowMotion = 0.3;
+      this.game._pendingTimeouts.push(setTimeout(() => {
+        if (this.game) this.game._slowMotion = null;
+      }, 2000));
+    }
+
+    // Remove overlay and show game over after delay
+    this.game._pendingTimeouts.push(setTimeout(() => {
+      overlay.style.opacity = '0';
+      setTimeout(() => {
+        if (overlay.parentElement) overlay.parentElement.removeChild(overlay);
+        callback();
+      }, 500);
+    }, 2500));
   }
 }

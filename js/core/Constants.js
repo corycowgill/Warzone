@@ -39,7 +39,8 @@ export const BUILDING_STATS = {
   aaturret: { hp: 300, cost: 300, produces: [], size: 1, requires: ['warfactory'], damage: 30, range: 14, attackRate: 1.5, armor: 1, targetDomain: 'air' },
   wall: { hp: 500, cost: 50, produces: [], size: 1, requires: [], armor: 5, blocksMovement: true },
   superweapon: { hp: 800, cost: 800, produces: [], size: 4, requires: ['warfactory'], isSuperweapon: true },
-  munitionscache: { hp: 250, cost: 250, produces: [], size: 2, muIncome: 4, requires: ['barracks'] }
+  munitionscache: { hp: 250, cost: 250, produces: [], size: 2, muIncome: 4, requires: ['barracks'] },
+  supplyexchange: { hp: 300, cost: 300, produces: [], size: 2, requires: ['headquarters'], isExchange: true }
 };
 
 // GD-091: Neutral Map Structures (capturable)
@@ -813,7 +814,8 @@ export const BUILDING_LIMITS = {
   ditch: 20,
   techlab: 1,
   superweapon: 1,
-  munitionscache: 4
+  munitionscache: 4,
+  supplyexchange: 1
 };
 
 // ============================================================
@@ -1042,5 +1044,86 @@ export const WEATHER_CONFIG = {
     river: ['clear', 'rain', 'fog'],
     plains: ['clear', 'sandstorm', 'clear'],
     random: ['clear', 'rain', 'fog', 'sandstorm']
+  }
+};
+
+// GD-134: Challenge Scenarios
+export const CHALLENGE_SCENARIOS = {
+  hold_the_line: {
+    name: 'Hold the Line',
+    description: 'Defend your HQ with a starting army for 10 minutes. No production allowed. Enemies attack in waves of increasing strength.',
+    timeLimit: 600,
+    playerNation: 'america',
+    enemyNation: 'germany',
+    playerStartSP: 0,
+    playerStartMU: 0,
+    noProduction: true,
+    startingUnits: { player: { infantry: 8, tank: 3, mortar: 2, aahalftrack: 1 }, enemy: {} },
+    waves: [
+      { time: 30, units: { infantry: 5 } },
+      { time: 90, units: { infantry: 6, tank: 2 } },
+      { time: 180, units: { infantry: 8, tank: 3, mortar: 2 } },
+      { time: 300, units: { infantry: 10, tank: 4, drone: 3 } },
+      { time: 420, units: { infantry: 12, tank: 5, drone: 4, heavytank: 1 } },
+      { time: 540, units: { infantry: 15, tank: 6, drone: 5, heavytank: 2 } }
+    ],
+    victory: 'survive',
+    halfTimeForStars: 300
+  },
+  blitzkrieg: {
+    name: 'Blitzkrieg',
+    description: 'Destroy the enemy base within 5 minutes using a pre-built tank army. No reinforcements!',
+    timeLimit: 300,
+    playerNation: 'germany',
+    enemyNation: 'france',
+    playerStartSP: 0,
+    playerStartMU: 0,
+    noProduction: true,
+    startingUnits: { player: { tank: 6, infantry: 4, scoutcar: 2, heavytank: 2 }, enemy: { infantry: 10, tank: 3, mortar: 3 } },
+    enemyHasDefenses: true,
+    victory: 'destroy_hq',
+    halfTimeForStars: 150
+  },
+  naval_supremacy: {
+    name: 'Naval Supremacy',
+    description: 'Island map. Build a fleet of ships and air units to destroy the enemy fleet. Land units disabled.',
+    timeLimit: 900,
+    playerNation: 'japan',
+    enemyNation: 'britain',
+    playerStartSP: 800,
+    playerStartMU: 200,
+    mapTemplate: 'islands',
+    navalOnly: true,
+    startingUnits: { player: { patrolboat: 2 }, enemy: { patrolboat: 2 } },
+    victory: 'destroy_all',
+    halfTimeForStars: 450
+  },
+  underdog: {
+    name: 'Underdog',
+    description: 'Start with half resources against a Hard AI with bonus resources. Prove your skill!',
+    timeLimit: 0,
+    playerNation: 'france',
+    enemyNation: 'japan',
+    playerStartSP: 250,
+    playerStartMU: 50,
+    enemyStartSP: 750,
+    enemyStartMU: 200,
+    enemyDifficulty: 'hard',
+    startingUnits: { player: {}, enemy: {} },
+    victory: 'destroy_all',
+    halfTimeForStars: 600
+  },
+  commander_duel: {
+    name: 'Commander Duel',
+    description: 'Commanders only! No other units. Use abilities wisely in this hero battle.',
+    timeLimit: 600,
+    playerNation: 'america',
+    enemyNation: 'germany',
+    playerStartSP: 0,
+    playerStartMU: 500,
+    noProduction: true,
+    startingUnits: { player: { commander: 1 }, enemy: { commander: 1 } },
+    victory: 'destroy_commander',
+    halfTimeForStars: 120
   }
 };

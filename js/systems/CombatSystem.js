@@ -42,9 +42,10 @@ export class CombatSystem {
     const camera = this.game.sceneManager.camera;
 
     for (const unit of allUnits) {
-      // Skip garrisoned and EMP-disabled units
+      // Skip garrisoned, EMP-disabled, and retreating units
       if (unit.isGarrisoned) continue;
       if (unit.empDisabledTimer > 0) continue;
+      if (unit.isRetreating) continue;
 
       // Handle combat for units with attack targets
       if (unit.attackTarget) {
@@ -199,7 +200,10 @@ export class CombatSystem {
     // GD-111: Commander aura damage buff
     const cmdDmgMod = attacker._cmdAuraDmg || 1.0;
 
-    const finalDmg = Math.max(1, baseDmg * modifier * armorReduction * terrainMod * ditchMod * banzaiMod * forestMod * cmdDmgMod);
+    // GD-125: Retreating units take -25% damage
+    const retreatMod = (defender.isUnit && defender.isRetreating) ? 0.75 : 1.0;
+
+    const finalDmg = Math.max(1, baseDmg * modifier * armorReduction * terrainMod * ditchMod * banzaiMod * forestMod * cmdDmgMod * retreatMod);
 
     // GD-075: Track committed damage for overkill protection
     this.addCommittedDamage(defender, finalDmg);

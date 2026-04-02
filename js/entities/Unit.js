@@ -38,6 +38,11 @@ export class Unit extends Entity {
     // Stance system: 'aggressive' (default), 'defensive', 'holdfire'
     this.stance = 'aggressive';
 
+    // GD-125: Retreat system
+    this.isRetreating = false;
+    this.retreatTarget = null;
+    this._retreatFlashTimer = 0;
+
     // Patrol system
     this._patrolPoints = [];
     this._patrolIndex = 0;
@@ -366,6 +371,30 @@ export class Unit extends Entity {
     this._isPatrolling = false;
     this._patrolPoints = [];
     this._patrolIndex = 0;
+    // GD-125: Cancel retreat on stop
+    this.isRetreating = false;
+    this.retreatTarget = null;
+    this._retreatFlashTimer = 0;
+    if (this.mesh) {
+      this.mesh.traverse(child => {
+        if (child.isMesh && child.material && child.material.emissive) {
+          child.material.emissive.setHex(0x000000);
+        }
+      });
+    }
+  }
+
+  // GD-125: Start tactical retreat to nearest friendly building
+  startRetreat(targetPos) {
+    if (!targetPos) return;
+    this.isRetreating = true;
+    this.retreatTarget = targetPos.clone();
+    this.attackTarget = null;
+    this.moveTarget = null;
+    this.waypoints = [];
+    this._attackMove = false;
+    this._isPatrolling = false;
+    this._retreatFlashTimer = 0;
   }
 
   updateStatusBadge() {
@@ -373,7 +402,8 @@ export class Unit extends Entity {
 
     // Determine badge state
     let badgeState = '';
-    if (this.stance === 'holdfire') badgeState = 'holdfire';
+    if (this.isRetreating) badgeState = 'retreat';
+    else if (this.stance === 'holdfire') badgeState = 'holdfire';
     else if (this.stance === 'defensive') badgeState = 'defensive';
     else if (this._isPatrolling) badgeState = 'patrol';
     else if (this._attackMove) badgeState = 'attackmove';
@@ -401,7 +431,8 @@ export class Unit extends Entity {
       defensive: 0x4488ff,
       patrol: 0x00ccff,
       attackmove: 0xff4444,
-      siege: 0xff8800
+      siege: 0xff8800,
+      retreat: 0xffffff
     };
 
     const color = badgeColors[badgeState] || 0xffffff;
@@ -480,6 +511,57 @@ export class Unit extends Entity {
       if (camera) {
         this.rankIndicator.quaternion.copy(camera.quaternion);
       }
+    }
+
+    // GD-125: Retreat logic
+    if (this.isRetreating && this.retreatTarget) {
+      const pos = this.mesh.position;
+      const dx = this.retreatTarget.x - pos.x;
+      const dz = this.retreatTarget.z - pos.z;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+
+      if (dist <= 5) {
+        // Reached friendly building - end retreat
+        this.isRetreating = false;
+        this.retreatTarget = null;
+        this.moveTarget = null;
+        this.isMoving = false;
+        this._retreatFlashTimer = 0;
+        // Restore opacity
+        this.mesh.traverse(child => {
+          if (child.isMesh && child.material) {
+            child.material.emissive?.setHex(0x000000);
+          }
+        });
+      } else {
+        // Move toward retreat target at +40% speed
+        let effSpeed = this.speed * 1.4;
+        if (this.domain === 'land' && this.game && this.game.weatherSystem) {
+          effSpeed *= this.game.weatherSystem.getSpeedMultiplier();
+        }
+        const moveAmount = effSpeed * deltaTime * GAME_CONFIG.unitSpeedMultiplier;
+        const ratio = Math.min(moveAmount / dist, 1);
+        pos.x += dx * ratio;
+        pos.z += dz * ratio;
+        this.mesh.rotation.y = Math.atan2(dx, dz) + this.modelRotationOffset;
+        this.isMoving = true;
+        if (this.domain === 'land' && this.game && this.game.terrain) {
+          pos.y = this.game.terrain.getHeightAt(pos.x, pos.z);
+        }
+
+        // White flash effect
+        this._retreatFlashTimer += deltaTime;
+        const flash = Math.sin(this._retreatFlashTimer * 6) > 0.3;
+        this.mesh.traverse(child => {
+          if (child.isMesh && child.material && child.material.emissive) {
+            child.material.emissive.setHex(flash ? 0x444444 : 0x000000);
+          }
+        });
+      }
+
+      // Update status badge and procedural animation, then return (skip normal movement)
+      this.updateStatusBadge();
+      return;
     }
 
     // Update status badge

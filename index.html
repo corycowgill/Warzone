@@ -27,6 +27,18 @@
         <button id="btn-2player" class="menu-btn">2 Player</button>
         <button id="btn-spectate" class="menu-btn menu-btn-secondary" style="margin-top:8px;">Watch AI Battle</button>
         <button id="btn-history" class="menu-btn menu-btn-secondary" style="margin-top:8px;font-size:13px;">Match History</button>
+        <button id="btn-challenges" class="menu-btn menu-btn-secondary" style="margin-top:8px;font-size:13px;">Challenges</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GD-134: Challenge Selection Screen -->
+  <div id="challenge-select" class="hidden">
+    <div class="nation-select-content" style="max-width:700px;">
+      <h2 class="nation-select-title">CHALLENGE SCENARIOS</h2>
+      <div id="challenge-list" style="display:flex;flex-direction:column;gap:10px;margin:20px 0;max-height:400px;overflow-y:auto;padding:0 10px;"></div>
+      <div class="nation-select-actions" style="margin-top:16px;">
+        <button id="btn-challenge-back" class="menu-btn menu-btn-secondary">Back</button>
       </div>
     </div>
   </div>
@@ -188,12 +200,9 @@
       </div>
     </div>
 
-    <!-- Command Panel (bottom-center) -->
-    <div id="command-panel">
-      <button class="cmd-btn" id="cmd-move" title="Move (M)">Move</button>
-      <button class="cmd-btn" id="cmd-attack" title="Attack (A)">Attack</button>
-      <button class="cmd-btn" id="cmd-stop" title="Stop (S)">Stop</button>
-      <button class="cmd-btn" id="cmd-build" title="Build (B)">Build</button>
+    <!-- GD-126: Command Card Panel (bottom-center, 3x4 grid) -->
+    <div id="command-card" class="hidden">
+      <div id="command-card-grid"></div>
     </div>
 
     <!-- Minimap (bottom-right) -->

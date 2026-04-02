@@ -5,37 +5,193 @@ export class EffectsManager {
     this.game = game;
     this.scene = game.sceneManager.scene;
     this.activeEffects = [];
+
+    // GD-129: Pre-create billboard textures for particle pooling
+    this._fireTexture = this._createGradientTexture(0xff6600, 0xffcc00);
+    this._smokeTexture = this._createGradientTexture(0x444444, 0x888888);
+    this._sparkTexture = this._createGradientTexture(0xffffaa, 0xffffff);
+
+    // GD-129: Particle pool
+    this._spritePool = [];
+    this._poolSize = 200;
+    for (let i = 0; i < this._poolSize; i++) {
+      const mat = new THREE.SpriteMaterial({ transparent: true, opacity: 1, depthWrite: false });
+      const sprite = new THREE.Sprite(mat);
+      sprite.visible = false;
+      this._spritePool.push(sprite);
+    }
+  }
+
+  // GD-129: Create gradient circle texture via canvas
+  _createGradientTexture(innerColor, outerColor) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    const ic = new THREE.Color(innerColor);
+    const oc = new THREE.Color(outerColor);
+    grad.addColorStop(0, `rgba(${Math.round(ic.r*255)},${Math.round(ic.g*255)},${Math.round(ic.b*255)},1)`);
+    grad.addColorStop(0.5, `rgba(${Math.round(oc.r*255)},${Math.round(oc.g*255)},${Math.round(oc.b*255)},0.6)`);
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 64, 64);
+    const texture = new THREE.CanvasTexture(canvas);
+    return texture;
+  }
+
+  // GD-129: Get a sprite from pool (or create one)
+  _getPooledSprite(texture, color, size) {
+    let sprite = this._spritePool.find(s => !s.visible);
+    if (!sprite) {
+      const mat = new THREE.SpriteMaterial({ transparent: true, opacity: 1, depthWrite: false });
+      sprite = new THREE.Sprite(mat);
+      this._spritePool.push(sprite);
+    }
+    sprite.material.map = texture;
+    sprite.material.color.set(color || 0xffffff);
+    sprite.material.opacity = 1;
+    sprite.material.needsUpdate = true;
+    sprite.scale.set(size, size, 1);
+    sprite.visible = true;
+    return sprite;
+  }
+
+  // GD-129: Return sprite to pool
+  _returnToPool(sprite) {
+    sprite.visible = false;
+    if (sprite.parent) sprite.parent.remove(sprite);
+  }
+
+  // GD-133: Create shadow texture (dark ellipse with soft edges)
+  _createShadowTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 30);
+    grad.addColorStop(0, 'rgba(0,0,0,0.35)');
+    grad.addColorStop(0.6, 'rgba(0,0,0,0.2)');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.ellipse(32, 32, 30, 22, 0, 0, Math.PI * 2);
+    ctx.fill();
+    return new THREE.CanvasTexture(canvas);
+  }
+
+  // GD-133: Add shadow under an entity
+  createEntityShadow(entity) {
+    if (!entity.mesh || entity._shadow) return;
+
+    if (!this._shadowTexture) {
+      this._shadowTexture = this._createShadowTexture();
+    }
+
+    const geo = new THREE.PlaneGeometry(1, 1);
+    const mat = new THREE.MeshBasicMaterial({
+      map: this._shadowTexture,
+      transparent: true,
+      opacity: 0.6,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+    const shadow = new THREE.Mesh(geo, mat);
+    shadow.rotation.x = -Math.PI / 2;
+
+    // Scale based on unit type
+    let size = 3;
+    if (entity.isUnit) {
+      if (entity.type === 'infantry' || entity.type === 'engineer' || entity.type === 'mortar') size = 2;
+      else if (entity.type === 'tank' || entity.type === 'aahalftrack' || entity.type === 'apc' || entity.type === 'scoutcar') size = 3.5;
+      else if (entity.type === 'heavytank' || entity.type === 'spg' || entity.type === 'commander') size = 4;
+      else if (entity.type === 'battleship' || entity.type === 'carrier') size = 6;
+      else if (entity.type === 'submarine' || entity.type === 'patrolboat') size = 3;
+      else if (entity.domain === 'air') size = 3;
+    } else if (entity.isBuilding) {
+      const bs = entity.size || 2;
+      size = bs * 3;
+    }
+    shadow.scale.set(size, size, 1);
+
+    entity._shadow = shadow;
+    entity._shadowSize = size;
+    this.scene.add(shadow);
+  }
+
+  // GD-133: Update all entity shadows
+  updateShadows(entities) {
+    for (const entity of entities) {
+      if (!entity.alive) {
+        if (entity._shadow) {
+          this.scene.remove(entity._shadow);
+          entity._shadow.geometry.dispose();
+          entity._shadow.material.dispose();
+          entity._shadow = null;
+        }
+        continue;
+      }
+
+      if (!entity._shadow) {
+        this.createEntityShadow(entity);
+      }
+
+      if (entity._shadow && entity.mesh) {
+        const pos = entity.mesh.position;
+        // Shadow on ground below entity
+        let groundY = 0;
+        if (this.game.terrain) {
+          groundY = this.game.terrain.getHeightAt(pos.x, pos.z);
+        }
+        entity._shadow.position.set(pos.x, groundY + 0.15, pos.z);
+
+        // Air units: offset shadow slightly based on sun direction
+        if (entity.isUnit && entity.domain === 'air') {
+          entity._shadow.position.x += 2;
+          entity._shadow.position.z += 2;
+        }
+      }
+    }
   }
 
   createExplosion(position) {
-    const particleCount = 12;
+    // GD-129: Billboard sprite explosion with fire + smoke
     const group = new THREE.Group();
     group.position.copy(position);
-
     const particles = [];
-    for (let i = 0; i < particleCount; i++) {
-      const size = 0.3 + Math.random() * 0.5;
-      const geometry = new THREE.SphereGeometry(size, 6, 6);
-      const color = Math.random() > 0.5 ? 0xff6600 : 0xffcc00;
-      const material = new THREE.MeshBasicMaterial({
-        color: color,
-        transparent: true,
-        opacity: 1.0
-      });
-      const particle = new THREE.Mesh(geometry, material);
 
-      // Random outward direction
+    // Fire particles (20-30 orange/red billboards)
+    const fireCount = 20 + Math.floor(Math.random() * 10);
+    for (let i = 0; i < fireCount; i++) {
+      const size = 1.0 + Math.random() * 1.5;
+      const sprite = this._getPooledSprite(this._fireTexture, Math.random() > 0.4 ? 0xff6600 : 0xffcc00, size);
       const angle = Math.random() * Math.PI * 2;
       const elevation = (Math.random() - 0.3) * Math.PI;
       const speed = 5 + Math.random() * 10;
-      particle.userData.velocity = new THREE.Vector3(
+      sprite.userData.velocity = new THREE.Vector3(
         Math.cos(angle) * Math.cos(elevation) * speed,
         Math.sin(elevation) * speed + 5,
         Math.sin(angle) * Math.cos(elevation) * speed
       );
+      sprite.userData.isPooled = true;
+      group.add(sprite);
+      particles.push(sprite);
+    }
 
-      group.add(particle);
-      particles.push(particle);
+    // Darker smoke particles that rise slowly
+    const smokeCount = 8;
+    for (let i = 0; i < smokeCount; i++) {
+      const size = 1.5 + Math.random() * 2;
+      const sprite = this._getPooledSprite(this._smokeTexture, 0x333333, size);
+      sprite.userData.velocity = new THREE.Vector3(
+        (Math.random() - 0.5) * 3,
+        2 + Math.random() * 3,
+        (Math.random() - 0.5) * 3
+      );
+      sprite.userData.isPooled = true;
+      sprite.userData.isSmoke = true;
+      group.add(sprite);
+      particles.push(sprite);
     }
 
     this.scene.add(group);
@@ -44,27 +200,24 @@ export class EffectsManager {
       type: 'explosion',
       group: group,
       particles: particles,
-      lifetime: 0.6,
+      lifetime: 0.8,
       elapsed: 0
     });
+
+    // GD-129: Ground scorch mark
+    this.createScorchMark(position);
   }
 
   createMuzzleFlash(position) {
+    // GD-129: Billboard sprite muzzle flash
     const group = new THREE.Group();
     group.position.copy(position);
     group.position.y += 2;
 
-    // Bright emissive sphere
-    const flashGeometry = new THREE.SphereGeometry(0.5, 6, 6);
-    const flashMaterial = new THREE.MeshBasicMaterial({
-      color: 0xffffaa,
-      transparent: true,
-      opacity: 1.0
-    });
-    const flash = new THREE.Mesh(flashGeometry, flashMaterial);
+    const flash = this._getPooledSprite(this._sparkTexture, 0xffffaa, 1.5);
+    flash.userData.isPooled = true;
     group.add(flash);
 
-    // Point light for illumination
     const light = new THREE.PointLight(0xffaa44, 3, 15);
     group.add(light);
 
@@ -76,6 +229,74 @@ export class EffectsManager {
       flash: flash,
       light: light,
       lifetime: 0.1,
+      elapsed: 0
+    });
+  }
+
+  // GD-129: Bullet impact sparks
+  createBulletImpact(position) {
+    const group = new THREE.Group();
+    group.position.copy(position);
+    const particles = [];
+
+    for (let i = 0; i < 5; i++) {
+      const sprite = this._getPooledSprite(this._sparkTexture, 0xffee88, 0.3 + Math.random() * 0.3);
+      sprite.userData.velocity = new THREE.Vector3(
+        (Math.random() - 0.5) * 8,
+        Math.random() * 5 + 2,
+        (Math.random() - 0.5) * 8
+      );
+      sprite.userData.isPooled = true;
+      group.add(sprite);
+      particles.push(sprite);
+    }
+
+    this.scene.add(group);
+    this.activeEffects.push({
+      type: 'explosion',
+      group,
+      particles,
+      lifetime: 0.3,
+      elapsed: 0
+    });
+  }
+
+  // GD-129: Ground scorch mark at explosion site
+  createScorchMark(position) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grad.addColorStop(0, 'rgba(20,15,10,0.6)');
+    grad.addColorStop(0.7, 'rgba(30,25,15,0.3)');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 64, 64);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    const geo = new THREE.PlaneGeometry(6, 6);
+    const mat = new THREE.MeshBasicMaterial({
+      map: texture,
+      transparent: true,
+      opacity: 0.7,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+    const plane = new THREE.Mesh(geo, mat);
+    plane.rotation.x = -Math.PI / 2;
+    plane.position.copy(position);
+    plane.position.y += 0.1;
+
+    this.scene.add(plane);
+
+    this.activeEffects.push({
+      type: 'scorch',
+      group: plane,
+      material: mat,
+      texture: texture,
+      geometry: geo,
+      lifetime: 10,
       elapsed: 0
     });
   }
@@ -384,6 +605,18 @@ export class EffectsManager {
       const progress = effect.elapsed / effect.lifetime;
 
       if (progress >= 1.0) {
+        // Return pooled sprites before removing
+        if (effect.particles) {
+          for (const p of effect.particles) {
+            if (p.userData && p.userData.isPooled) {
+              this._returnToPool(p);
+            }
+          }
+        }
+        if (effect.flash && effect.flash.userData && effect.flash.userData.isPooled) {
+          this._returnToPool(effect.flash);
+        }
+
         // Remove completed effect
         this.scene.remove(effect.group);
         if (effect.type === 'damageNumber') {
@@ -392,8 +625,13 @@ export class EffectsManager {
         } else if (effect.type === 'trail') {
           if (effect.material) effect.material.dispose();
           if (effect.geometry) effect.geometry.dispose();
+        } else if (effect.type === 'scorch') {
+          if (effect.material) effect.material.dispose();
+          if (effect.texture) effect.texture.dispose();
+          if (effect.geometry) effect.geometry.dispose();
         } else {
           effect.group.traverse(child => {
+            if (child.userData && child.userData.isPooled) return; // skip pooled sprites
             if (child.geometry) child.geometry.dispose();
             if (child.material) child.material.dispose();
           });
@@ -441,6 +679,9 @@ export class EffectsManager {
           }
           particle.material.opacity = 1.0 - progress;
         }
+      } else if (effect.type === 'scorch') {
+        // GD-129: Fade scorch marks over time
+        effect.material.opacity = 0.7 * (1.0 - progress);
       }
     }
   }
