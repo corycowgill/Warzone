@@ -124,8 +124,8 @@ export class FogOfWar {
       // Flare zones temporarily grant full vision (GD-066 smoke_screen/flare)
       if (this.game._flareZones) {
         for (const flare of this.game._flareZones) {
-          const dx = pos.x - flare.x;
-          const dz = pos.z - flare.z;
+          const dx = pos.x - flare.position.x;
+          const dz = pos.z - flare.position.z;
           if (dx * dx + dz * dz < flare.radius * flare.radius) {
             visionRange = Math.max(visionRange, entity.vision || 10); // restore full vision in flare area
           }
@@ -154,8 +154,8 @@ export class FogOfWar {
     // Step 2a: Flare zones reveal area (GD-066)
     if (this.game._flareZones) {
       for (const flare of this.game._flareZones) {
-        const fgx = Math.floor(flare.x / this.cellSize);
-        const fgz = Math.floor(flare.z / this.cellSize);
+        const fgx = Math.floor(flare.position.x / this.cellSize);
+        const fgz = Math.floor(flare.position.z / this.cellSize);
         const fr = Math.ceil(flare.radius / this.cellSize);
         const frSq = fr * fr;
         const fMinX = Math.max(0, fgx - fr);
@@ -177,8 +177,8 @@ export class FogOfWar {
     // Step 2a: Smoke zones block vision (GD-066)
     if (this.game._smokeZones) {
       for (const smoke of this.game._smokeZones) {
-        const sgx = Math.floor(smoke.x / this.cellSize);
-        const sgz = Math.floor(smoke.z / this.cellSize);
+        const sgx = Math.floor(smoke.position.x / this.cellSize);
+        const sgz = Math.floor(smoke.position.z / this.cellSize);
         const sr = Math.ceil(smoke.radius / this.cellSize);
         const srSq = sr * sr;
         const sMinX = Math.max(0, sgx - sr);

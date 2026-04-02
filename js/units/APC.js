@@ -53,6 +53,8 @@ export class APC extends Unit {
                     pos.z + Math.sin(angle) * offset
                 );
             }
+            if (unit.selectionRing) unit.selectionRing.visible = true;
+            if (unit.healthBar) unit.healthBar.visible = true;
         }
         this.garrisoned = [];
     }
