@@ -10,28 +10,29 @@ GD-012: Combat drama layer | GD-013: Veterancy visuals | GD-014: Unit counter sy
 GD-021: Production queue preview | GD-023: Formation presets (5 types) | GD-024: Building tier upgrades | GD-030: Tech tree visualization
 
 ## Cycle 4 - Completed (5 features)
-GD-031: Unit Stance System (Aggressive/Defensive/Hold Fire) | GD-032: Patrol Command | GD-033: Pause/Resume | GD-034: Match History & Stats | GD-035: Shift-click Waypoint Queuing
+GD-031: Unit Stance System | GD-032: Patrol Command | GD-033: Pause/Resume | GD-034: Match History & Stats | GD-035: Shift-click Waypoint Queuing
+
+## Cycle 5 - Completed (5 features)
+GD-036: AI vs AI Spectator Mode | GD-037: Supply Caches | GD-038: Dynamic Map Events | GD-039: Unit Status Badges | GD-040: Tutorial System
 
 ## QA Fixes Applied
 - Cycle 1: 6 fixes (GAME_CONFIG import, minimap Vector3, ability mode reset, double-click state, entity flash null check, production panel alive check)
 - Cycle 2: 4 fixes (aura position, event listener leak, fog ghost position, ace attack balance)
 - Cycle 3: 3 fixes (productionProgress property, getTotalQueueTime tier bonus, getRemainingTime simplification)
+- Cycle 4: 3 fixes (defensive stance freeze, patrol mode exit, listener reference)
 
 ## Pending / Deferred
 | ID | Priority | Status | Description |
 |----|----------|--------|-------------|
-| GD-011 | HIGH | DEFERRED | Production Queue Cost/Time Preview (partially done via GD-021) |
-| GD-015 | MEDIUM | PENDING | Destructible Environment and Supply Caches |
-| GD-016 | MEDIUM | DONE (as GD-023) | Formation Presets |
-| GD-018 | MEDIUM | DONE (as GD-024) | Building Specialization |
-| GD-019 | LOW-MED | PENDING | Dynamic Map Events System |
-| GD-022 | HIGH | PENDING | Destructible Environment & Supply Caches |
-| GD-025 | MEDIUM | PENDING | Dynamic Map Events |
-| GD-026 | MEDIUM | PENDING | Spectator/Observer Mode |
-| GD-027 | MEDIUM | PENDING | Unit Status Badges |
-| GD-028 | MEDIUM | DONE (as GD-035) | Smart Control Group Auto-Refill (waypoint queue) |
+| GD-015 | MEDIUM | DONE (as GD-037) | Destructible Environment and Supply Caches |
+| GD-019 | LOW-MED | DONE (as GD-038) | Dynamic Map Events System |
+| GD-022 | HIGH | DONE (as GD-037) | Destructible Environment & Supply Caches |
+| GD-025 | MEDIUM | DONE (as GD-038) | Dynamic Map Events |
+| GD-026 | MEDIUM | DONE (as GD-036) | Spectator/Observer Mode |
+| GD-027 | MEDIUM | DONE (as GD-039) | Unit Status Badges |
+| GD-028 | MEDIUM | DONE (as GD-035) | Smart Control Group Auto-Refill |
 | GD-029 | MEDIUM | PENDING | Last Seen Ghost Overlay (partially done via GD-017) |
 
-## Total Features Implemented: 24
-## Total QA Fixes: 13
-## Git Commits: 9
+## Total Features Implemented: 29
+## Total QA Fixes: 16
+## Git Commits: 13
