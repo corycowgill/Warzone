@@ -9,9 +9,13 @@ GD-012: Combat drama layer | GD-013: Veterancy visuals | GD-014: Unit counter sy
 ## Cycle 3 - Completed (4 features)
 GD-021: Production queue preview | GD-023: Formation presets (5 types) | GD-024: Building tier upgrades | GD-030: Tech tree visualization
 
+## Cycle 4 - Completed (5 features)
+GD-031: Unit Stance System (Aggressive/Defensive/Hold Fire) | GD-032: Patrol Command | GD-033: Pause/Resume | GD-034: Match History & Stats | GD-035: Shift-click Waypoint Queuing
+
 ## QA Fixes Applied
 - Cycle 1: 6 fixes (GAME_CONFIG import, minimap Vector3, ability mode reset, double-click state, entity flash null check, production panel alive check)
 - Cycle 2: 4 fixes (aura position, event listener leak, fog ghost position, ace attack balance)
+- Cycle 3: 3 fixes (productionProgress property, getTotalQueueTime tier bonus, getRemainingTime simplification)
 
 ## Pending / Deferred
 | ID | Priority | Status | Description |
@@ -25,9 +29,9 @@ GD-021: Production queue preview | GD-023: Formation presets (5 types) | GD-024:
 | GD-025 | MEDIUM | PENDING | Dynamic Map Events |
 | GD-026 | MEDIUM | PENDING | Spectator/Observer Mode |
 | GD-027 | MEDIUM | PENDING | Unit Status Badges |
-| GD-028 | MEDIUM | PENDING | Smart Control Group Auto-Refill |
+| GD-028 | MEDIUM | DONE (as GD-035) | Smart Control Group Auto-Refill (waypoint queue) |
 | GD-029 | MEDIUM | PENDING | Last Seen Ghost Overlay (partially done via GD-017) |
 
-## Total Features Implemented: 19
-## Total QA Fixes: 10
-## Git Commits: 6
+## Total Features Implemented: 24
+## Total QA Fixes: 13
+## Git Commits: 9
