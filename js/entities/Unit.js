@@ -542,10 +542,10 @@ export class Unit extends Entity {
         // Defensive stance: don't chase beyond auto-acquire range
         if (this.stance === 'defensive') {
           this.attackTarget = null;
-          return;
+        } else {
+          // Out of range - chase the target (don't clear attackTarget)
+          this.chasePosition(this.attackTarget.getPosition());
         }
-        // Out of range - chase the target (don't clear attackTarget)
-        this.chasePosition(this.attackTarget.getPosition());
       } else {
         // In range - stop moving, face target (CombatSystem handles actual firing)
         this.moveTarget = null;

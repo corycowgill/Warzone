@@ -135,9 +135,9 @@ export class CommandSystem {
         }
         this.game.eventBus.emit('command:patrol', { units: selectedUnits, position: worldPos });
         if (this.game.soundManager) this.game.soundManager.play('move', { unitType: selectedUnits[0]?.type });
+        this.patrolMode = false;
+        document.body.style.cursor = 'default';
       }
-      this.patrolMode = false;
-      document.body.style.cursor = 'default';
     } else if (this.attackMoveMode) {
       // Attack-move: move to location but engage enemies along the way
       const worldPos = this.game.inputManager.getWorldPosition(event.clientX, event.clientY);

@@ -190,14 +190,15 @@ export class UIManager {
       this.hideMatchHistory();
     });
 
-    // Pause overlay toggle
-    this.game.eventBus.on('game:stateChange', (data) => {
+    // Pause overlay toggle (UIManager is a singleton, listener persists for app lifetime)
+    this._pauseStateListener = (data) => {
       if (data.state === 'PAUSED') {
         this.pauseOverlay?.classList.remove('hidden');
       } else {
         this.pauseOverlay?.classList.add('hidden');
       }
-    });
+    };
+    this.game.eventBus.on('game:stateChange', this._pauseStateListener);
 
     // Options panel
     this.optionsPanel = document.getElementById('options-panel');
