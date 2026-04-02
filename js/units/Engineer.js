@@ -263,6 +263,18 @@ export class Engineer extends Unit {
   plantMine() {
     if (!this.game) return false;
 
+    // Check and deduct MU cost (50 MU per mine)
+    const muCost = 50;
+    if (this.game.resourceSystem && !this.game.resourceSystem.canAffordMU(this.team, muCost)) {
+      if (this.game.uiManager?.hud && this.team === 'player') {
+        this.game.uiManager.hud.showNotification(`Not enough MU to plant mine (need ${muCost})`, '#ff4444');
+      }
+      return false;
+    }
+    if (this.game.resourceSystem) {
+      this.game.resourceSystem.spendMU(this.team, muCost);
+    }
+
     const pos = this.getPosition().clone();
 
     // Create mine entity (invisible until triggered)

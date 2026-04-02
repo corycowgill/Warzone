@@ -1470,6 +1470,17 @@ export class Game {
       }
       this._corpses = [];
     }
+    // Clean up mines
+    if (this._mines) {
+      for (const mine of this._mines) {
+        if (mine.mesh) {
+          this.sceneManager.scene.remove(mine.mesh);
+          if (mine.mesh.geometry) mine.mesh.geometry.dispose();
+          if (mine.mesh.material) mine.mesh.material.dispose();
+        }
+      }
+      this._mines = [];
+    }
     // Clean up smoke/flare zones
     this._smokeZones = null;
     this._flareZones = null;

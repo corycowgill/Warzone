@@ -595,8 +595,17 @@ export class HUD {
         this._researchDisplay.style.cssText = 'position:fixed;bottom:225px;right:10px;background:rgba(0,0,0,0.8);border:1px solid #00ccaa;border-radius:4px;padding:4px 8px;font-size:11px;color:#00ffcc;font-family:sans-serif;z-index:100;';
         document.body.appendChild(this._researchDisplay);
       }
+      let researchName = '?';
       const upg = RESEARCH_UPGRADES[resState.inProgress];
-      this._researchDisplay.textContent = `Researching: ${upg?.name || '?'} (${Math.ceil(resState.timer)}s)`;
+      if (upg) {
+        researchName = upg.name;
+      } else if (resState._branchDomain && resState._branchKey) {
+        // GD-090: Branch doctrine research in progress
+        const domainConfig = TECH_BRANCHES[resState._branchDomain];
+        const branch = domainConfig?.[resState._branchKey];
+        if (branch) researchName = branch.name;
+      }
+      this._researchDisplay.textContent = `Researching: ${researchName} (${Math.ceil(resState.timer)}s)`;
       this._researchDisplay.style.display = 'block';
     } else if (this._researchDisplay) {
       this._researchDisplay.style.display = 'none';

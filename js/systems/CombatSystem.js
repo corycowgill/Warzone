@@ -121,6 +121,9 @@ export class CombatSystem {
   performAttack(attacker, defender) {
     if (!attacker.alive || !defender.alive) return;
 
+    // Engineers cannot attack (0 damage, non-combat unit)
+    if (attacker.type === 'engineer') return;
+
     // GD-075: Overkill protection - skip if target is already effectively dead
     const committed = this.getCommittedDamage(defender);
     if (defender.health - committed <= 0) {
@@ -692,9 +695,9 @@ export class CombatSystem {
     const ab = UNIT_ABILITIES.engineer;
     if (!ab) return false;
 
-    unit.abilityCooldown = ab.cooldown;
     const success = unit.plantMine();
     if (success) {
+      unit.abilityCooldown = ab.cooldown;
       if (this.game.soundManager) this.game.soundManager.play('build');
       if (this.game.uiManager?.hud && unit.team === 'player') {
         this.game.uiManager.hud.showNotification('Mine planted!', '#ffcc00');

@@ -261,7 +261,9 @@ export class ProductionSystem {
       this.game.resourceSystem.addIncome(building.team, stats.cost);
       this.game.eventBus.emit('resource:changed', {
         player: this.game.teams.player.sp,
-        enemy: this.game.teams.enemy.sp
+        enemy: this.game.teams.enemy.sp,
+        playerMU: this.game.teams.player.mu,
+        enemyMU: this.game.teams.enemy.mu
       });
     }
 
@@ -394,7 +396,9 @@ export class ProductionSystem {
     this.game.resourceSystem.addIncome(building.team, refund);
     this.game.eventBus.emit('resource:changed', {
       player: this.game.teams.player.sp,
-      enemy: this.game.teams.enemy.sp
+      enemy: this.game.teams.enemy.sp,
+      playerMU: this.game.teams.player.mu,
+      enemyMU: this.game.teams.enemy.mu
     });
 
     // Remove building

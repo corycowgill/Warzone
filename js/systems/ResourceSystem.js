@@ -147,7 +147,7 @@ export class ResourceSystem {
   }
 
   addMUIncome(team, amount) {
-    if (!this.game.teams[team].mu) this.game.teams[team].mu = 0;
+    if (this.game.teams[team].mu == null) this.game.teams[team].mu = 0;
     this.game.teams[team].mu += amount;
   }
 
