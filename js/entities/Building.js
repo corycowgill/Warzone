@@ -119,34 +119,34 @@ export class Building extends Entity {
 
   getTotalQueueTime() {
     let total = 0;
-    const queue = this.getFullQueue();
-    for (const item of queue) {
-      const stats = UNIT_STATS[item.type];
+    // Current production: use remaining timer directly
+    if (this.currentProduction) {
+      total += Math.max(0, this.productionTimer);
+    }
+    // Queued items: calculate adjusted build times
+    for (const unitType of this.productionQueue) {
+      const stats = UNIT_STATS[unitType];
       if (stats) {
         let buildTime = stats.buildTime;
         // Apply nation production speed bonus
-        if (this.nation && NATIONS[this.nation]?.bonuses?.productionSpeed) {
-          buildTime /= NATIONS[this.nation].bonuses.productionSpeed;
+        const nationSpeed = this.nation && NATIONS[this.nation]?.bonuses?.productionSpeed;
+        if (nationSpeed && nationSpeed > 0) {
+          buildTime /= nationSpeed;
+        }
+        // Apply tier production speed bonus
+        const tierBonus = this.getTierBonus();
+        if (tierBonus && tierBonus.productionSpeed > 1) {
+          buildTime /= tierBonus.productionSpeed;
         }
         total += buildTime;
       }
-    }
-    // Subtract elapsed time on current production
-    if (this.currentProduction) {
-      total -= this.productionProgress || 0;
     }
     return Math.max(0, total);
   }
 
   getRemainingTime() {
     if (!this.currentProduction) return 0;
-    const stats = UNIT_STATS[this.currentProduction];
-    if (!stats) return 0;
-    let buildTime = stats.buildTime;
-    if (this.nation && NATIONS[this.nation]?.bonuses?.productionSpeed) {
-      buildTime /= NATIONS[this.nation].bonuses.productionSpeed;
-    }
-    return Math.max(0, buildTime - (this.productionProgress || 0));
+    return Math.max(0, this.productionTimer);
   }
 
   upgrade() {
