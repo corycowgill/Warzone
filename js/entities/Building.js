@@ -21,6 +21,9 @@ export class Building extends Entity {
 
     this.tier = 1;
 
+    // Construction phase state (set by ProductionSystem._startConstruction)
+    this._constructing = false;
+
     // Nation reference for production speed bonus (set externally)
     this.nation = null;
   }

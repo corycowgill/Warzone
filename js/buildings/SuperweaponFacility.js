@@ -166,7 +166,7 @@ export class SuperweaponFacility extends Building {
 
     // Delay before impact
     setTimeout(() => {
-      if (!this.alive) return;
+      if (!this.alive || !this.game || this.game.state !== 'PLAYING') return;
 
       const enemies = this.game.getEntitiesByTeam(enemyTeam);
       const allEntities = [...enemies];

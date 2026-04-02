@@ -74,11 +74,12 @@ export class PostProcessing {
     this.composer.addPass(this.vignettePass);
 
     // Handle resize
-    window.addEventListener('resize', () => {
+    this._onResize = () => {
       if (this.composer) {
         this.composer.setSize(window.innerWidth, window.innerHeight);
       }
-    });
+    };
+    window.addEventListener('resize', this._onResize);
   }
 
   render() {
@@ -97,5 +98,15 @@ export class PostProcessing {
     if (this.bloomPass) {
       this.bloomPass.strength = strength;
     }
+  }
+
+  dispose() {
+    if (this._onResize) {
+      window.removeEventListener('resize', this._onResize);
+      this._onResize = null;
+    }
+    this.composer = null;
+    this.bloomPass = null;
+    this.vignettePass = null;
   }
 }

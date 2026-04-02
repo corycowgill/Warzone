@@ -382,7 +382,7 @@ export class CombatSystem {
     const enemyTeam = unit.team === 'player' ? 'enemy' : 'player';
     for (let salvo = 0; salvo < ab.salvos; salvo++) {
       setTimeout(() => {
-        if (!unit.alive) return;
+        if (!unit.alive || this.game.state !== 'PLAYING') return;
         const offset = new THREE.Vector3((Math.random() - 0.5) * 4, 0, (Math.random() - 0.5) * 4);
         const impactPos = targetPos.clone().add(offset);
         for (const enemy of this.game.getEntitiesByTeam(enemyTeam)) {
@@ -419,7 +419,7 @@ export class CombatSystem {
       const interval = ab.squadronDuration / ab.squadronCount;
       for (let i = 0; i < ab.squadronCount; i++) {
         setTimeout(() => {
-          if (!unit.alive) return;
+          if (!unit.alive || this.game.state !== 'PLAYING') return;
           let nearest = null, nd = Infinity;
           for (const enemy of this.game.getEntitiesByTeam(enemyTeam)) {
             if (!enemy.alive) continue;

@@ -579,11 +579,13 @@ export class Game {
       if (entity.alive) {
         entity.update(delta);
       } else {
-        this.effectsManager.createExplosion(entity.mesh.position);
-        // GD-065: Smoke after explosion + debris for buildings
-        this.effectsManager.createSmoke(entity.mesh.position.clone());
-        if (entity.isBuilding) {
-          this.effectsManager.createDebris(entity.mesh.position.clone());
+        if (entity.mesh) {
+          this.effectsManager.createExplosion(entity.mesh.position);
+          // GD-065: Smoke after explosion + debris for buildings
+          this.effectsManager.createSmoke(entity.mesh.position.clone());
+          if (entity.isBuilding) {
+            this.effectsManager.createDebris(entity.mesh.position.clone());
+          }
         }
         this.removeEntity(entity);
         this.eventBus.emit(entity.isUnit ? 'unit:destroyed' : 'building:destroyed', { entity });
@@ -833,7 +835,7 @@ export class Game {
       { time: 5, msg: 'Select units with left-click or drag. Right-click to move.', color: '#88ccff' },
       { time: 15, msg: 'Press A for attack-move. Press B to open the build menu.', color: '#88ccff' },
       { time: 30, msg: 'Press V to cycle stance (Aggressive/Defensive/Hold Fire).', color: '#ffcc00' },
-      { time: 50, msg: 'Press P to patrol. Press F to cycle formation types.', color: '#ffcc00' },
+      { time: 50, msg: 'Press P to patrol. Press F for nation ability. Shift+F to cycle formations.', color: '#ffcc00' },
       { time: 75, msg: 'Press G to use unit abilities. Press T to view the tech tree.', color: '#00ff88' },
       { time: 100, msg: 'Shift+right-click queues waypoints. Press F1 for all controls.', color: '#00ff88' },
     ];
@@ -1090,6 +1092,34 @@ export class Game {
       this.eventBus.off('combat:kill', this._onCacheKill);
       this._onCacheKill = null;
     }
+    if (this._onSalvageKill) {
+      this.eventBus.off('combat:kill', this._onSalvageKill);
+      this._onSalvageKill = null;
+    }
+    // Clean up post-processing
+    if (this.postProcessing) {
+      if (this.postProcessing.dispose) this.postProcessing.dispose();
+      this.postProcessing = null;
+    }
+    // Clean up nation ability system
+    this.nationAbilitySystem = null;
+    // Clean up resource node meshes
+    if (this.resourceNodes) {
+      for (const node of this.resourceNodes) {
+        if (node.mesh) {
+          this.sceneManager.scene.remove(node.mesh);
+          node.mesh.traverse(child => {
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) child.material.dispose();
+          });
+        }
+      }
+      this.resourceNodes = [];
+    }
+    // Clean up nation ability button
+    const abilityBtn = document.getElementById('nation-ability-btn');
+    if (abilityBtn) abilityBtn.style.display = 'none';
+
     this.setState('MENU');
     this.uiManager.showMainMenu();
   }
