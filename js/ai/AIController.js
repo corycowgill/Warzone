@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { UNIT_STATS, BUILDING_STATS, GAME_CONFIG, AI_DIFFICULTY, DAMAGE_MODIFIERS, RESEARCH_UPGRADES, BUILDING_UPGRADES, BUILDING_LIMITS } from '../core/Constants.js';
+import { UNIT_STATS, BUILDING_STATS, GAME_CONFIG, AI_DIFFICULTY, DAMAGE_MODIFIERS, RESEARCH_UPGRADES, BUILDING_UPGRADES, BUILDING_LIMITS, TECH_BRANCHES } from '../core/Constants.js';
 
 // Multiple build order strategies
 const BUILD_ORDERS = {
@@ -377,6 +377,22 @@ export class AIController {
     const sp = this.game.teams[this.team].sp;
     const mu = this.game.teams[this.team].mu || 0;
     if (sp < 250) return; // need resources for units first
+
+    // GD-090: AI picks random branch doctrines when tech lab available
+    const hasTechLab = this.game.getBuildings(this.team).some(b => b.type === 'techlab' && b.alive);
+    if (hasTechLab && sp >= 400) {
+      for (const domain of Object.keys(TECH_BRANCHES)) {
+        if (state.branches[domain]) continue; // already chosen
+        const branch = TECH_BRANCHES[domain];
+        const branchKey = Math.random() < 0.5 ? 'branchA' : 'branchB';
+        const chosen = branch[branchKey];
+        if (sp >= chosen.cost && (!chosen.muCost || mu >= chosen.muCost)) {
+          if (this.game.startBranchResearch(this.team, domain, branchKey)) {
+            return; // one research at a time
+          }
+        }
+      }
+    }
 
     // Prioritize research based on strategy
     const priorities = ['improved_armor', 'heavy_shells', 'rapid_fire', 'field_medics',

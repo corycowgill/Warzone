@@ -522,6 +522,128 @@ export const RESEARCH_UPGRADES = {
   }
 };
 
+// GD-090: Branching Tech Tree Choices
+// Each domain has Branch A and Branch B, researched at Tech Lab.
+// Choosing one branch locks out the other for that domain.
+export const TECH_BRANCHES = {
+  infantry: {
+    label: 'Infantry Doctrine',
+    branchA: {
+      id: 'infantry_assault',
+      name: 'Assault Doctrine',
+      description: '+25% infantry damage, +1 armor, unlock grenadier squad',
+      cost: 400,
+      muCost: 60,
+      researchTime: 20,
+      effects: {
+        applies: (unit) => unit.type === 'infantry' || unit.type === 'mortar',
+        damageMult: 1.25,
+        armor: 1
+      }
+    },
+    branchB: {
+      id: 'infantry_support',
+      name: 'Support Doctrine',
+      description: '+40% infantry HP, +3 HP/s regen, enhanced field medics',
+      cost: 400,
+      muCost: 60,
+      researchTime: 20,
+      effects: {
+        applies: (unit) => unit.type === 'infantry' || unit.type === 'mortar',
+        hpMult: 1.4,
+        regen: 3
+      }
+    }
+  },
+  vehicle: {
+    label: 'Vehicle Doctrine',
+    branchA: {
+      id: 'vehicle_blitz',
+      name: 'Blitzkrieg Doctrine',
+      description: '+30% vehicle speed, +15% damage, fast flanking',
+      cost: 500,
+      muCost: 80,
+      researchTime: 25,
+      effects: {
+        applies: (unit) => unit.domain === 'land' && unit.type !== 'infantry' && unit.type !== 'mortar' && unit.type !== 'engineer',
+        speedMult: 1.3,
+        damageMult: 1.15
+      }
+    },
+    branchB: {
+      id: 'vehicle_fortress',
+      name: 'Fortress Doctrine',
+      description: '+35% vehicle HP, +3 armor, siege specialists',
+      cost: 500,
+      muCost: 80,
+      researchTime: 25,
+      effects: {
+        applies: (unit) => unit.domain === 'land' && unit.type !== 'infantry' && unit.type !== 'mortar' && unit.type !== 'engineer',
+        hpMult: 1.35,
+        armor: 3
+      }
+    }
+  },
+  air: {
+    label: 'Air Doctrine',
+    branchA: {
+      id: 'air_superiority',
+      name: 'Air Superiority',
+      description: '+30% air damage, +20% range, dominate the skies',
+      cost: 500,
+      muCost: 80,
+      researchTime: 25,
+      effects: {
+        applies: (unit) => unit.domain === 'air',
+        damageMult: 1.3,
+        rangeMult: 1.2
+      }
+    },
+    branchB: {
+      id: 'air_strike',
+      name: 'Ground Strike',
+      description: '+40% air HP, +25% speed, survive AA and hit hard',
+      cost: 500,
+      muCost: 80,
+      researchTime: 25,
+      effects: {
+        applies: (unit) => unit.domain === 'air',
+        hpMult: 1.4,
+        speedMult: 1.25
+      }
+    }
+  },
+  naval: {
+    label: 'Naval Doctrine',
+    branchA: {
+      id: 'naval_firepower',
+      name: 'Naval Firepower',
+      description: '+25% naval damage, +15% range, long-range bombardment',
+      cost: 450,
+      muCost: 70,
+      researchTime: 22,
+      effects: {
+        applies: (unit) => unit.domain === 'naval',
+        damageMult: 1.25,
+        rangeMult: 1.15
+      }
+    },
+    branchB: {
+      id: 'naval_resilience',
+      name: 'Naval Resilience',
+      description: '+40% naval HP, +4 armor, unsinkable fleet',
+      cost: 450,
+      muCost: 70,
+      researchTime: 22,
+      effects: {
+        applies: (unit) => unit.domain === 'naval',
+        hpMult: 1.4,
+        armor: 4
+      }
+    }
+  }
+};
+
 export const GAME_CONFIG = {
   mapSize: 128,
   worldScale: 2,

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { EventBus } from './EventBus.js';
-import { GAME_CONFIG, NATIONS, BUILDING_STATS, UNIT_STATS, RESEARCH_UPGRADES, SALVAGE_CONFIG, RESOURCE_NODE_CONFIG, CONSTRUCTION_CONFIG } from './Constants.js';
+import { GAME_CONFIG, NATIONS, BUILDING_STATS, UNIT_STATS, RESEARCH_UPGRADES, SALVAGE_CONFIG, RESOURCE_NODE_CONFIG, CONSTRUCTION_CONFIG, TECH_BRANCHES } from './Constants.js';
 import { SceneManager } from '../rendering/SceneManager.js';
 import { CameraController } from '../rendering/CameraController.js';
 import { EffectsManager } from '../rendering/EffectsManager.js';
@@ -50,8 +50,8 @@ export class Game {
 
     // Research state per team
     this.research = {
-      player: { completed: [], inProgress: null, timer: 0, building: null },
-      enemy: { completed: [], inProgress: null, timer: 0, building: null }
+      player: { completed: [], inProgress: null, timer: 0, building: null, branches: {} },
+      enemy: { completed: [], inProgress: null, timer: 0, building: null, branches: {} }
     };
 
     // Systems (initialized in startGame)
@@ -1151,15 +1151,26 @@ export class Game {
 
       // Cancel research if building was destroyed — refund SP
       if (state.building && !state.building.alive) {
+        let refundCost = 0;
         const upgrade = RESEARCH_UPGRADES[state.inProgress];
         if (upgrade) {
-          this.teams[team].sp += upgrade.cost;
+          refundCost = upgrade.cost;
+        } else if (state._branchDomain) {
+          // GD-090: Branch research refund
+          const domainConfig = TECH_BRANCHES[state._branchDomain];
+          const branch = domainConfig?.[state._branchKey];
+          if (branch) refundCost = branch.cost;
+          // Unlock the branch choice so they can re-choose
+          delete state.branches[state._branchDomain];
+          state._branchDomain = null;
+          state._branchKey = null;
         }
+        if (refundCost > 0) this.teams[team].sp += refundCost;
         state.inProgress = null;
         state.timer = 0;
         state.building = null;
         if (team === 'player' && this.uiManager && this.uiManager.hud) {
-          this.uiManager.hud.showNotification(`Research cancelled: building destroyed! (${upgrade?.cost || 0} SP refunded)`, '#ff4444');
+          this.uiManager.hud.showNotification(`Research cancelled: building destroyed! (${refundCost} SP refunded)`, '#ff4444');
         }
         continue;
       }
@@ -1175,15 +1186,22 @@ export class Game {
           state.building = null;
         }
 
-        // Apply upgrade effects to existing entities
-        this.applyResearchUpgrade(team, upgradeId);
+        // GD-090: Check if this is a branch research
+        if (state._branchDomain) {
+          this._completeBranchResearch(team, state._branchDomain, state._branchKey);
+          state._branchDomain = null;
+          state._branchKey = null;
+        } else {
+          // Apply upgrade effects to existing entities
+          this.applyResearchUpgrade(team, upgradeId);
 
-        if (team === 'player' && this.uiManager && this.uiManager.hud) {
-          const upgrade = RESEARCH_UPGRADES[upgradeId];
-          this.uiManager.hud.showNotification(`Research complete: ${upgrade.name}!`, '#00ffcc');
+          if (team === 'player' && this.uiManager && this.uiManager.hud) {
+            const upgrade = RESEARCH_UPGRADES[upgradeId];
+            this.uiManager.hud.showNotification(`Research complete: ${upgrade.name}!`, '#00ffcc');
+          }
+          if (this.soundManager) this.soundManager.play('produce');
+          this.eventBus.emit('research:complete', { team, upgradeId });
         }
-        if (this.soundManager) this.soundManager.play('produce');
-        this.eventBus.emit('research:complete', { team, upgradeId });
       }
     }
   }
@@ -1221,10 +1239,108 @@ export class Game {
       const upgrade = RESEARCH_UPGRADES[upgradeId];
       if (upgrade) this.applyUpgradeToEntity(entity, upgrade);
     }
+    // GD-090: Apply branch doctrine effects
+    const branches = this.research[team].branches;
+    if (branches) {
+      for (const domain of Object.keys(branches)) {
+        const branchKey = branches[domain];
+        const domainConfig = TECH_BRANCHES[domain];
+        if (domainConfig && domainConfig[branchKey]) {
+          this._applyBranchToEntity(entity, domainConfig[branchKey]);
+        }
+      }
+    }
   }
 
   hasResearch(team, upgradeId) {
     return this.research[team]?.completed.includes(upgradeId) || false;
+  }
+
+  // GD-090: Branching Tech Tree
+  startBranchResearch(team, domain, branchKey) {
+    const domainConfig = TECH_BRANCHES[domain];
+    if (!domainConfig) return false;
+
+    const state = this.research[team];
+    if (!state) return false;
+
+    // Check if this domain already has a branch chosen
+    if (state.branches[domain]) return false;
+
+    // Need a tech lab
+    const hasTechLab = this.getBuildings(team).some(b => b.type === 'techlab' && b.alive);
+    if (!hasTechLab) return false;
+
+    // Already researching something
+    if (state.inProgress) return false;
+
+    const branch = domainConfig[branchKey]; // 'branchA' or 'branchB'
+    if (!branch) return false;
+
+    // Check cost
+    if (this.teams[team].sp < branch.cost) return false;
+    if (branch.muCost && this.teams[team].mu < branch.muCost) return false;
+
+    // Deduct cost
+    this.teams[team].sp -= branch.cost;
+    if (branch.muCost) this.teams[team].mu -= branch.muCost;
+
+    // Lock the choice
+    state.branches[domain] = branchKey;
+
+    // Start research timer
+    state.inProgress = `branch_${branch.id}`;
+    state.timer = branch.researchTime;
+    state._branchDomain = domain;
+    state._branchKey = branchKey;
+
+    const techLab = this.getBuildings(team).find(b => b.type === 'techlab' && b.alive);
+    if (techLab) {
+      state.building = techLab;
+      techLab._researching = branch.name;
+    }
+
+    return true;
+  }
+
+  _completeBranchResearch(team, domain, branchKey) {
+    const domainConfig = TECH_BRANCHES[domain];
+    if (!domainConfig) return;
+    const branch = domainConfig[branchKey];
+    if (!branch) return;
+
+    // Apply branch effects to all existing units
+    const entities = this.entities.filter(e => e.team === team && e.alive);
+    for (const entity of entities) {
+      this._applyBranchToEntity(entity, branch);
+    }
+
+    if (team === 'player' && this.uiManager?.hud) {
+      this.uiManager.hud.showNotification(`Doctrine complete: ${branch.name}!`, '#ff88ff');
+    }
+    if (this.soundManager) this.soundManager.play('produce');
+    this.eventBus.emit('research:complete', { team, upgradeId: `branch_${branch.id}`, isBranch: true });
+  }
+
+  _applyBranchToEntity(entity, branch) {
+    const fx = branch.effects;
+    if (!fx) return;
+    if (fx.applies && !fx.applies(entity)) return;
+    if (fx.armor) entity.armor = (entity.armor || 0) + fx.armor;
+    if (fx.damageMult) entity.damage = Math.round((entity.damage || 1) * fx.damageMult);
+    if (fx.hpMult) {
+      const ratio = entity.health / entity.maxHealth;
+      entity.maxHealth = Math.round(entity.maxHealth * fx.hpMult);
+      entity.health = Math.round(entity.maxHealth * ratio);
+    }
+    if (fx.speedMult) entity.speed = (entity.speed || 1) * fx.speedMult;
+    if (fx.rangeMult) entity.range = (entity.range || 6) * fx.rangeMult;
+    if (fx.regen) entity._regenRate = (entity._regenRate || 0) + fx.regen;
+  }
+
+  // Get the chosen branch for a domain/team (for applying to newly created units)
+  getBranchChoice(team, domain) {
+    return this.research[team]?.branches[domain] || null;
   }
 
   capitalize(str) {
@@ -1269,8 +1385,8 @@ export class Game {
     this._hillControl = null;
     this.gameMode = null;
     this.research = {
-      player: { completed: [], inProgress: null, timer: 0, building: null },
-      enemy: { completed: [], inProgress: null, timer: 0, building: null }
+      player: { completed: [], inProgress: null, timer: 0, building: null, branches: {} },
+      enemy: { completed: [], inProgress: null, timer: 0, building: null, branches: {} }
     };
     // Clean up GameOverScreen event listeners
     if (this.uiManager && this.uiManager.gameOverScreen && this.uiManager.gameOverScreen.dispose) {

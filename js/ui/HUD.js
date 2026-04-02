@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { UNIT_STATS, BUILDING_STATS, TECH_TREE, NATIONS, GAME_CONFIG, UNIT_COUNTERS, VETERANCY, BUILDING_UPGRADES, RESEARCH_UPGRADES, NATION_ABILITIES, BUILDING_LIMITS } from '../core/Constants.js';
+import { UNIT_STATS, BUILDING_STATS, TECH_TREE, NATIONS, GAME_CONFIG, UNIT_COUNTERS, VETERANCY, BUILDING_UPGRADES, RESEARCH_UPGRADES, NATION_ABILITIES, BUILDING_LIMITS, TECH_BRANCHES } from '../core/Constants.js';
 
 export class HUD {
   constructor(game) {
@@ -1580,6 +1580,53 @@ export class HUD {
     }
     html += `</div>`;
 
+    // GD-090: Branching Doctrines section
+    const hasTechLab = ownedTypes.has('techlab');
+    const teamBranches = this.game.research?.[activeTeam]?.branches || {};
+    const researchInProgress = !!this.game.research?.[activeTeam]?.inProgress;
+
+    html += `<h3 style="color:#ff88ff;margin:20px 0 10px 0;font-size:14px;">Doctrines (Tech Lab)</h3>`;
+    if (!hasTechLab) {
+      html += `<div style="color:#888;font-size:12px;padding:8px;">Build a Tech Lab to unlock doctrine choices.</div>`;
+    } else {
+      html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">`;
+      for (const [domain, domainConfig] of Object.entries(TECH_BRANCHES)) {
+        const chosen = teamBranches[domain];
+        const branchA = domainConfig.branchA;
+        const branchB = domainConfig.branchB;
+
+        html += `<div style="grid-column:1/3;color:#ffcc00;font-size:13px;font-weight:bold;margin-top:8px;border-bottom:1px solid #333;padding-bottom:4px;">${domainConfig.label}</div>`;
+
+        for (const [key, branch] of [['branchA', branchA], ['branchB', branchB]]) {
+          const isChosen = chosen === key;
+          const isLocked = chosen && chosen !== key;
+          const canAfford = this.game.teams[activeTeam].sp >= branch.cost && (!branch.muCost || (this.game.teams[activeTeam].mu || 0) >= branch.muCost);
+          const isCompleted = this.game.research?.[activeTeam]?.completed.includes(`branch_${branch.id}`);
+
+          let borderColor = isCompleted ? '#00ff44' : isChosen ? '#ffcc00' : isLocked ? '#444' : canAfford ? '#88ff88' : '#ff4444';
+          let bgColor = isCompleted ? 'rgba(0,255,65,0.1)' : isChosen ? 'rgba(255,204,0,0.1)' : isLocked ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.3)';
+          let statusText = isCompleted ? 'ACTIVE' : isChosen ? 'Researching...' : isLocked ? 'LOCKED' : `${branch.cost} SP + ${branch.muCost} MU`;
+          let statusColor = isCompleted ? '#00ff44' : isChosen ? '#ffcc00' : isLocked ? '#666' : canAfford ? '#88ff88' : '#ff4444';
+          const clickable = !chosen && !researchInProgress && canAfford && hasTechLab;
+
+          html += `
+            <div class="branch-choice" data-domain="${domain}" data-branch="${key}" style="
+              background:${bgColor};border:1px solid ${borderColor};border-radius:6px;padding:10px;
+              cursor:${clickable ? 'pointer' : 'default'};opacity:${isLocked ? '0.5' : '1'};
+              ${clickable ? 'transition:background 0.2s;' : ''}
+            ">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <strong style="color:#fff;font-size:12px;">${branch.name}</strong>
+                <span style="color:${statusColor};font-size:10px;">${statusText}</span>
+              </div>
+              <div style="color:#aaa;font-size:10px;margin-top:4px;">${branch.description}</div>
+            </div>
+          `;
+        }
+      }
+      html += `</div>`;
+    }
+
     // Close button
     html += `<div style="text-align:center;margin-top:20px;">
       <button id="btn-close-techtree" style="padding:8px 24px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer;font-size:14px;">Close (T)</button>
@@ -1590,6 +1637,20 @@ export class HUD {
 
     document.getElementById('btn-close-techtree')?.addEventListener('click', () => {
       this.hideTechTree();
+    });
+
+    // GD-090: Branch choice click handlers
+    this.techTreeEl.querySelectorAll('.branch-choice').forEach(el => {
+      el.addEventListener('click', () => {
+        const domain = el.dataset.domain;
+        const branchKey = el.dataset.branch;
+        if (this.game.startBranchResearch(activeTeam, domain, branchKey)) {
+          const domainConfig = TECH_BRANCHES[domain];
+          const branch = domainConfig[branchKey];
+          this.showNotification(`Doctrine chosen: ${branch.name}`, '#ff88ff');
+          this.showTechTree(); // refresh
+        }
+      });
     });
   }
 
