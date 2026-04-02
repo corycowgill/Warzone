@@ -46,6 +46,9 @@ GD-065: Enhanced Combat Effects (smoke particles, debris, projectile trails, tan
 - Cycle 6: 9 fixes (minimap delta, unused variable, minimap listener leak, GameOverScreen listener leak, button visual reset, spectate panel, gameMode reset/history, annihilation fallback, dead stats code)
 - Cycle 7: 5 fixes (research building destroyed, blitz_training effect, income display, research DOM leak, AI retreat timer)
 - Cycle 8: 7 fixes (wall pathfinding O(1) cache, production progress bar, queue time estimate, AI shipyard filter, turret ditch reduction, research refund, scout timer)
+- Cycle 9: 4 fixes (null guards, memory leaks, stale timers, tutorial text)
+- Cycle 10: 4 fixes (smoke/flare zone coordinates, APC eject visibility, map seed validation, day/night shader)
+- Cycle 11: 3 fixes (overkill protection edge case, fog memory leak, building limits typo)
 
 ## Cycle 10 - Completed (7 features)
 GD-066: Mortar Team & Scout Car (indirect fire AOE, fast recon with flare ability, smoke screen)
@@ -75,9 +78,18 @@ GD-079: Building Limits (BUILDING_LIMITS constant, enforced in ProductionSystem 
 | GD-026 | MEDIUM | DONE (as GD-036) | Spectator/Observer Mode |
 | GD-027 | MEDIUM | DONE (as GD-039) | Unit Status Badges |
 | GD-028 | MEDIUM | DONE (as GD-035) | Smart Control Group Auto-Refill |
-| GD-029 | MEDIUM | PENDING | Last Seen Ghost Overlay (partially done via GD-017) |
+| GD-029 | MEDIUM | WONT_DO | Last Seen Ghost Overlay (partially covered by GD-017 fog improvements; full ghost overlay not needed at 9.5/10) |
 
 ## Total Features Implemented: 68
-## Total QA Fixes: 41
+## Total QA Fixes: 52
 ## Git Commits: 26
-## Game Designer Rating: 9/10 - "Exceptionally well-architected single-player military RTS"
+## Game Designer Rating: 9.5/10 - "Exceptionally well-architected single-player military RTS"
+
+---
+
+## Final Status
+- **Total Features:** 68
+- **Total QA Fixes:** 52
+- **Total Cycles:** 12
+- **Game Designer Final Rating:** 9.5/10
+- **Status:** COMPLETE - Ready to Ship
