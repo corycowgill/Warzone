@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { UNIT_STATS, BUILDING_STATS, TECH_TREE, NATIONS, GAME_CONFIG, UNIT_COUNTERS, VETERANCY, BUILDING_UPGRADES, RESEARCH_UPGRADES, NATION_ABILITIES } from '../core/Constants.js';
+import { UNIT_STATS, BUILDING_STATS, TECH_TREE, NATIONS, GAME_CONFIG, UNIT_COUNTERS, VETERANCY, BUILDING_UPGRADES, RESEARCH_UPGRADES, NATION_ABILITIES, BUILDING_LIMITS } from '../core/Constants.js';
 
 export class HUD {
   constructor(game) {
@@ -110,6 +110,10 @@ export class HUD {
       <div>Ctrl+0-9: Save group</div>
       <div>0-9: Recall group</div>
       <div>Double-tap: Center cam</div>
+      <div style="margin-top:4px;color:#88ff88;">QoL</div>
+      <div>, : Select idle units</div>
+      <div>. : Select all units</div>
+      <div>Space: Jump to alert</div>
     `;
     document.body.appendChild(this.helpEl);
   }
@@ -306,8 +310,23 @@ export class HUD {
       const hasReqs = requires.every(req => teamBuildings.some(b => b.type === req && b.alive));
       const canAfford = this.game.resourceSystem ? this.game.resourceSystem.canAfford(activeTeam, stats.cost) : false;
 
-      btn.style.opacity = (hasReqs && canAfford) ? '1' : '0.5';
-      btn.style.cursor = (hasReqs && canAfford) ? 'pointer' : 'not-allowed';
+      // GD-079: Check building limits
+      const limit = BUILDING_LIMITS[type];
+      let atLimit = false;
+      let limitStr = '';
+      if (limit !== undefined) {
+        const count = teamBuildings.filter(b => b.type === type).length;
+        atLimit = count >= limit;
+        limitStr = ` (${count}/${limit})`;
+      }
+
+      const enabled = hasReqs && canAfford && !atLimit;
+      btn.style.opacity = enabled ? '1' : '0.5';
+      btn.style.cursor = enabled ? 'pointer' : 'not-allowed';
+      // Update tooltip with limit info
+      if (limit !== undefined) {
+        btn.title = atLimit ? `Limit reached${limitStr}` : `Remaining${limitStr}`;
+      }
     });
   }
 

@@ -477,6 +477,48 @@ export class CommandSystem {
         event.preventDefault();
         this.cycleProductionBuildings();
         break;
+
+      case ',': {
+        // Select all idle military units
+        const ownTeam = this.game.mode === '2P' ? this.game.activeTeam : 'player';
+        const idleUnits = this.game.getUnits(ownTeam).filter(u =>
+          u.alive && !u.moveTarget && !u.attackTarget && !u.isMoving
+        );
+        if (idleUnits.length > 0) {
+          this.game.selectionManager.selectEntities(idleUnits);
+          if (this.game.uiManager?.hud) {
+            this.game.uiManager.hud.showNotification(`Selected ${idleUnits.length} idle units`, '#00ccff');
+          }
+          if (this.game.soundManager) this.game.soundManager.play('select');
+        }
+        break;
+      }
+
+      case '.': {
+        // Select all military units
+        const ownTeam2 = this.game.mode === '2P' ? this.game.activeTeam : 'player';
+        const allUnits = this.game.getUnits(ownTeam2).filter(u => u.alive);
+        if (allUnits.length > 0) {
+          this.game.selectionManager.selectEntities(allUnits);
+          if (this.game.uiManager?.hud) {
+            this.game.uiManager.hud.showNotification(`Selected ${allUnits.length} units`, '#00ccff');
+          }
+          if (this.game.soundManager) this.game.soundManager.play('select');
+        }
+        break;
+      }
+
+      case ' ': {
+        // Space: center camera on last combat alert position
+        event.preventDefault();
+        if (this.game._lastCombatAlertPos && this.game.cameraController) {
+          this.game.cameraController.moveTo(
+            this.game._lastCombatAlertPos.x,
+            this.game._lastCombatAlertPos.z
+          );
+        }
+        break;
+      }
     }
   }
 

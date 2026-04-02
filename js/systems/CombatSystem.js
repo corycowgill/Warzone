@@ -7,6 +7,31 @@ export class CombatSystem {
     this.game = game;
     this.combatIntensity = 0;
     this._intensityDecay = 2;
+    // GD-075: Overkill protection - track committed damage per entity
+    this._committedDamage = new Map();
+  }
+
+  getCommittedDamage(entity) {
+    return this._committedDamage.get(entity.id) || 0;
+  }
+
+  addCommittedDamage(entity, amount) {
+    const current = this._committedDamage.get(entity.id) || 0;
+    this._committedDamage.set(entity.id, current + amount);
+  }
+
+  reduceCommittedDamage(entity, amount) {
+    const current = this._committedDamage.get(entity.id) || 0;
+    const newVal = Math.max(0, current - amount);
+    if (newVal <= 0) {
+      this._committedDamage.delete(entity.id);
+    } else {
+      this._committedDamage.set(entity.id, newVal);
+    }
+  }
+
+  clearCommittedDamage(entity) {
+    this._committedDamage.delete(entity.id);
   }
 
   update(delta) {
@@ -93,6 +118,15 @@ export class CombatSystem {
   performAttack(attacker, defender) {
     if (!attacker.alive || !defender.alive) return;
 
+    // GD-075: Overkill protection - skip if target is already effectively dead
+    const committed = this.getCommittedDamage(defender);
+    if (defender.health - committed <= 0) {
+      // Target already has enough incoming damage, find new target
+      attacker.attackTarget = null;
+      this.autoAcquireTarget(attacker);
+      return;
+    }
+
     // Minimum range check (mortar, SPG)
     const stats = attacker.isUnit ? UNIT_STATS[attacker.type] : null;
     if (stats && stats.minRange) {
@@ -144,10 +178,28 @@ export class CombatSystem {
       banzaiMod = defender._banzaiVulnerability;
     }
 
-    const finalDmg = Math.max(1, baseDmg * modifier * armorReduction * terrainMod * ditchMod * banzaiMod);
+    // GD-078: Forest cover damage reduction
+    let forestMod = 1.0;
+    if (defender.isUnit && defender.domain === 'land' && this.game.terrain && this.game.terrain.isInForest) {
+      const dPos = defender.getPosition();
+      if (this.game.terrain.isInForest(dPos.x, dPos.z)) {
+        if (defender.type === 'infantry') {
+          forestMod = 0.75; // Infantry: -25% incoming damage in forest
+        }
+        // Vehicles get no damage bonus in forest
+      }
+    }
+
+    const finalDmg = Math.max(1, baseDmg * modifier * armorReduction * terrainMod * ditchMod * banzaiMod * forestMod);
+
+    // GD-075: Track committed damage for overkill protection
+    this.addCommittedDamage(defender, finalDmg);
 
     // Apply damage
     defender.takeDamage(finalDmg);
+
+    // GD-075: Reduce committed damage now that hit has landed
+    this.reduceCommittedDamage(defender, finalDmg);
 
     // AOE splash damage for mortar, SPG, bomber
     if (stats && stats.aoeRadius) {
@@ -177,6 +229,11 @@ export class CombatSystem {
 
     // Reset attack cooldown on the attacker (this is the ONLY place it's set)
     attacker.attackCooldown = 1 / attacker.attackRate;
+
+    // GD-074: Submarine stealth reveal on firing
+    if (attacker.type === 'submarine' && attacker.onFired) {
+      attacker.onFired();
+    }
 
     // Face the target
     const attackerPos = attacker.getPosition();
@@ -228,6 +285,9 @@ export class CombatSystem {
 
     // Check if defender was killed
     if (!defender.alive) {
+      // GD-075: Clear committed damage on death
+      this.clearCommittedDamage(defender);
+
       // Award kill to attacker (veterancy)
       if (attacker.isUnit && attacker.addKill) {
         attacker.addKill();
@@ -644,6 +704,9 @@ export class CombatSystem {
       // Scout car cannot target air
       if (unit.type === 'scoutcar' && enemy.domain === 'air') continue;
 
+      // GD-074: Cannot auto-acquire stealthed submarines
+      if (enemy.type === 'submarine' && enemy.isStealthed && enemy.isStealthed()) continue;
+
       // If this unit belongs to the player team, check fog visibility
       if (fog && unit.team === 'player') {
         const ePos = enemy.getPosition();
@@ -654,6 +717,10 @@ export class CombatSystem {
 
       // Minimum range check
       if (unitStats && unitStats.minRange && dist < unitStats.minRange * 3) continue;
+
+      // GD-075: Skip overkill targets
+      const committedDmg = this.getCommittedDamage(enemy);
+      if (enemy.health - committedDmg <= 0) continue;
 
       if (dist <= autoRange && dist < nearestDist) {
         nearestDist = dist;

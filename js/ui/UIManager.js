@@ -233,6 +233,24 @@ export class UIManager {
     };
     this.game.eventBus.on('game:stateChange', this._pauseStateListener);
 
+    // GD-077: Surrender button + confirmation dialog
+    const surrenderConfirm = document.getElementById('surrender-confirm');
+    document.getElementById('btn-surrender')?.addEventListener('click', () => {
+      surrenderConfirm?.classList.remove('hidden');
+    });
+    document.getElementById('btn-surrender-no')?.addEventListener('click', () => {
+      surrenderConfirm?.classList.add('hidden');
+    });
+    document.getElementById('btn-surrender-yes')?.addEventListener('click', () => {
+      surrenderConfirm?.classList.add('hidden');
+      this.pauseOverlay?.classList.add('hidden');
+      this.game.paused = false;
+      this.game.setState('GAME_OVER');
+      this.showGameOver(false);
+      if (this.game.soundManager) this.game.soundManager.play('defeat');
+      this.game.saveMatchHistory(false);
+    });
+
     // Options panel
     this.optionsPanel = document.getElementById('options-panel');
     document.getElementById('btn-options')?.addEventListener('click', () => {

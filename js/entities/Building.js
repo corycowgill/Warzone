@@ -44,6 +44,9 @@ export class Building extends Entity {
     // Skip production during construction phase (GD-063)
     if (this._constructing) return;
 
+    // GD-076: Building damage states visual
+    this._updateDamageState(deltaTime);
+
     // Handle production
     if (this.currentProduction) {
       this.productionTimer -= deltaTime;
@@ -194,5 +197,87 @@ export class Building extends Entity {
 
   setRallyPoint(position) {
     this.rallyPoint = position.clone();
+  }
+
+  // GD-076: Building damage state visuals
+  _updateDamageState(deltaTime) {
+    if (!this.mesh) return;
+    const hpRatio = this.health / this.maxHealth;
+
+    // Determine damage state: 0=healthy, 1=damaged(66%), 2=critical(33%)
+    let newState = 0;
+    if (hpRatio <= 0.33) newState = 2;
+    else if (hpRatio <= 0.66) newState = 1;
+
+    if (newState === this._damageState) {
+      // Update existing particle timers
+      if (this._damageParticleTimer !== undefined) {
+        this._damageParticleTimer -= deltaTime;
+        if (this._damageParticleTimer <= 0) {
+          this._damageParticleTimer = 0.4;
+          if (this.game && this.game.effectsManager) {
+            const pos = this.getPosition().clone();
+            pos.y += 4 + Math.random() * 3;
+            if (newState >= 1) {
+              this.game.effectsManager.createSmoke(pos);
+            }
+            if (newState >= 2) {
+              // Fire particles: create small explosion with orange tint
+              pos.x += (Math.random() - 0.5) * 3;
+              pos.z += (Math.random() - 0.5) * 3;
+              this.game.effectsManager.createMuzzleFlash(pos);
+            }
+          }
+        }
+      }
+      return;
+    }
+
+    // State changed
+    const prevState = this._damageState || 0;
+    this._damageState = newState;
+
+    if (newState === 0) {
+      // Restored above 66%: clear damage visuals
+      this._restoreBuildingMaterials();
+      this._damageParticleTimer = undefined;
+    } else if (newState === 1) {
+      // At 66%: darken by 30%
+      this._darkenBuildingMaterials(0.7);
+      this._damageParticleTimer = 0;
+    } else if (newState === 2) {
+      // At 33%: darken further
+      this._darkenBuildingMaterials(0.4);
+      this._damageParticleTimer = 0;
+    }
+  }
+
+  _darkenBuildingMaterials(factor) {
+    if (!this.mesh) return;
+    const healthBarGroup = this.healthBar;
+    this.mesh.traverse(child => {
+      if (child.isMesh && child.material &&
+          !(healthBarGroup && child.parent === healthBarGroup) &&
+          child !== this.selectionRing) {
+        if (!child.material._origColor) {
+          child.material._origColor = child.material.color.getHex();
+        }
+        const orig = child.material._origColor;
+        const r = ((orig >> 16) & 0xff) / 255 * factor;
+        const g = ((orig >> 8) & 0xff) / 255 * factor;
+        const b = (orig & 0xff) / 255 * factor;
+        child.material.color.setRGB(r, g, b);
+      }
+    });
+  }
+
+  _restoreBuildingMaterials() {
+    if (!this.mesh) return;
+    this.mesh.traverse(child => {
+      if (child.isMesh && child.material && child.material._origColor !== undefined) {
+        child.material.color.setHex(child.material._origColor);
+        delete child.material._origColor;
+      }
+    });
   }
 }

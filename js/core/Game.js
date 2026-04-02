@@ -222,6 +222,21 @@ export class Game {
       };
       this.eventBus.on('combat:attack', this._onCombatAttack);
 
+      // GD-073: Track last combat alert position for Space hotkey
+      this._lastCombatAlertPos = null;
+      this._onCombatAlert = (data) => {
+        if (data.defender && data.defender.team === 'player') {
+          this._lastCombatAlertPos = data.defender.getPosition().clone();
+        }
+      };
+      this.eventBus.on('combat:attack', this._onCombatAlert);
+      this._onBuildingDestroyedAlert = (data) => {
+        if (data.entity && data.entity.team === 'player') {
+          this._lastCombatAlertPos = data.entity.getPosition().clone();
+        }
+      };
+      this.eventBus.on('building:destroyed', this._onBuildingDestroyedAlert);
+
       // Listen for unit promotions (store reference for cleanup)
       this._onUnitPromoted = (data) => {
         if (data.unit.team === 'player') {
@@ -549,6 +564,53 @@ export class Game {
     if (projectile.mesh) this.sceneManager.scene.add(projectile.mesh);
   }
 
+  // GD-076: Create a corpse from a dead land unit
+  _createCorpse(entity) {
+    if (!entity.mesh) return;
+    if (!this._corpses) this._corpses = [];
+
+    // Clone the mesh position but detach from entity management
+    const corpseGroup = entity.mesh;
+
+    // Remove health bar, selection ring, rank indicator, status badge
+    const toRemove = [];
+    corpseGroup.traverse(child => {
+      if (child === entity.healthBar || child === entity.selectionRing ||
+          child === entity.rankIndicator || child === entity._statusBadge) {
+        toRemove.push(child);
+      }
+    });
+    for (const child of toRemove) {
+      corpseGroup.remove(child);
+      child.traverse(c => {
+        if (c.geometry) c.geometry.dispose();
+        if (c.material) c.material.dispose();
+      });
+    }
+
+    // Tint dark grey and lay flat
+    corpseGroup.traverse(child => {
+      if (child.isMesh && child.material) {
+        child.material = child.material.clone();
+        child.material.color.setHex(0x444444);
+        child.material.transparent = true;
+      }
+    });
+    corpseGroup.rotation.z = Math.PI / 2; // lay on side
+
+    // Re-add to scene (removeEntity already removed it)
+    this.sceneManager.scene.add(corpseGroup);
+
+    this._corpses.push({
+      mesh: corpseGroup,
+      timer: 5.0,
+      totalTime: 5.0
+    });
+
+    // Prevent removeEntity from removing the mesh (we still need it)
+    entity.mesh = null;
+  }
+
   removeProjectile(projectile) {
     const idx = this.projectiles.indexOf(projectile);
     if (idx !== -1) this.projectiles.splice(idx, 1);
@@ -587,8 +649,38 @@ export class Game {
             this.effectsManager.createDebris(entity.mesh.position.clone());
           }
         }
+
+        // GD-076: Unit corpses for land units (lay flat and fade out)
+        if (entity.isUnit && entity.domain === 'land' && entity.mesh) {
+          this._createCorpse(entity);
+        }
+
         this.removeEntity(entity);
         this.eventBus.emit(entity.isUnit ? 'unit:destroyed' : 'building:destroyed', { entity });
+      }
+    }
+
+    // GD-076: Update corpse fade-outs
+    if (this._corpses) {
+      for (let i = this._corpses.length - 1; i >= 0; i--) {
+        const corpse = this._corpses[i];
+        corpse.timer -= delta;
+        const fadeProgress = 1 - (corpse.timer / corpse.totalTime);
+        // Fade opacity
+        corpse.mesh.traverse(child => {
+          if (child.isMesh && child.material) {
+            child.material.transparent = true;
+            child.material.opacity = Math.max(0, 1 - fadeProgress);
+          }
+        });
+        if (corpse.timer <= 0) {
+          this.sceneManager.scene.remove(corpse.mesh);
+          corpse.mesh.traverse(child => {
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) child.material.dispose();
+          });
+          this._corpses.splice(i, 1);
+        }
       }
     }
 

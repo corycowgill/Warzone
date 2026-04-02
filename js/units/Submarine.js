@@ -10,6 +10,98 @@ export class Submarine extends Unit {
         this.createSelectionRing(3);
         this.createHealthBar();
         this.isSurfaced = true;
+
+        // GD-074: Stealth system
+        this._stealthed = true;        // Default: invisible to enemies
+        this._stealthRevealTimer = 0;  // Timer after firing (3s reveal)
+        this._sonarRevealed = 0;       // Sonar ping reveal timer (from PatrolBoat ability)
+    }
+
+    // GD-074: Check if this submarine is currently stealthed (invisible to enemies)
+    isStealthed() {
+        if (this._stealthRevealTimer > 0) return false;  // Revealed after firing
+        if (this._sonarRevealed > 0) return false;        // Sonar pinged
+        return this._stealthed;
+    }
+
+    // GD-074: Update stealth state based on nearby enemies
+    updateStealth(delta) {
+        // Tick reveal timer
+        if (this._stealthRevealTimer > 0) {
+            this._stealthRevealTimer -= delta;
+            if (this._stealthRevealTimer < 0) this._stealthRevealTimer = 0;
+        }
+
+        // Check proximity reveal: within distance 6 of any enemy unit
+        if (this.game && this._stealthRevealTimer <= 0 && (this._sonarRevealed || 0) <= 0) {
+            const enemyTeam = this.team === 'player' ? 'enemy' : 'player';
+            const enemies = this.game.getUnits(enemyTeam);
+            const myPos = this.getPosition();
+            let proximityRevealed = false;
+
+            for (const enemy of enemies) {
+                if (!enemy.alive) continue;
+                const dist = myPos.distanceTo(enemy.getPosition());
+
+                // Drone vision reveals submarines
+                if (enemy.type === 'drone' && dist < enemy.vision * 3) {
+                    proximityRevealed = true;
+                    break;
+                }
+                // Patrol boat sonar proximity (always-on passive)
+                if (enemy.type === 'patrolboat' && dist < 18) {
+                    proximityRevealed = true;
+                    break;
+                }
+                // Any enemy within distance 6 world units
+                if (dist < 18) { // 6 range * 3 world units
+                    proximityRevealed = true;
+                    break;
+                }
+            }
+
+            this._stealthed = !proximityRevealed;
+        }
+
+        // Update mesh opacity based on stealth state
+        this._updateStealthVisual();
+    }
+
+    _updateStealthVisual() {
+        if (!this.mesh || !this.game) return;
+
+        const isOwnTeam = this.game.mode === 'SPECTATE' ||
+            this.team === (this.game.mode === '2P' ? this.game.activeTeam : 'player');
+
+        if (isOwnTeam) {
+            // Owner always sees their sub, but slightly transparent when stealthed
+            const opacity = this.isStealthed() ? 0.6 : 1.0;
+            this.mesh.traverse(child => {
+                if (child.isMesh && child.material) {
+                    if (!child.material._subOrigOpacity) {
+                        child.material._subOrigOpacity = child.material.opacity;
+                        child.material._subOrigTransparent = child.material.transparent;
+                    }
+                    child.material.transparent = true;
+                    child.material.opacity = opacity;
+                }
+            });
+        }
+        // Enemy visibility is handled by FogOfWar / CombatSystem
+    }
+
+    // Override update to include stealth logic
+    update(deltaTime) {
+        super.update(deltaTime);
+        if (this.alive) {
+            this.updateStealth(deltaTime);
+        }
+    }
+
+    // GD-074: Called when this sub fires - reveal for 3 seconds
+    onFired() {
+        this._stealthRevealTimer = 3.0;
+        this._stealthed = false;
     }
 
     createMesh() {

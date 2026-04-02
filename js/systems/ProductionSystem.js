@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { UNIT_STATS, BUILDING_STATS, TECH_TREE, NATIONS, GAME_CONFIG, CONSTRUCTION_CONFIG } from '../core/Constants.js';
+import { UNIT_STATS, BUILDING_STATS, TECH_TREE, NATIONS, GAME_CONFIG, CONSTRUCTION_CONFIG, BUILDING_LIMITS } from '../core/Constants.js';
 
 export class ProductionSystem {
   constructor(game) {
@@ -166,6 +166,19 @@ export class ProductionSystem {
           if (this.game.soundManager) this.game.soundManager.play('error');
           return false;
         }
+      }
+    }
+
+    // GD-079: Check building limits
+    const limit = BUILDING_LIMITS[type];
+    if (limit !== undefined) {
+      const existingCount = this.game.getBuildings(team).filter(b => b.type === type).length;
+      if (existingCount >= limit) {
+        this.game.eventBus.emit('production:error', {
+          message: `Building limit reached (${existingCount}/${limit})`
+        });
+        if (this.game.soundManager) this.game.soundManager.play('error');
+        return false;
       }
     }
 

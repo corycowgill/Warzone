@@ -624,6 +624,26 @@ export const SALVAGE_CONFIG = {
 };
 
 // ============================================================
+// BUILDING LIMITS - Max count per type per team
+// ============================================================
+export const BUILDING_LIMITS = {
+  barracks: 3,
+  warfactory: 2,
+  airfield: 2,
+  shipyard: 2,
+  supply_depot: 4,
+  supplydepot: 4,
+  resourcedepot: 4,
+  turret: 10,
+  aaturret: 10,
+  bunker: 5,
+  wall: 20,
+  ditch: 20,
+  techlab: 1,
+  superweapon: 1
+};
+
+// ============================================================
 // CONSTRUCTION CONFIG
 // ============================================================
 export const CONSTRUCTION_CONFIG = {

@@ -56,6 +56,15 @@ GD-070: Patrol Boat (cheap naval unit with sonar ping ability revealing submarin
 GD-071: Day/Night Cycle (8-min rotation, sine-based lighting, night vision reduction in FogOfWar)
 GD-072: Minimap Tactical Drawing (Ctrl+drag to draw, auto-fade, Ctrl+right-click to clear)
 
+## Cycle 11 - Completed (7 features)
+GD-073: QoL Hotkeys (comma=idle units, period=all units, space=jump to last combat alert, keyboard help updated)
+GD-074: Submarine Stealth System (invisible by default, revealed by proximity/sonar/drone/firing, semi-transparent rendering, FogOfWar integration, AI counter-builds patrol boats)
+GD-075: Overkill Protection (committed damage tracking in CombatSystem, skip overkill targets in auto-acquire)
+GD-076: Unit Corpses + Building Damage States (land unit corpses lay flat and fade over 5s, buildings darken+smoke at 66% HP, fire at 33% HP)
+GD-077: Surrender Button (pause menu surrender with confirmation dialog, triggers GAME_OVER defeat)
+GD-078: Forest Cover System (grid-based forest lookup from tree positions, -25% damage for infantry in forest, speed reduction, vision blocking, green tint visual)
+GD-079: Building Limits (BUILDING_LIMITS constant, enforced in ProductionSystem and AI, shown in build menu tooltips)
+
 ## Pending / Deferred
 | ID | Priority | Status | Description |
 |----|----------|--------|-------------|
@@ -68,7 +77,7 @@ GD-072: Minimap Tactical Drawing (Ctrl+drag to draw, auto-fade, Ctrl+right-click
 | GD-028 | MEDIUM | DONE (as GD-035) | Smart Control Group Auto-Refill |
 | GD-029 | MEDIUM | PENDING | Last Seen Ghost Overlay (partially done via GD-017) |
 
-## Total Features Implemented: 61
+## Total Features Implemented: 68
 ## Total QA Fixes: 41
-## Git Commits: 25
+## Git Commits: 26
 ## Game Designer Rating: 9/10 - "Exceptionally well-architected single-player military RTS"

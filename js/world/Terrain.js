@@ -519,4 +519,41 @@ export class Terrain {
       z: gridZ * this.worldScale + this.worldScale / 2
     };
   }
+
+  // GD-078: Forest cover system
+  // Build a grid-based lookup for "is position in forest"
+  buildForestGrid() {
+    if (this._forestGrid) return; // already built
+    this._forestGrid = new Uint8Array(this.mapSize * this.mapSize);
+    const forestRadius = 3; // grid cells around each tree
+
+    for (const tree of this.treePositions) {
+      const tx = tree.x;
+      const tz = tree.z;
+      const minX = Math.max(0, tx - forestRadius);
+      const maxX = Math.min(this.mapSize - 1, tx + forestRadius);
+      const minZ = Math.max(0, tz - forestRadius);
+      const maxZ = Math.min(this.mapSize - 1, tz + forestRadius);
+      const rSq = forestRadius * forestRadius;
+
+      for (let z = minZ; z <= maxZ; z++) {
+        for (let x = minX; x <= maxX; x++) {
+          const dx = x - tx;
+          const dz = z - tz;
+          if (dx * dx + dz * dz <= rSq) {
+            this._forestGrid[z * this.mapSize + x] = 1;
+          }
+        }
+      }
+    }
+  }
+
+  // Check if a world position is in a forest zone
+  isInForest(worldX, worldZ) {
+    if (!this._forestGrid) this.buildForestGrid();
+    const gx = Math.floor(worldX / this.worldScale);
+    const gz = Math.floor(worldZ / this.worldScale);
+    if (gx < 0 || gx >= this.mapSize || gz < 0 || gz >= this.mapSize) return false;
+    return this._forestGrid[gz * this.mapSize + gx] === 1;
+  }
 }

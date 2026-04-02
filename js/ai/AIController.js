@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { UNIT_STATS, BUILDING_STATS, GAME_CONFIG, AI_DIFFICULTY, DAMAGE_MODIFIERS, RESEARCH_UPGRADES, BUILDING_UPGRADES } from '../core/Constants.js';
+import { UNIT_STATS, BUILDING_STATS, GAME_CONFIG, AI_DIFFICULTY, DAMAGE_MODIFIERS, RESEARCH_UPGRADES, BUILDING_UPGRADES, BUILDING_LIMITS } from '../core/Constants.js';
 
 // Multiple build order strategies
 const BUILD_ORDERS = {
@@ -426,6 +426,13 @@ export class AIController {
     const stats = BUILDING_STATS[type];
     if (!stats) return false;
 
+    // GD-079: Respect building limits
+    const limit = BUILDING_LIMITS[type];
+    if (limit !== undefined) {
+      const existingCount = this.game.getBuildings(this.team).filter(b => b.type === type).length;
+      if (existingCount >= limit) return false;
+    }
+
     if (!this.game.resourceSystem.canAfford(this.team, stats.cost)) {
       return false;
     }
@@ -587,6 +594,11 @@ export class AIController {
     const subs = myUnits.filter(u => u.type === 'submarine').length;
     const carriers = myUnits.filter(u => u.type === 'carrier').length;
     const patrolBoats = myUnits.filter(u => u.type === 'patrolboat').length;
+
+    // GD-074: Counter enemy submarines with patrol boats
+    const enemySubs = (this.lastKnownEnemyComposition['submarine'] || 0);
+    if (enemySubs > 0 && patrolBoats < Math.max(2, enemySubs)) return 'patrolboat';
+
     // Early naval: cheap patrol boats
     if (patrolBoats < 2 && battleships === 0) return 'patrolboat';
     if (battleships < 2) return 'battleship';

@@ -486,7 +486,19 @@ export class Unit extends Entity {
       const dist = Math.sqrt(dx * dx + dz * dz);
 
       if (dist > 1) {
-        const effSpeed = this.formationSpeed !== null ? Math.min(this.formationSpeed, this.speed) : this.speed;
+        let effSpeed = this.formationSpeed !== null ? Math.min(this.formationSpeed, this.speed) : this.speed;
+
+        // GD-078: Forest speed reduction
+        if (this.domain === 'land' && this.game && this.game.terrain && this.game.terrain.isInForest) {
+          if (this.game.terrain.isInForest(pos.x, pos.z)) {
+            if (this.type === 'infantry') {
+              effSpeed = Math.max(1, effSpeed - 1); // Infantry: -1 speed in forest
+            } else {
+              effSpeed = Math.max(1, effSpeed - 2); // Vehicles: -2 speed in forest
+            }
+          }
+        }
+
         const moveAmount = effSpeed * deltaTime * GAME_CONFIG.unitSpeedMultiplier;
 
         let sepX = 0, sepZ = 0;
@@ -535,6 +547,38 @@ export class Unit extends Entity {
         // Update Y position from terrain for land units
         if (this.domain === 'land' && this.game && this.game.terrain) {
           pos.y = this.game.terrain.getHeightAt(pos.x, pos.z);
+        }
+
+        // GD-078: Forest cover visual indicator
+        if (this.domain === 'land' && this.game && this.game.terrain && this.game.terrain.isInForest) {
+          const inForest = this.game.terrain.isInForest(pos.x, pos.z);
+          if (inForest !== this._wasInForest) {
+            this._wasInForest = inForest;
+            if (inForest) {
+              // Subtle green tint
+              this.mesh.traverse(child => {
+                if (child.isMesh && child.material && !child.material._forestTinted) {
+                  child.material._forestTinted = true;
+                  child.material._preForestColor = child.material.color.getHex();
+                  const c = child.material.color;
+                  c.setRGB(
+                    c.r * 0.8,
+                    Math.min(1, c.g * 1.15 + 0.05),
+                    c.b * 0.8
+                  );
+                }
+              });
+            } else {
+              // Restore original color
+              this.mesh.traverse(child => {
+                if (child.isMesh && child.material && child.material._forestTinted) {
+                  child.material.color.setHex(child.material._preForestColor);
+                  delete child.material._forestTinted;
+                  delete child.material._preForestColor;
+                }
+              });
+            }
+          }
         }
 
         // GD-065: Tank dust while moving

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GAME_CONFIG, UNIT_STATS } from '../core/Constants.js';
+import { GAME_CONFIG } from '../core/Constants.js';
 
 /**
  * Fog of War system.
@@ -132,9 +132,16 @@ export class FogOfWar {
         }
       }
 
+      // GD-078: Check if observer is in forest (observers in forest can see into forest)
+      const terrain = this.game.terrain;
+      const observerInForest = terrain && terrain.isInForest &&
+        terrain.isInForest(pos.x, pos.z);
+
       // Mark cells within vision radius
       const r = visionRange;
       const rSq = r * r;
+      // GD-078: Forest blocks vision - reduce effective radius into forest cells
+      const forestReducedRSq = Math.floor(r * 0.6) * Math.floor(r * 0.6);
       const minX = Math.max(0, gx - r);
       const maxX = Math.min(this.mapSize - 1, gx + r);
       const minZ = Math.max(0, gz - r);
@@ -144,8 +151,18 @@ export class FogOfWar {
         for (let x = minX; x <= maxX; x++) {
           const dx = x - gx;
           const dz = z - gz;
-          if (dx * dx + dz * dz <= rSq) {
-            grid[z * this.mapSize + x] = 2; // visible
+          const d2 = dx * dx + dz * dz;
+          if (d2 <= rSq) {
+            // GD-078: Forest cells harder to see into from outside
+            if (!observerInForest && terrain && terrain._forestGrid &&
+                terrain._forestGrid[z * this.mapSize + x] === 1) {
+              // Only see into forest at reduced range
+              if (d2 <= forestReducedRSq) {
+                grid[z * this.mapSize + x] = 2;
+              }
+            } else {
+              grid[z * this.mapSize + x] = 2; // visible
+            }
           }
         }
       }
@@ -310,11 +327,23 @@ export class FogOfWar {
       // Check for combat reveal (firing from fog)
       const combatRevealed = entity._combatRevealTimer && entity._combatRevealTimer > 0;
 
+      // GD-074: Stealthed submarines hidden even in visible areas
+      if (entity.type === 'submarine' && entity.isStealthed && entity.isStealthed()) {
+        if (entity.mesh) entity.mesh.visible = false;
+        this._hiddenEnemies.add(entity);
+        continue;
+      }
+
       if (state === 2 || combatRevealed) {
-        // Currently visible or combat-revealed - show at full opacity
+        // Currently visible or combat-revealed - show
         if (entity.mesh) {
           entity.mesh.visible = true;
-          this._restoreEntityOpacity(entity);
+          // GD-074: Revealed submarines appear semi-transparent to enemies
+          if (entity.type === 'submarine' && entity._stealthRevealTimer > 0) {
+            this._setEntityOpacity(entity, 0.5);
+          } else {
+            this._restoreEntityOpacity(entity);
+          }
         }
         // Record last-seen position while visible
         entity._lastSeenPosition = pos.clone();
