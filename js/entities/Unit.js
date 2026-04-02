@@ -35,6 +35,14 @@ export class Unit extends Entity {
     this._attackMove = false;
     this.formationSpeed = null;
 
+    // Stance system: 'aggressive' (default), 'defensive', 'holdfire'
+    this.stance = 'aggressive';
+
+    // Patrol system
+    this._patrolPoints = [];
+    this._patrolIndex = 0;
+    this._isPatrolling = false;
+
     // Game reference (set by Game.createUnit)
     this.game = null;
 
@@ -351,6 +359,26 @@ export class Unit extends Entity {
     this.waypoints = [];
     this._attackMove = false;
     this.formationSpeed = null;
+    this._isPatrolling = false;
+    this._patrolPoints = [];
+    this._patrolIndex = 0;
+  }
+
+  cycleStance() {
+    const stances = ['aggressive', 'defensive', 'holdfire'];
+    const idx = stances.indexOf(this.stance);
+    this.stance = stances[(idx + 1) % stances.length];
+    return this.stance;
+  }
+
+  startPatrol(points) {
+    if (!points || points.length < 2) return;
+    this._patrolPoints = points.map(p => p.clone());
+    this._patrolIndex = 0;
+    this._isPatrolling = true;
+    this._attackMove = true;
+    this.moveTarget = this._patrolPoints[0].clone();
+    this.isMoving = true;
   }
 
   update(deltaTime) {
@@ -483,6 +511,14 @@ export class Unit extends Entity {
           this.moveTarget = null;
           this.isMoving = false;
           this.formationSpeed = null;
+
+          // Patrol: cycle to next patrol point
+          if (this._isPatrolling && this._patrolPoints.length >= 2) {
+            this._patrolIndex = (this._patrolIndex + 1) % this._patrolPoints.length;
+            this.moveTarget = this._patrolPoints[this._patrolIndex].clone();
+            this.isMoving = true;
+            this._attackMove = true; // patrol engages enemies
+          }
         }
       }
     }
@@ -503,6 +539,11 @@ export class Unit extends Entity {
       const worldRange = this.range * 3; // range in world units
 
       if (dist > worldRange) {
+        // Defensive stance: don't chase beyond auto-acquire range
+        if (this.stance === 'defensive') {
+          this.attackTarget = null;
+          return;
+        }
         // Out of range - chase the target (don't clear attackTarget)
         this.chasePosition(this.attackTarget.getPosition());
       } else {

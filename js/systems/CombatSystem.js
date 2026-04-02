@@ -402,6 +402,9 @@ export class CombatSystem {
   }
 
   autoAcquireTarget(unit) {
+    // Hold fire stance: never auto-acquire targets
+    if (unit.stance === 'holdfire') return;
+
     // Auto-acquire if idle or in attack-move mode
     if (unit.moveTarget && !unit._attackMove) return;
 

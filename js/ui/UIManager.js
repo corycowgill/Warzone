@@ -9,6 +9,8 @@ export class UIManager {
     this.nationSelectEl = document.getElementById('nation-select');
     this.hudEl = document.getElementById('hud');
     this.gameOverEl = document.getElementById('game-over');
+    this.pauseOverlay = document.getElementById('pause-overlay');
+    this.matchHistoryEl = document.getElementById('match-history');
     this.hud = null;
     this.gameOverScreen = null;
 
@@ -180,6 +182,23 @@ export class UIManager {
       this.game.restart();
     });
 
+    // Match history button
+    document.getElementById('btn-history')?.addEventListener('click', () => {
+      this.showMatchHistory();
+    });
+    document.getElementById('btn-close-history')?.addEventListener('click', () => {
+      this.hideMatchHistory();
+    });
+
+    // Pause overlay toggle
+    this.game.eventBus.on('game:stateChange', (data) => {
+      if (data.state === 'PAUSED') {
+        this.pauseOverlay?.classList.remove('hidden');
+      } else {
+        this.pauseOverlay?.classList.add('hidden');
+      }
+    });
+
     // Options panel
     this.optionsPanel = document.getElementById('options-panel');
     document.getElementById('btn-options')?.addEventListener('click', () => {
@@ -294,6 +313,8 @@ export class UIManager {
     this.nationSelectEl?.classList.add('hidden');
     this.hudEl?.classList.add('hidden');
     this.gameOverEl?.classList.add('hidden');
+    this.pauseOverlay?.classList.add('hidden');
+    this.matchHistoryEl?.classList.add('hidden');
   }
 
   showMainMenu() {
@@ -349,19 +370,81 @@ export class UIManager {
     }
   }
 
+  updateHUD() {
+    if (this.hud && (this.game.state === 'PLAYING' || this.game.state === 'PAUSED')) {
+      this.hud.update();
+    }
+  }
+
+  showMatchHistory() {
+    if (!this.matchHistoryEl) return;
+    const list = document.getElementById('match-history-list');
+    if (!list) return;
+
+    try {
+      const history = JSON.parse(localStorage.getItem('warzone_history') || '[]');
+      if (history.length === 0) {
+        list.innerHTML = '<p style="text-align:center;color:#666;">No matches played yet.</p>';
+      } else {
+        let html = '';
+        // Show newest first
+        for (let i = history.length - 1; i >= 0; i--) {
+          const m = history[i];
+          const isWin = m.result === 'victory';
+          const mins = Math.floor((m.duration || 0) / 60);
+          const secs = (m.duration || 0) % 60;
+          const date = new Date(m.date).toLocaleDateString();
+          html += `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;margin-bottom:4px;background:${isWin ? 'rgba(0,255,65,0.08)' : 'rgba(255,0,0,0.08)'};border:1px solid ${isWin ? '#335533' : '#553333'};border-radius:4px;font-size:12px;">
+              <div>
+                <span style="color:${isWin ? '#00ff44' : '#ff4444'};font-weight:bold;">${isWin ? 'VICTORY' : 'DEFEAT'}</span>
+                <span style="color:#888;margin-left:8px;">${date}</span>
+              </div>
+              <div style="color:#aaa;">
+                ${(m.playerNation || '?').charAt(0).toUpperCase() + (m.playerNation || '').slice(1)} vs ${(m.enemyNation || '?').charAt(0).toUpperCase() + (m.enemyNation || '').slice(1)}
+                <span style="color:#666;margin-left:8px;">${mins}:${secs.toString().padStart(2, '0')}</span>
+                <span style="color:#666;margin-left:8px;">${(m.difficulty || 'normal').charAt(0).toUpperCase() + (m.difficulty || '').slice(1)}</span>
+              </div>
+            </div>
+          `;
+        }
+        list.innerHTML = html;
+      }
+    } catch (e) {
+      list.innerHTML = '<p style="text-align:center;color:#666;">Could not load match history.</p>';
+    }
+
+    this.matchHistoryEl.classList.remove('hidden');
+  }
+
+  hideMatchHistory() {
+    if (this.matchHistoryEl) this.matchHistoryEl.classList.add('hidden');
+  }
+
   showGameOver(won) {
     this.hideAll();
     this.gameOverEl?.classList.remove('hidden');
+
+    // Show post-game stats
+    const statsEl = document.getElementById('game-over-stats');
+    if (statsEl && this.game.stats) {
+      const s = this.game.stats.player;
+      const mins = Math.floor(this.game.gameElapsed / 60);
+      const secs = Math.floor(this.game.gameElapsed % 60);
+      statsEl.innerHTML = `
+        <div style="border-top:1px solid #333;padding-top:10px;">
+          <div><span style="color:#888;">Duration:</span> ${mins}:${secs.toString().padStart(2, '0')}</div>
+          <div><span style="color:#888;">Units Produced:</span> <span style="color:#88ff88;">${s.unitsProduced}</span></div>
+          <div><span style="color:#888;">Units Lost:</span> <span style="color:#ff8888;">${s.unitsLost}</span></div>
+          <div><span style="color:#888;">Buildings Destroyed:</span> <span style="color:#ffcc00;">${s.buildingsDestroyed}</span></div>
+          <div><span style="color:#888;">Damage Dealt:</span> <span style="color:#ff8866;">${Math.floor(s.damageDealt)}</span></div>
+        </div>
+      `;
+    }
 
     if (!this.gameOverScreen) {
       this.gameOverScreen = new GameOverScreen(this.game);
     }
     this.gameOverScreen.show(won);
-  }
-
-  updateHUD() {
-    if (this.hud && this.game.state === 'PLAYING') {
-      this.hud.update();
-    }
   }
 }

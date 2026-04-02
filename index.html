@@ -25,6 +25,7 @@
       <div class="menu-buttons">
         <button id="btn-1player" class="menu-btn">1 Player</button>
         <button id="btn-2player" class="menu-btn">2 Player</button>
+        <button id="btn-history" class="menu-btn menu-btn-secondary" style="margin-top:8px;font-size:13px;">Match History</button>
       </div>
     </div>
   </div>
@@ -192,12 +193,30 @@
     </div>
   </div>
 
+  <!-- Pause Overlay -->
+  <div id="pause-overlay" class="hidden" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10005;font-family:sans-serif;">
+    <div style="text-align:center;">
+      <h1 style="color:#ffcc00;font-size:48px;letter-spacing:6px;margin:0;">PAUSED</h1>
+      <p style="color:#888;font-size:14px;margin-top:10px;">Press Ctrl+P or Pause to resume</p>
+    </div>
+  </div>
+
   <!-- Game Over -->
   <div id="game-over" class="hidden">
     <div class="game-over-content">
       <h1 id="game-over-title" class="game-over-title">VICTORY</h1>
       <p id="game-over-message" class="game-over-message">You have conquered the enemy!</p>
+      <div id="game-over-stats" style="margin:15px 0;font-size:13px;color:#aaa;text-align:left;max-width:300px;margin-left:auto;margin-right:auto;"></div>
       <button id="btn-play-again" class="menu-btn">Play Again</button>
+    </div>
+  </div>
+
+  <!-- Match History Panel (shown from main menu) -->
+  <div id="match-history" class="hidden" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.95);border:2px solid #555;border-radius:12px;padding:30px;z-index:10003;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;font-family:sans-serif;color:#ccc;">
+    <h2 style="color:#ffcc00;margin:0 0 15px 0;text-align:center;letter-spacing:2px;">MATCH HISTORY</h2>
+    <div id="match-history-list"></div>
+    <div style="text-align:center;margin-top:15px;">
+      <button id="btn-close-history" style="padding:8px 24px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer;font-size:14px;">Close</button>
     </div>
   </div>
 

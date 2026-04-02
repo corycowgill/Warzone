@@ -6,6 +6,7 @@ export class CommandSystem {
     this.game = game;
     this.attackMoveMode = false;
     this.abilityTargetMode = false;
+    this.patrolMode = false;
     this.buildPlacementMode = false;
     this.buildPlacementType = null;
     this.raycaster = new THREE.Raycaster();
@@ -124,6 +125,19 @@ export class CommandSystem {
     if (clickedEnemy) {
       // Attack command
       this.attackTarget(selectedUnits, clickedEnemy);
+    } else if (this.patrolMode) {
+      // Patrol: set patrol between current position and clicked location
+      const worldPos = this.game.inputManager.getWorldPosition(event.clientX, event.clientY);
+      if (worldPos) {
+        for (const unit of selectedUnits) {
+          const currentPos = unit.getPosition();
+          unit.startPatrol([currentPos, worldPos]);
+        }
+        this.game.eventBus.emit('command:patrol', { units: selectedUnits, position: worldPos });
+        if (this.game.soundManager) this.game.soundManager.play('move', { unitType: selectedUnits[0]?.type });
+      }
+      this.patrolMode = false;
+      document.body.style.cursor = 'default';
     } else if (this.attackMoveMode) {
       // Attack-move: move to location but engage enemies along the way
       const worldPos = this.game.inputManager.getWorldPosition(event.clientX, event.clientY);
@@ -132,6 +146,12 @@ export class CommandSystem {
       }
       this.attackMoveMode = false;
       document.body.style.cursor = 'default';
+    } else if (event.shiftKey) {
+      // Shift-click: queue waypoint
+      const worldPos = this.game.inputManager.getWorldPosition(event.clientX, event.clientY);
+      if (worldPos) {
+        this.queueWaypoint(selectedUnits, worldPos);
+      }
     } else {
       // Move command
       const worldPos = this.game.inputManager.getWorldPosition(event.clientX, event.clientY);
@@ -348,10 +368,38 @@ export class CommandSystem {
         this.game.selectionManager.clearSelection();
         break;
 
+      case 'v': {
+        // Cycle unit stance (aggressive → defensive → hold fire)
+        const stanceUnits = selected.filter(e => e.isUnit);
+        if (stanceUnits.length > 0) {
+          const newStance = stanceUnits[0].cycleStance();
+          // Sync all selected to same stance
+          for (let si = 1; si < stanceUnits.length; si++) {
+            stanceUnits[si].stance = newStance;
+          }
+          const stanceLabels = { aggressive: 'Aggressive', defensive: 'Defensive', holdfire: 'Hold Fire' };
+          this.game.eventBus.emit('command:stance', { stance: newStance });
+          this.game.eventBus.emit('notification', { message: `Stance: ${stanceLabels[newStance]}`, color: '#ffcc00' });
+        }
+        break;
+      }
+
+      case 'p': {
+        // Enter patrol mode
+        const patrolUnits = selected.filter(e => e.isUnit);
+        if (patrolUnits.length > 0) {
+          this.patrolMode = true;
+          document.body.style.cursor = 'crosshair';
+          this.game.eventBus.emit('notification', { message: 'Click to set patrol destination', color: '#ffcc00' });
+        }
+        break;
+      }
+
       case 'escape':
-        // Cancel attack-move mode, ability targeting, or build placement
+        // Cancel attack-move mode, ability targeting, patrol, or build placement
         this.attackMoveMode = false;
         this.abilityTargetMode = false;
+        this.patrolMode = false;
         this.buildPlacementMode = false;
         this.buildPlacementType = null;
         document.body.style.cursor = 'default';
@@ -424,6 +472,21 @@ export class CommandSystem {
     }
 
     this.game.selectionManager.selectEntities([buildings[nextIdx]]);
+  }
+
+  queueWaypoint(units, position) {
+    for (const unit of units) {
+      // Add to existing waypoints without clearing current movement
+      unit.waypoints.push(position.clone());
+      if (!unit.isMoving && !unit.moveTarget) {
+        unit.moveTarget = unit.waypoints.shift();
+        unit.isMoving = true;
+      }
+    }
+    this.game.eventBus.emit('command:waypoint', { units, position });
+    if (this.game.soundManager) {
+      this.game.soundManager.play('move', { unitType: units[0]?.type });
+    }
   }
 
   // Enter build placement mode

@@ -34,6 +34,7 @@ export class Game {
     this.mode = '1P';
     this.activeTeam = 'player'; // For 2P hot-seat
     this.clock = new THREE.Clock();
+    this.paused = false;
 
     // Game timer and stats
     this.gameElapsed = 0;
@@ -67,6 +68,15 @@ export class Game {
     this.soundManager = new SoundManager(this);
     this.uiManager = new UIManager(this);
     this.uiManager.showMainMenu();
+
+    // Global key handlers (pause)
+    window.addEventListener('keydown', (e) => {
+      if ((e.key === 'Pause' || (e.key === 'p' && e.ctrlKey)) && (this.state === 'PLAYING' || this.state === 'PAUSED')) {
+        e.preventDefault();
+        this.togglePause();
+      }
+    });
+
     this.loop();
   }
 
@@ -136,6 +146,37 @@ export class Game {
 
       // Initialize Fog of War for the player team
       this.fogOfWar = new FogOfWar(this, 'player');
+
+      // Track game stats
+      this._onUnitCreated = (data) => {
+        if (data.unit && this.stats[data.unit.team]) {
+          this.stats[data.unit.team].unitsProduced++;
+        }
+      };
+      this.eventBus.on('unit:created', this._onUnitCreated);
+
+      this._onUnitDestroyed = (data) => {
+        if (data.entity && this.stats[data.entity.team]) {
+          this.stats[data.entity.team].unitsLost++;
+        }
+      };
+      this.eventBus.on('unit:destroyed', this._onUnitDestroyed);
+
+      this._onBuildingDestroyed = (data) => {
+        if (data.entity) {
+          // Credit to the other team
+          const otherTeam = data.entity.team === 'player' ? 'enemy' : 'player';
+          if (this.stats[otherTeam]) this.stats[otherTeam].buildingsDestroyed++;
+        }
+      };
+      this.eventBus.on('building:destroyed', this._onBuildingDestroyed);
+
+      this._onCombatAttack = (data) => {
+        if (data.attacker && this.stats[data.attacker.team]) {
+          this.stats[data.attacker.team].damageDealt += data.damage || 0;
+        }
+      };
+      this.eventBus.on('combat:attack', this._onCombatAttack);
 
       // Listen for unit promotions (store reference for cleanup)
       this._onUnitPromoted = (data) => {
@@ -337,15 +378,12 @@ export class Game {
   checkGameOver() {
     const playerHQ = this.getHQ('player');
     const enemyHQ = this.getHQ('enemy');
+    let won = null;
 
     if (!playerHQ) {
-      this.setState('GAME_OVER');
-      this.uiManager.showGameOver(false);
-      if (this.soundManager) this.soundManager.play('defeat');
+      won = false;
     } else if (!enemyHQ) {
-      this.setState('GAME_OVER');
-      this.uiManager.showGameOver(true);
-      if (this.soundManager) this.soundManager.play('victory');
+      won = true;
     } else {
       // Total annihilation check: if enemy has no units AND no production buildings
       const enemyUnits = this.getUnits('enemy');
@@ -353,9 +391,7 @@ export class Game {
         b.produces && b.produces.length > 0
       );
       if (enemyUnits.length === 0 && enemyBuildings.length === 0) {
-        this.setState('GAME_OVER');
-        this.uiManager.showGameOver(true);
-        if (this.soundManager) this.soundManager.play('victory');
+        won = true;
       }
 
       // Same for player
@@ -364,10 +400,47 @@ export class Game {
         b.produces && b.produces.length > 0
       );
       if (playerUnits.length === 0 && playerBuildings.length === 0) {
-        this.setState('GAME_OVER');
-        this.uiManager.showGameOver(false);
-        if (this.soundManager) this.soundManager.play('defeat');
+        won = false;
       }
+    }
+
+    if (won !== null) {
+      this.setState('GAME_OVER');
+      this.uiManager.showGameOver(won);
+      if (this.soundManager) this.soundManager.play(won ? 'victory' : 'defeat');
+      this.saveMatchHistory(won);
+    }
+  }
+
+  saveMatchHistory(won) {
+    try {
+      const history = JSON.parse(localStorage.getItem('warzone_history') || '[]');
+      history.push({
+        date: new Date().toISOString(),
+        result: won ? 'victory' : 'defeat',
+        playerNation: this.teams.player.nation,
+        enemyNation: this.teams.enemy.nation,
+        difficulty: this.aiDifficulty || 'normal',
+        duration: Math.floor(this.gameElapsed),
+        stats: { ...this.stats.player }
+      });
+      // Keep last 50 matches
+      if (history.length > 50) history.splice(0, history.length - 50);
+      localStorage.setItem('warzone_history', JSON.stringify(history));
+    } catch (e) {
+      // localStorage unavailable or full, silently ignore
+    }
+  }
+
+  togglePause() {
+    if (this.state !== 'PLAYING' && this.state !== 'PAUSED') return;
+    if (this.paused) {
+      this.paused = false;
+      this.setState('PLAYING');
+      this.clock.getDelta(); // discard accumulated delta
+    } else {
+      this.paused = true;
+      this.setState('PAUSED');
     }
   }
 
@@ -375,7 +448,7 @@ export class Game {
     requestAnimationFrame(() => this.loop());
     const delta = this.clock.getDelta();
 
-    if (this.state === 'PLAYING') {
+    if (this.state === 'PLAYING' && !this.paused) {
       this.update(delta);
     }
 
@@ -416,6 +489,12 @@ export class Game {
     this.entities = [];
     this.projectiles = [];
     this.aiController = null;
+    this.paused = false;
+    this.gameElapsed = 0;
+    this.stats = {
+      player: { unitsProduced: 0, unitsLost: 0, buildingsDestroyed: 0, damageDealt: 0 },
+      enemy: { unitsProduced: 0, unitsLost: 0, buildingsDestroyed: 0, damageDealt: 0 }
+    };
     if (this.fogOfWar) {
       this.fogOfWar.dispose();
       this.fogOfWar = null;
@@ -424,6 +503,22 @@ export class Game {
     if (this._onUnitPromoted) {
       this.eventBus.off('unit:promoted', this._onUnitPromoted);
       this._onUnitPromoted = null;
+    }
+    if (this._onUnitCreated) {
+      this.eventBus.off('unit:created', this._onUnitCreated);
+      this._onUnitCreated = null;
+    }
+    if (this._onUnitDestroyed) {
+      this.eventBus.off('unit:destroyed', this._onUnitDestroyed);
+      this._onUnitDestroyed = null;
+    }
+    if (this._onBuildingDestroyed) {
+      this.eventBus.off('building:destroyed', this._onBuildingDestroyed);
+      this._onBuildingDestroyed = null;
+    }
+    if (this._onCombatAttack) {
+      this.eventBus.off('combat:attack', this._onCombatAttack);
+      this._onCombatAttack = null;
     }
     this.setState('MENU');
     this.uiManager.showMainMenu();

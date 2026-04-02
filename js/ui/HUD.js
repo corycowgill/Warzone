@@ -86,11 +86,15 @@ export class HUD {
       <div>A: Attack move</div>
       <div>S: Stop</div>
       <div>D: Hold position</div>
+      <div>V: Cycle stance</div>
+      <div>P: Patrol</div>
       <div>G: Use ability</div>
       <div>B: Build menu</div>
       <div>F: Cycle formation</div>
       <div>Tab: Cycle buildings</div>
       <div>T: Tech tree</div>
+      <div>Shift+RClick: Queue waypoint</div>
+      <div>Ctrl+P: Pause/Resume</div>
       <div>Esc: Cancel</div>
       <div style="margin-top:4px;color:#00ccff;">Control Groups</div>
       <div>Ctrl+0-9: Save group</div>
@@ -401,6 +405,11 @@ export class HUD {
     let statsHtml = '';
 
     if (entity.isUnit) {
+      const stanceColors = { aggressive: '#ff4444', defensive: '#4488ff', holdfire: '#ffcc00' };
+      const stanceLabels = { aggressive: 'AGG', defensive: 'DEF', holdfire: 'HOLD' };
+      const stanceColor = stanceColors[entity.stance] || '#888';
+      const stanceLabel = stanceLabels[entity.stance] || entity.stance;
+
       statsHtml = `
         <div style="display:flex;gap:12px;margin-top:6px;font-size:12px;flex-wrap:wrap;">
           <span><span style="color:#888;">ATK:</span> <span style="color:#ff8866;">${entity.damage}</span></span>
@@ -408,6 +417,7 @@ export class HUD {
           <span><span style="color:#888;">SPD:</span> <span style="color:#88ff88;">${entity.speed}</span></span>
           <span><span style="color:#888;">ARM:</span> <span style="color:#cccccc;">${entity.armor || 0}</span></span>
           <span><span style="color:#888;">Rate:</span> <span style="color:#cccc88;">${entity.attackRate}/s</span></span>
+          <span style="border:1px solid ${stanceColor};padding:0 4px;border-radius:2px;color:${stanceColor};font-weight:bold;">[V] ${stanceLabel}</span>
         </div>
       `;
 
