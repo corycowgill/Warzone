@@ -137,8 +137,8 @@ export class Game {
       // Initialize Fog of War for the player team
       this.fogOfWar = new FogOfWar(this, 'player');
 
-      // Listen for unit promotions
-      this.eventBus.on('unit:promoted', (data) => {
+      // Listen for unit promotions (store reference for cleanup)
+      this._onUnitPromoted = (data) => {
         if (data.unit.team === 'player') {
           const rank = data.rank;
           if (this.uiManager && this.uiManager.hud) {
@@ -148,14 +148,14 @@ export class Game {
             );
           }
           if (this.soundManager) {
-            this.soundManager.play('produce'); // rank-up sound
+            this.soundManager.play('produce');
           }
-          // Camera shake for Ace promotion
-          if (data.rankIndex >= 3 && this.cameraController) {
-            this.cameraController.shake && this.cameraController.shake(0.3);
+          if (data.rankIndex >= 3 && this.cameraController && this.cameraController.shake) {
+            this.cameraController.shake(0.3);
           }
         }
-      });
+      };
+      this.eventBus.on('unit:promoted', this._onUnitPromoted);
 
       this.setState('PLAYING');
     } catch (err) {
@@ -419,6 +419,11 @@ export class Game {
     if (this.fogOfWar) {
       this.fogOfWar.dispose();
       this.fogOfWar = null;
+    }
+    // Clean up event listeners to prevent leaks across game sessions
+    if (this._onUnitPromoted) {
+      this.eventBus.off('unit:promoted', this._onUnitPromoted);
+      this._onUnitPromoted = null;
     }
     this.setState('MENU');
     this.uiManager.showMainMenu();

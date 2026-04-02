@@ -235,11 +235,16 @@ export class Unit extends Entity {
       });
       const aura = new THREE.Mesh(auraGeo, auraMat);
       aura.rotation.x = -Math.PI / 2;
-      aura.position.y = -group.position.y + 0.3; // Ground level relative to group
       group.add(aura);
     }
 
     group.position.y = 6.5; // above health bar
+
+    // Position aura at ground level (after group.position.y is set)
+    if (this.veterancyRank >= 2) {
+      const auraChild = group.children.find(c => c.geometry?.type === 'RingGeometry');
+      if (auraChild) auraChild.position.y = -6.5 + 0.3;
+    }
     this.mesh.add(group);
     this.rankIndicator = group;
   }
@@ -372,9 +377,11 @@ export class Unit extends Entity {
       this.attackCooldown -= deltaTime;
     }
 
-    // Ace passive: faster attack rate (20% extra cooldown reduction)
+    // Ace passive: 20% faster attack rate (replace normal decay with boosted)
     if (this.veterancyRank >= 3 && this.attackCooldown > 0) {
+      // Already decayed by deltaTime above, add only the 20% bonus portion
       this.attackCooldown -= deltaTime * 0.2;
+      if (this.attackCooldown < 0) this.attackCooldown = 0;
     }
 
     // Rotate rank indicator to face camera (billboard)

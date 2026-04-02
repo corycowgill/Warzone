@@ -247,12 +247,9 @@ export class FogOfWar {
         entity._lastSeenTime = Date.now();
         this._hiddenEnemies.delete(entity);
       } else if (state === 1 && entity._lastSeenPosition && entity.isUnit) {
-        // Explored but not visible - show ghost at last-known position
-        if (entity.mesh) {
-          entity.mesh.visible = true;
-          this._setEntityOpacity(entity, 0.3);
-        }
-        this._hiddenEnemies.delete(entity);
+        // Explored but not visible - hide 3D mesh (ghost shown on minimap only)
+        if (entity.mesh) entity.mesh.visible = false;
+        this._hiddenEnemies.add(entity);
       } else {
         // Unexplored or no last-seen data - fully hidden
         if (entity.mesh) entity.mesh.visible = false;
