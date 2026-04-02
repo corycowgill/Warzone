@@ -61,6 +61,12 @@ export class Game {
     this.unitFactory = null;
     this.soundManager = null;
     this.fogOfWar = null;
+    this.aiController2 = null;
+    this._mapEventTimer = 0;
+    this._mapEventInterval = 60; // seconds between events
+    this._tutorialStep = 0;
+    this._tutorialTimer = 0;
+    this._tutorialShown = false;
   }
 
   init() {
@@ -133,6 +139,10 @@ export class Game {
 
       if (this.mode === '1P') {
         this.aiController = new AIController(this, 'enemy', this.aiDifficulty);
+      } else if (this.mode === 'SPECTATE') {
+        // Both teams controlled by AI
+        this.aiController = new AIController(this, 'enemy', this.aiDifficulty);
+        this.aiController2 = new AIController(this, 'player', this.aiDifficulty);
       }
 
       // Place initial buildings and units
@@ -144,8 +154,10 @@ export class Game {
       // Initialize minimap after HUD is shown
       this.minimap = new Minimap(this);
 
-      // Initialize Fog of War for the player team
-      this.fogOfWar = new FogOfWar(this, 'player');
+      // Initialize Fog of War for the player team (disabled in spectate mode)
+      if (this.mode !== 'SPECTATE') {
+        this.fogOfWar = new FogOfWar(this, 'player');
+      }
 
       // Track game stats
       this._onUnitCreated = (data) => {
@@ -225,6 +237,104 @@ export class Game {
       this.createUnit('infantry', 'player', new THREE.Vector3(50 + i * 4, 0, mapSize / 2 + 10));
       this.createUnit('infantry', 'enemy', new THREE.Vector3(mapSize - 80 + i * 4, 0, mapSize / 2 + 10));
     }
+
+    // Place supply caches (neutral resource pickups)
+    this.placeSupplyCaches();
+  }
+
+  placeSupplyCaches() {
+    const mapSize = GAME_CONFIG.mapSize * GAME_CONFIG.worldScale;
+    const cacheCount = 6;
+    const margin = 40;
+
+    for (let i = 0; i < cacheCount; i++) {
+      let x, z, attempts = 0;
+      do {
+        x = margin + Math.random() * (mapSize - 2 * margin);
+        z = margin + Math.random() * (mapSize - 2 * margin);
+        attempts++;
+      } while (attempts < 20 && this.terrain && (this.terrain.isWater(x, z) || !this.terrain.isWalkable(x, z)));
+
+      if (attempts >= 20) continue;
+
+      const pos = new THREE.Vector3(x, 0, z);
+      const y = this.terrain ? this.terrain.getHeightAt(x, z) : 0;
+
+      // Create supply cache mesh
+      const group = new THREE.Group();
+      const boxGeo = new THREE.BoxGeometry(2, 1.5, 2);
+      const boxMat = new THREE.MeshPhongMaterial({ color: 0xccaa44 });
+      const box = new THREE.Mesh(boxGeo, boxMat);
+      box.position.y = 0.75;
+      group.add(box);
+
+      // Star marker on top
+      const markerGeo = new THREE.OctahedronGeometry(0.5, 0);
+      const markerMat = new THREE.MeshBasicMaterial({ color: 0xffcc00 });
+      const marker = new THREE.Mesh(markerGeo, markerMat);
+      marker.position.y = 2;
+      group.add(marker);
+
+      group.position.set(x, y, z);
+
+      // Create as a simple entity
+      const cache = {
+        id: Date.now() + Math.floor(Math.random() * 10000),
+        type: 'supply_cache',
+        team: 'neutral',
+        alive: true,
+        health: 60,
+        maxHealth: 60,
+        isBuilding: true,
+        isUnit: false,
+        mesh: group,
+        selected: false,
+        size: 1,
+        produces: [],
+        selectionRing: null,
+        healthBar: null,
+        _isCache: true,
+        _cacheReward: 100 + Math.floor(Math.random() * 100),
+        getPosition() { return this.mesh.position; },
+        distanceTo(other) { return this.getPosition().distanceTo(other.getPosition()); },
+        takeDamage(amount) {
+          this.health -= amount;
+          if (this.health <= 0) { this.health = 0; this.alive = false; }
+        },
+        update() {},
+        updateHealthBar() {},
+        setSelected(sel) { this.selected = sel; }
+      };
+
+      this.addEntity(cache);
+    }
+
+    // Listen for cache destruction to award resources
+    this._onCacheDestroyed = (data) => {
+      if (data.entity && data.entity._isCache) {
+        // Award SP to both teams (whoever is fighting nearby)
+        // Actually, the attacker gets the reward via combat:kill event
+      }
+    };
+
+    // Award resources when a supply cache is killed
+    this._onCacheKill = (data) => {
+      if (data.defender && data.defender._isCache && data.attacker) {
+        const reward = data.defender._cacheReward || 100;
+        const team = data.attacker.team;
+        if (this.teams[team]) {
+          this.teams[team].sp += reward;
+          if (this.uiManager && this.uiManager.hud) {
+            this.uiManager.hud.showNotification(`Supply cache captured! +${reward} SP`, '#ffcc00');
+          }
+          if (this.soundManager) this.soundManager.play('produce');
+          if (this.effectsManager) {
+            this.effectsManager.createExplosion(data.defender.getPosition());
+          }
+        }
+      }
+    };
+    this.eventBus.on('combat:kill', this._onCacheKill);
   }
 
   createUnit(type, team, position) {
@@ -352,6 +462,9 @@ export class Game {
     if (this.aiController) {
       this.aiController.update(delta);
     }
+    if (this.aiController2) {
+      this.aiController2.update(delta);
+    }
 
     // Passive heal near HQ for both teams
     for (const team of ['player', 'enemy']) {
@@ -367,6 +480,18 @@ export class Game {
 
     // Update game timer
     this.gameElapsed += delta;
+
+    // Dynamic map events
+    this._mapEventTimer += delta;
+    if (this._mapEventTimer >= this._mapEventInterval) {
+      this._mapEventTimer = 0;
+      this.triggerMapEvent();
+    }
+
+    // Tutorial tips for new players
+    if (!this._tutorialShown && this.mode !== 'SPECTATE') {
+      this.updateTutorial(delta);
+    }
 
     // Update UI
     this.uiManager.updateHUD();
@@ -432,6 +557,108 @@ export class Game {
     }
   }
 
+  triggerMapEvent() {
+    const events = ['supply_drop', 'resource_surge', 'reinforcements'];
+    const event = events[Math.floor(Math.random() * events.length)];
+    const mapSize = GAME_CONFIG.mapSize * GAME_CONFIG.worldScale;
+
+    switch (event) {
+      case 'supply_drop': {
+        // Drop a supply cache at a random location
+        const x = 60 + Math.random() * (mapSize - 120);
+        const z = 60 + Math.random() * (mapSize - 120);
+        if (this.terrain && this.terrain.isWalkable(x, z)) {
+          const pos = new THREE.Vector3(x, 0, z);
+          const y = this.terrain.getHeightAt(x, z);
+          const group = new THREE.Group();
+          const boxGeo = new THREE.BoxGeometry(2.5, 1.5, 2.5);
+          const boxMat = new THREE.MeshPhongMaterial({ color: 0x44ccff });
+          const box = new THREE.Mesh(boxGeo, boxMat);
+          box.position.y = 0.75;
+          group.add(box);
+          const markerGeo = new THREE.OctahedronGeometry(0.6, 0);
+          const markerMat = new THREE.MeshBasicMaterial({ color: 0x00ffcc });
+          const marker = new THREE.Mesh(markerGeo, markerMat);
+          marker.position.y = 2.2;
+          group.add(marker);
+          group.position.set(x, y, z);
+
+          const reward = 150 + Math.floor(Math.random() * 100);
+          const cache = {
+            id: Date.now() + Math.floor(Math.random() * 10000),
+            type: 'supply_cache', team: 'neutral', alive: true,
+            health: 40, maxHealth: 40, isBuilding: true, isUnit: false,
+            mesh: group, selected: false, size: 1, produces: [],
+            selectionRing: null, healthBar: null,
+            _isCache: true, _cacheReward: reward,
+            getPosition() { return this.mesh.position; },
+            distanceTo(other) { return this.getPosition().distanceTo(other.getPosition()); },
+            takeDamage(amount) { this.health -= amount; if (this.health <= 0) { this.health = 0; this.alive = false; } },
+            update() {}, updateHealthBar() {}, setSelected(sel) { this.selected = sel; }
+          };
+          this.addEntity(cache);
+
+          if (this.uiManager && this.uiManager.hud) {
+            this.uiManager.hud.showNotification(`Supply drop detected! (${reward} SP)`, '#00ffcc');
+          }
+          if (this.soundManager) this.soundManager.play('produce');
+        }
+        break;
+      }
+      case 'resource_surge': {
+        // Both teams get a small SP bonus
+        const bonus = 50 + Math.floor(Math.random() * 50);
+        this.teams.player.sp += bonus;
+        this.teams.enemy.sp += bonus;
+        if (this.uiManager && this.uiManager.hud) {
+          this.uiManager.hud.showNotification(`Resource surge! +${bonus} SP`, '#88ff88');
+        }
+        break;
+      }
+      case 'reinforcements': {
+        // Random free infantry for both teams near their HQ
+        for (const team of ['player', 'enemy']) {
+          const hq = this.getHQ(team);
+          if (!hq) continue;
+          const hqPos = hq.getPosition();
+          const pos = new THREE.Vector3(
+            hqPos.x + (Math.random() - 0.5) * 20,
+            0,
+            hqPos.z + (Math.random() - 0.5) * 20
+          );
+          this.createUnit('infantry', team, pos);
+        }
+        if (this.uiManager && this.uiManager.hud) {
+          this.uiManager.hud.showNotification('Reinforcements arrived!', '#88ff88');
+        }
+        break;
+      }
+    }
+  }
+
+  updateTutorial(delta) {
+    this._tutorialTimer += delta;
+    const tips = [
+      { time: 5, msg: 'Select units with left-click or drag. Right-click to move.', color: '#88ccff' },
+      { time: 15, msg: 'Press A for attack-move. Press B to open the build menu.', color: '#88ccff' },
+      { time: 30, msg: 'Press V to cycle stance (Aggressive/Defensive/Hold Fire).', color: '#ffcc00' },
+      { time: 50, msg: 'Press P to patrol. Press F to cycle formation types.', color: '#ffcc00' },
+      { time: 75, msg: 'Press G to use unit abilities. Press T to view the tech tree.', color: '#00ff88' },
+      { time: 100, msg: 'Shift+right-click queues waypoints. Press F1 for all controls.', color: '#00ff88' },
+    ];
+
+    if (this._tutorialStep < tips.length && this._tutorialTimer >= tips[this._tutorialStep].time) {
+      const tip = tips[this._tutorialStep];
+      if (this.uiManager && this.uiManager.hud) {
+        this.uiManager.hud.showNotification(tip.msg, tip.color);
+      }
+      this._tutorialStep++;
+      if (this._tutorialStep >= tips.length) {
+        this._tutorialShown = true;
+      }
+    }
+  }
+
   togglePause() {
     if (this.state !== 'PLAYING' && this.state !== 'PAUSED') return;
     if (this.paused) {
@@ -489,6 +716,7 @@ export class Game {
     this.entities = [];
     this.projectiles = [];
     this.aiController = null;
+    this.aiController2 = null;
     this.paused = false;
     this.gameElapsed = 0;
     this.stats = {
@@ -519,6 +747,10 @@ export class Game {
     if (this._onCombatAttack) {
       this.eventBus.off('combat:attack', this._onCombatAttack);
       this._onCombatAttack = null;
+    }
+    if (this._onCacheKill) {
+      this.eventBus.off('combat:kill', this._onCacheKill);
+      this._onCacheKill = null;
     }
     this.setState('MENU');
     this.uiManager.showMainMenu();

@@ -35,6 +35,11 @@ export class UIManager {
       this.showNationSelect();
     });
 
+    document.getElementById('btn-spectate')?.addEventListener('click', () => {
+      this.game.mode = 'SPECTATE';
+      this.showNationSelect();
+    });
+
     // Nation selection - allied cards
     const alliedCards = document.querySelectorAll('.nation-card[data-side="allied"], .nation-card[data-nation="america"], .nation-card[data-nation="britain"], .nation-card[data-nation="france"]');
     alliedCards.forEach(card => {
@@ -263,10 +268,16 @@ export class UIManager {
 
     let enemyNation = this.selectedEnemyNation;
 
-    if (this.game.mode === '1P') {
+    if (this.game.mode === '1P' || this.game.mode === 'SPECTATE') {
       // Auto-select a random enemy nation for AI
       const enemyNations = Object.keys(NATIONS).filter(n => NATIONS[n].side === 'enemy');
       enemyNation = enemyNations[Math.floor(Math.random() * enemyNations.length)];
+
+      // In spectate mode, also auto-select player nation if not chosen
+      if (this.game.mode === 'SPECTATE' && !this.selectedPlayerNation) {
+        const alliedNations = Object.keys(NATIONS).filter(n => NATIONS[n].side === 'allied');
+        this.selectedPlayerNation = alliedNations[Math.floor(Math.random() * alliedNations.length)];
+      }
     } else if (this.game.mode === '2P' && !enemyNation) {
       this.showNotification('Player 2: Please select your nation');
       return;

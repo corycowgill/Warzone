@@ -72,7 +72,10 @@ export class Unit extends Entity {
     this.kills = 0;
     this.veterancyRank = 0; // index into VETERANCY.ranks
     this.rankIndicator = null; // THREE mesh for rank stars
-  }
+
+    // Status badge (stance/order indicator)
+    this._statusBadge = null;
+    this._lastBadgeState = '';
 
   // Apply nation-specific bonuses to this unit's stats
   applyNationBonuses(nationKey) {
@@ -364,6 +367,57 @@ export class Unit extends Entity {
     this._patrolIndex = 0;
   }
 
+  updateStatusBadge() {
+    if (!this.mesh) return;
+
+    // Determine badge state
+    let badgeState = '';
+    if (this.stance === 'holdfire') badgeState = 'holdfire';
+    else if (this.stance === 'defensive') badgeState = 'defensive';
+    else if (this._isPatrolling) badgeState = 'patrol';
+    else if (this._attackMove) badgeState = 'attackmove';
+    else if (this._siegeMode) badgeState = 'siege';
+
+    // Only update if state changed
+    if (badgeState === this._lastBadgeState) return;
+    this._lastBadgeState = badgeState;
+
+    // Remove old badge
+    if (this._statusBadge) {
+      this.mesh.remove(this._statusBadge);
+      this._statusBadge.traverse(c => {
+        if (c.geometry) c.geometry.dispose();
+        if (c.material) c.material.dispose();
+      });
+      this._statusBadge = null;
+    }
+
+    if (!badgeState) return;
+
+    // Create badge
+    const badgeColors = {
+      holdfire: 0xffcc00,
+      defensive: 0x4488ff,
+      patrol: 0x00ccff,
+      attackmove: 0xff4444,
+      siege: 0xff8800
+    };
+
+    const color = badgeColors[badgeState] || 0xffffff;
+    const geo = new THREE.CircleGeometry(0.3, 8);
+    const mat = new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity: 0.8,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+    const badge = new THREE.Mesh(geo, mat);
+    badge.position.set(1.5, 4, 0);
+    this.mesh.add(badge);
+    this._statusBadge = badge;
+  }
+
   cycleStance() {
     const stances = ['aggressive', 'defensive', 'holdfire'];
     const idx = stances.indexOf(this.stance);
@@ -419,6 +473,9 @@ export class Unit extends Entity {
         this.rankIndicator.quaternion.copy(camera.quaternion);
       }
     }
+
+    // Update status badge
+    this.updateStatusBadge();
 
     // Movement
     if (this.moveTarget) {
