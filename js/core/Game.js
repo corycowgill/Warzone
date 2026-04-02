@@ -1221,6 +1221,31 @@ export class Game {
       this.eventBus.off('combat:kill', this._onSalvageKill);
       this._onSalvageKill = null;
     }
+    if (this._onCombatAlert) {
+      this.eventBus.off('combat:attack', this._onCombatAlert);
+      this._onCombatAlert = null;
+    }
+    if (this._onBuildingDestroyedAlert) {
+      this.eventBus.off('building:destroyed', this._onBuildingDestroyedAlert);
+      this._onBuildingDestroyedAlert = null;
+    }
+    this._lastCombatAlertPos = null;
+    // Clean up corpse meshes still fading
+    if (this._corpses) {
+      for (const corpse of this._corpses) {
+        if (corpse.mesh) {
+          this.sceneManager.scene.remove(corpse.mesh);
+          corpse.mesh.traverse(child => {
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) child.material.dispose();
+          });
+        }
+      }
+      this._corpses = [];
+    }
+    // Clean up smoke/flare zones
+    this._smokeZones = null;
+    this._flareZones = null;
     // Clean up post-processing
     if (this.postProcessing) {
       if (this.postProcessing.dispose) this.postProcessing.dispose();
