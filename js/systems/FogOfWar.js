@@ -116,6 +116,22 @@ export class FogOfWar {
         visionRange = 8;
       }
 
+      // Day/night vision reduction (GD-071)
+      if (entity.isUnit && this.game.sceneManager && this.game.sceneManager.getVisionMultiplier) {
+        visionRange = Math.floor(visionRange * this.game.sceneManager.getVisionMultiplier(entity.type));
+      }
+
+      // Flare zones temporarily grant full vision (GD-066 smoke_screen/flare)
+      if (this.game._flareZones) {
+        for (const flare of this.game._flareZones) {
+          const dx = pos.x - flare.x;
+          const dz = pos.z - flare.z;
+          if (dx * dx + dz * dz < flare.radius * flare.radius) {
+            visionRange = Math.max(visionRange, entity.vision || 10); // restore full vision in flare area
+          }
+        }
+      }
+
       // Mark cells within vision radius
       const r = visionRange;
       const rSq = r * r;
@@ -135,7 +151,75 @@ export class FogOfWar {
       }
     }
 
-    // Step 2b: Firing position reveal - enemies that recently attacked become briefly visible
+    // Step 2a: Flare zones reveal area (GD-066)
+    if (this.game._flareZones) {
+      for (const flare of this.game._flareZones) {
+        const fgx = Math.floor(flare.x / this.cellSize);
+        const fgz = Math.floor(flare.z / this.cellSize);
+        const fr = Math.ceil(flare.radius / this.cellSize);
+        const frSq = fr * fr;
+        const fMinX = Math.max(0, fgx - fr);
+        const fMaxX = Math.min(this.mapSize - 1, fgx + fr);
+        const fMinZ = Math.max(0, fgz - fr);
+        const fMaxZ = Math.min(this.mapSize - 1, fgz + fr);
+        for (let z = fMinZ; z <= fMaxZ; z++) {
+          for (let x = fMinX; x <= fMaxX; x++) {
+            const dx = x - fgx;
+            const dz = z - fgz;
+            if (dx * dx + dz * dz <= frSq) {
+              grid[z * this.mapSize + x] = 2;
+            }
+          }
+        }
+      }
+    }
+
+    // Step 2a: Smoke zones block vision (GD-066)
+    if (this.game._smokeZones) {
+      for (const smoke of this.game._smokeZones) {
+        const sgx = Math.floor(smoke.x / this.cellSize);
+        const sgz = Math.floor(smoke.z / this.cellSize);
+        const sr = Math.ceil(smoke.radius / this.cellSize);
+        const srSq = sr * sr;
+        const sMinX = Math.max(0, sgx - sr);
+        const sMaxX = Math.min(this.mapSize - 1, sgx + sr);
+        const sMinZ = Math.max(0, sgz - sr);
+        const sMaxZ = Math.min(this.mapSize - 1, sgz + sr);
+        for (let z = sMinZ; z <= sMaxZ; z++) {
+          for (let x = sMinX; x <= sMaxX; x++) {
+            const dx = x - sgx;
+            const dz = z - sgz;
+            if (dx * dx + dz * dz <= srSq) {
+              if (grid[z * this.mapSize + x] === 2) {
+                grid[z * this.mapSize + x] = 1; // demote visible to explored (blocked)
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Step 2b: Sonar ping reveals (GD-070)
+    for (const entity of this.game.entities) {
+      if (!entity.alive || entity.team === this.team) continue;
+      if (entity._sonarRevealed && entity._sonarRevealed > 0) {
+        const epos = entity.getPosition();
+        const egx = Math.floor(epos.x / this.cellSize);
+        const egz = Math.floor(epos.z / this.cellSize);
+        // Reveal small area around sonar-revealed entity
+        for (let dz = -2; dz <= 2; dz++) {
+          for (let dx = -2; dx <= 2; dx++) {
+            const rx = egx + dx;
+            const rz = egz + dz;
+            if (rx >= 0 && rx < this.mapSize && rz >= 0 && rz < this.mapSize) {
+              grid[rz * this.mapSize + rx] = 2;
+            }
+          }
+        }
+      }
+    }
+
+    // Step 2c: Firing position reveal - enemies that recently attacked become briefly visible
     this.updateCombatReveals(delta);
 
     // Step 3: Update the fog texture

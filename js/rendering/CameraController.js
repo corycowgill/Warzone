@@ -79,10 +79,10 @@ export class CameraController {
 
     // Edge panning
     if (!this.isPanning) {
-      if (this.mousePos.x < this.edgePanSize) dx += 1;
-      if (this.mousePos.x > window.innerWidth - this.edgePanSize) dx -= 1;
-      if (this.mousePos.y < this.edgePanSize) dz -= 1;
-      if (this.mousePos.y > window.innerHeight - this.edgePanSize) dz += 1;
+      if (this.mousePos.x < this.edgePanSize) dx -= 1;
+      if (this.mousePos.x > window.innerWidth - this.edgePanSize) dx += 1;
+      if (this.mousePos.y < this.edgePanSize) dz += 1;
+      if (this.mousePos.y > window.innerHeight - this.edgePanSize) dz -= 1;
     }
 
     // Move relative to camera rotation

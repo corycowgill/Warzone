@@ -30,12 +30,46 @@ export class Minimap {
   setupListeners() {
     // Left-click on minimap to move camera
     this.canvas.addEventListener('mousedown', (e) => {
+      if (e.ctrlKey && e.button === 0) {
+        // Ctrl+click: start tactical drawing
+        this._drawingActive = true;
+        const { x, z } = this.minimapToWorld(e);
+        this._currentDrawing = [{ x, z }];
+        return;
+      }
+      if (e.ctrlKey && e.button === 2) {
+        // Ctrl+right-click: clear all drawings
+        this._tacticalDrawings = [];
+        return;
+      }
       if (e.button === 0) this.handleClick(e);
       if (e.button === 2) this.handleRightClick(e);
     });
-    // Drag on minimap to continuously update camera
+    // Drag on minimap to continuously update camera or draw
     this.canvas.addEventListener('mousemove', (e) => {
+      if (this._drawingActive && this._currentDrawing) {
+        const { x, z } = this.minimapToWorld(e);
+        this._currentDrawing.push({ x, z });
+        return;
+      }
       if (e.buttons === 1) this.handleClick(e);
+    });
+    // End drawing on mouseup
+    this.canvas.addEventListener('mouseup', (e) => {
+      if (this._drawingActive && this._currentDrawing && this._currentDrawing.length > 1) {
+        if (!this._tacticalDrawings) this._tacticalDrawings = [];
+        this._tacticalDrawings.push({
+          points: this._currentDrawing,
+          timer: 8, // fade out after 8 seconds
+          color: '#ffcc00'
+        });
+        // Max 10 drawings
+        while (this._tacticalDrawings.length > 10) {
+          this._tacticalDrawings.shift();
+        }
+      }
+      this._drawingActive = false;
+      this._currentDrawing = null;
     });
     // Prevent browser context menu on minimap
     this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -339,6 +373,43 @@ export class Minimap {
       ctx.arc(mp.x, mp.y, radius, 0, Math.PI * 2);
       ctx.stroke();
       ctx.globalAlpha = 1.0;
+    }
+
+    // Tactical drawings (GD-072)
+    if (this._tacticalDrawings) {
+      for (let i = this._tacticalDrawings.length - 1; i >= 0; i--) {
+        const drawing = this._tacticalDrawings[i];
+        drawing.timer -= delta || 0.016;
+        if (drawing.timer <= 0) {
+          this._tacticalDrawings.splice(i, 1);
+          continue;
+        }
+        const alpha = Math.min(1, drawing.timer / 2); // fade in last 2 seconds
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = drawing.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let j = 0; j < drawing.points.length; j++) {
+          const mp = this.worldToMinimap(drawing.points[j].x, drawing.points[j].z);
+          if (j === 0) ctx.moveTo(mp.x, mp.y);
+          else ctx.lineTo(mp.x, mp.y);
+        }
+        ctx.stroke();
+        ctx.globalAlpha = 1.0;
+      }
+    }
+
+    // Active drawing in progress
+    if (this._drawingActive && this._currentDrawing && this._currentDrawing.length > 1) {
+      ctx.strokeStyle = '#ffcc00';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let j = 0; j < this._currentDrawing.length; j++) {
+        const mp = this.worldToMinimap(this._currentDrawing[j].x, this._currentDrawing[j].z);
+        if (j === 0) ctx.moveTo(mp.x, mp.y);
+        else ctx.lineTo(mp.x, mp.y);
+      }
+      ctx.stroke();
     }
 
     // Border

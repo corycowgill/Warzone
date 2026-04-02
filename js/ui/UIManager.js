@@ -154,6 +154,7 @@ export class UIManager {
 
     // Map selection buttons
     const mapDescs = {
+      random: 'Randomly selected map template.',
       continental: 'Large landmass with water on one side.',
       islands: 'Archipelago map — naval control is key.',
       river: 'Two landmasses split by a river with crossing points.',
@@ -310,13 +311,25 @@ export class UIManager {
       return;
     }
 
+    // Resolve random map
+    let mapTemplate = this.selectedMap;
+    if (mapTemplate === 'random') {
+      const templates = ['continental', 'islands', 'river', 'plains'];
+      mapTemplate = templates[Math.floor(Math.random() * templates.length)];
+    }
+
+    // Get optional seed
+    const seedInput = document.getElementById('map-seed-input');
+    const mapSeed = seedInput && seedInput.value.trim() ? parseInt(seedInput.value.trim()) || null : null;
+
     // Start the game
     this.game.startGame({
       mode: this.game.mode,
       playerNation: this.selectedPlayerNation,
       enemyNation: enemyNation,
       difficulty: this.selectedDifficulty,
-      mapTemplate: this.selectedMap,
+      mapTemplate: mapTemplate,
+      mapSeed: mapSeed,
       gameMode: this.selectedGameMode
     });
   }

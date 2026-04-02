@@ -50,7 +50,7 @@ export class Unit extends Entity {
     this.flyHeight = this.domain === 'air' ? 15 : 0;
 
     // Model facing offset: models built facing +X need -π/2 to align with atan2(dx,dz) which assumes +Z
-    const xFacingTypes = ['tank', 'plane', 'battleship', 'carrier', 'submarine'];
+    const xFacingTypes = ['tank', 'plane', 'battleship', 'carrier', 'submarine', 'scoutcar', 'aahalftrack', 'apc', 'heavytank', 'spg', 'bomber', 'patrolboat'];
     this.modelRotationOffset = xFacingTypes.includes(type) ? -Math.PI / 2 : 0;
 
     // --- Nation bonus tracking ---

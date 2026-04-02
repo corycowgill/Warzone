@@ -104,6 +104,8 @@ export class HUD {
       <div>I: Infantry | K: Tank</div>
       <div>J: Drone | L: Plane</div>
       <div>N: Battleship | U: Sub</div>
+      <div>M: Mortar | O: Scout Car</div>
+      <div>H: Heavy Tank | Y: Bomber</div>
       <div style="margin-top:4px;color:#00ccff;">Control Groups</div>
       <div>Ctrl+0-9: Save group</div>
       <div>0-9: Recall group</div>
@@ -207,7 +209,7 @@ export class HUD {
     if (!this.buildOptions) return;
     this.buildOptions.innerHTML = '';
 
-    const buildableTypes = ['barracks', 'warfactory', 'airfield', 'shipyard', 'resourcedepot', 'supplydepot', 'turret', 'aaturret', 'bunker', 'wall', 'superweapon'];
+    const buildableTypes = ['barracks', 'warfactory', 'airfield', 'shipyard', 'techlab', 'resourcedepot', 'supplydepot', 'turret', 'aaturret', 'bunker', 'wall', 'superweapon'];
     for (const type of buildableTypes) {
       const stats = BUILDING_STATS[type];
       if (!stats) continue;
@@ -461,6 +463,7 @@ export class HUD {
     this.updateProductionPanel();
     this.updateRallyPointVisuals();
     this.updateNationAbilityButton();
+    this.updateDayNightIndicator();
   }
 
   // ============================
@@ -642,6 +645,26 @@ export class HUD {
           </div>
         `;
       }
+
+      // APC garrison info
+      if (entity.type === 'apc' && entity.garrisonSlots) {
+        const count = entity.garrisoned ? entity.garrisoned.length : 0;
+        statsHtml += `<div style="margin-top:6px;font-size:12px;"><span style="color:#66aaff;">Garrison:</span> ${count}/${entity.garrisonSlots} infantry`;
+        if (count > 0) {
+          statsHtml += ` <span style="color:#88ff88;">(firing)</span>`;
+          statsHtml += `</div><div style="margin-top:4px;"><button id="btn-eject-apc" style="padding:4px 10px;background:#553333;color:#eee;border:1px solid #774444;border-radius:3px;cursor:pointer;font-size:11px;font-family:sans-serif;">[U] Unload All</button></div>`;
+        } else {
+          statsHtml += `</div><div style="font-size:10px;color:#666;margin-top:2px;">Right-click with infantry to load</div>`;
+        }
+      }
+
+      // SPG deploy status
+      if (entity.type === 'spg') {
+        const deployed = entity._deployed;
+        statsHtml += `<div style="margin-top:6px;font-size:12px;padding:4px 8px;background:${deployed ? '#2a3a2a' : '#3a2a2a'};border:1px solid ${deployed ? '#00ff44' : '#ff4444'};border-radius:4px;">
+          <span style="color:${deployed ? '#00ff44' : '#ff4444'};">${deployed ? 'DEPLOYED - Can fire' : 'MOBILE - Must deploy to fire [G]'}</span>
+        </div>`;
+      }
     }
 
     if (entity.isBuilding) {
@@ -756,6 +779,18 @@ export class HUD {
       const ejectBtn = document.getElementById('btn-eject-garrison');
       if (ejectBtn) {
         ejectBtn.addEventListener('click', () => {
+          entity.ejectAll();
+          this.showSingleEntityInfo(entity);
+          if (this.game.soundManager) this.game.soundManager.play('move');
+        });
+      }
+    }
+
+    // Wire up eject button for APCs
+    if (entity.type === 'apc' && entity.garrisoned && entity.garrisoned.length > 0) {
+      const apcEjectBtn = document.getElementById('btn-eject-apc');
+      if (apcEjectBtn) {
+        apcEjectBtn.addEventListener('click', () => {
           entity.ejectAll();
           this.showSingleEntityInfo(entity);
           if (this.game.soundManager) this.game.soundManager.play('move');
@@ -1520,7 +1555,8 @@ export class HUD {
   handleProductionHotkey(e) {
     const key = e.key.toLowerCase();
     const hotkeys = { 'i': 'infantry', 'k': 'tank', 'j': 'drone', 'l': 'plane',
-                      'n': 'battleship', 'u': 'submarine' };
+                      'n': 'battleship', 'u': 'submarine', 'm': 'mortar',
+                      'o': 'scoutcar', 'h': 'heavytank', 'y': 'bomber' };
     const unitType = hotkeys[key];
     if (!unitType) return;
 
@@ -1632,6 +1668,26 @@ export class HUD {
   }
 
   // Military score comparison for HUD
+  updateDayNightIndicator() {
+    if (!this.game.sceneManager || !this.game.sceneManager.dayNightEnabled) return;
+
+    if (!this._dayNightIndicator) {
+      const existing = document.getElementById('hud-daynight');
+      if (existing) existing.remove();
+      this._dayNightIndicator = document.createElement('div');
+      this._dayNightIndicator.id = 'hud-daynight';
+      this._dayNightIndicator.style.cssText = 'position:fixed;top:44px;right:10px;background:rgba(0,0,0,0.7);border-radius:4px;padding:3px 8px;font-size:11px;font-family:sans-serif;z-index:100;';
+      document.body.appendChild(this._dayNightIndicator);
+    }
+
+    const isNight = this.game.sceneManager.isNight;
+    const symbol = isNight ? '\u{1F319}' : '\u2600';
+    const label = isNight ? 'Night' : 'Day';
+    const color = isNight ? '#8888cc' : '#ffcc44';
+    const visionNote = isNight ? ' (Vision -30%)' : '';
+    this._dayNightIndicator.innerHTML = `<span style="color:${color};">${symbol} ${label}${visionNote}</span>`;
+  }
+
   getMilitaryScore(team) {
     let score = 0;
     const units = this.game.getUnits(team);
@@ -1649,6 +1705,23 @@ export class HUD {
 
   formatName(type) {
     if (!type) return '';
+    const names = {
+      warfactory: 'War Factory',
+      resourcedepot: 'Resource Depot',
+      supplydepot: 'Supply Depot',
+      aaturret: 'AA Turret',
+      superweapon: 'Superweapon',
+      mortar: 'Mortar Team',
+      scoutcar: 'Scout Car',
+      aahalftrack: 'AA Half-Track',
+      apc: 'APC',
+      heavytank: 'Heavy Tank',
+      spg: 'SPG/Artillery',
+      bomber: 'Bomber',
+      patrolboat: 'Patrol Boat',
+      techlab: 'Tech Lab'
+    };
+    if (names[type]) return names[type];
     return type.charAt(0).toUpperCase() + type.slice(1).replace(/([A-Z])/g, ' $1');
   }
 }

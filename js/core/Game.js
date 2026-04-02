@@ -653,6 +653,39 @@ export class Game {
     // Update game timer
     this.gameElapsed += delta;
 
+    // Day/Night cycle
+    if (this.sceneManager) {
+      this.sceneManager.updateDayNight(delta, this.gameElapsed);
+    }
+
+    // Update smoke zones (mortar ability)
+    if (this._smokeZones) {
+      for (let i = this._smokeZones.length - 1; i >= 0; i--) {
+        this._smokeZones[i].timer -= delta;
+        if (this._smokeZones[i].timer <= 0) {
+          this._smokeZones.splice(i, 1);
+        }
+      }
+    }
+
+    // Update flare zones (scout car ability)
+    if (this._flareZones) {
+      for (let i = this._flareZones.length - 1; i >= 0; i--) {
+        this._flareZones[i].timer -= delta;
+        if (this._flareZones[i].timer <= 0) {
+          this._flareZones.splice(i, 1);
+        }
+      }
+    }
+
+    // Update sonar reveal timers
+    for (const entity of this.entities) {
+      if (entity.alive && entity._sonarRevealed > 0) {
+        entity._sonarRevealed -= delta;
+        if (entity._sonarRevealed <= 0) entity._sonarRevealed = 0;
+      }
+    }
+
     // Dynamic map events
     this._mapEventTimer += delta;
     if (this._mapEventTimer >= this._mapEventInterval) {

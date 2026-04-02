@@ -4,10 +4,10 @@ import { UNIT_STATS, BUILDING_STATS, GAME_CONFIG, AI_DIFFICULTY, DAMAGE_MODIFIER
 // Multiple build order strategies
 const BUILD_ORDERS = {
   rush: ['barracks', 'barracks', 'resourcedepot', 'warfactory'],
-  boom: ['resourcedepot', 'barracks', 'resourcedepot', 'warfactory', 'resourcedepot', 'airfield'],
-  turtle: ['barracks', 'turret', 'resourcedepot', 'warfactory', 'turret', 'aaturret', 'airfield'],
-  air: ['barracks', 'resourcedepot', 'warfactory', 'airfield', 'airfield', 'resourcedepot'],
-  balanced: ['barracks', 'resourcedepot', 'warfactory', 'airfield', 'resourcedepot', 'shipyard']
+  boom: ['resourcedepot', 'barracks', 'resourcedepot', 'warfactory', 'resourcedepot', 'airfield', 'techlab'],
+  turtle: ['barracks', 'turret', 'resourcedepot', 'warfactory', 'turret', 'aaturret', 'airfield', 'techlab'],
+  air: ['barracks', 'resourcedepot', 'warfactory', 'airfield', 'airfield', 'resourcedepot', 'techlab'],
+  balanced: ['barracks', 'resourcedepot', 'warfactory', 'airfield', 'resourcedepot', 'shipyard', 'techlab']
 };
 
 const NATION_PERSONALITIES = {
@@ -491,9 +491,9 @@ export class AIController {
       let unitType = null;
 
       if (building.type === 'headquarters' || building.type === 'barracks') {
-        unitType = 'infantry';
+        unitType = this.chooseBarracksUnit(myUnits);
       } else if (building.type === 'warfactory') {
-        unitType = 'tank';
+        unitType = this.chooseFactoryUnit(myUnits);
       } else if (building.type === 'airfield') {
         unitType = this.chooseAirUnit(myUnits);
       } else if (building.type === 'shipyard') {
@@ -526,9 +526,54 @@ export class AIController {
     }
   }
 
+  chooseBarracksUnit(myUnits) {
+    const infantry = myUnits.filter(u => u.type === 'infantry').length;
+    const mortars = myUnits.filter(u => u.type === 'mortar').length;
+    // Mix in mortars occasionally for building damage
+    if (mortars < 2 && infantry > 3 && Math.random() < 0.3) return 'mortar';
+    return 'infantry';
+  }
+
+  chooseFactoryUnit(myUnits) {
+    const tanks = myUnits.filter(u => u.type === 'tank').length;
+    const heavyTanks = myUnits.filter(u => u.type === 'heavytank').length;
+    const spgs = myUnits.filter(u => u.type === 'spg').length;
+    const aaHTs = myUnits.filter(u => u.type === 'aahalftrack').length;
+    const apcs = myUnits.filter(u => u.type === 'apc').length;
+    const scoutcars = myUnits.filter(u => u.type === 'scoutcar').length;
+
+    // Check if we have tech lab for T3 units
+    const hasTechLab = this.game.getBuildings(this.team).some(b => b.type === 'techlab' && b.alive);
+
+    // Early game: scout car for scouting
+    if (scoutcars < 1 && this.gameTime < 120) return 'scoutcar';
+
+    // Get AA if enemy has lots of air
+    const comp = this.lastKnownEnemyComposition;
+    const airCount = (comp.drone || 0) + (comp.plane || 0) + (comp.bomber || 0);
+    if (airCount > 2 && aaHTs < 2) return 'aahalftrack';
+
+    // T3 units if we have tech lab
+    if (hasTechLab) {
+      if (heavyTanks < 2 && Math.random() < 0.3) return 'heavytank';
+      if (spgs < 1 && Math.random() < 0.2) return 'spg';
+    }
+
+    // APCs if we have lots of infantry
+    const infantryCount = myUnits.filter(u => u.type === 'infantry').length;
+    if (apcs < 1 && infantryCount > 6 && Math.random() < 0.2) return 'apc';
+
+    return 'tank';
+  }
+
   chooseAirUnit(myUnits) {
     const drones = myUnits.filter(u => u.type === 'drone').length;
     const planes = myUnits.filter(u => u.type === 'plane').length;
+    const bombers = myUnits.filter(u => u.type === 'bomber').length;
+
+    // Check for tech lab for bombers
+    const hasTechLab = this.game.getBuildings(this.team).some(b => b.type === 'techlab' && b.alive);
+    if (hasTechLab && bombers < 1 && Math.random() < 0.3) return 'bomber';
 
     // Strategy-based air choices
     if (this.strategy === 'air') {
@@ -541,11 +586,13 @@ export class AIController {
     const battleships = myUnits.filter(u => u.type === 'battleship').length;
     const subs = myUnits.filter(u => u.type === 'submarine').length;
     const carriers = myUnits.filter(u => u.type === 'carrier').length;
+    const patrolBoats = myUnits.filter(u => u.type === 'patrolboat').length;
+    // Early naval: cheap patrol boats
+    if (patrolBoats < 2 && battleships === 0) return 'patrolboat';
     if (battleships < 2) return 'battleship';
     if (subs < 2) return 'submarine';
     if (carriers < 1) return 'carrier';
     // Rotate through fleet composition
-    const total = battleships + subs + carriers;
     if (battleships <= subs) return 'battleship';
     if (subs <= carriers) return 'submarine';
     return 'carrier';

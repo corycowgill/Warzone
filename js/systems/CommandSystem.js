@@ -83,13 +83,17 @@ export class CommandSystem {
       }
     }
 
-    // Check for friendly bunker under cursor (garrison command)
+    // Check for friendly bunker or APC under cursor (garrison command)
     if (!clickedEnemy) {
       const friendlyEntities = this.game.getEntitiesByTeam(ownTeam);
       const friendlyMeshes = [];
       const friendlyMeshToEntity = new Map();
       for (const entity of friendlyEntities) {
-        if (!entity.mesh || !entity.isBuilding || !entity.garrisonUnit) continue;
+        if (!entity.mesh) continue;
+        // Bunkers (buildings with garrisonUnit) or APCs (units with garrison method)
+        const isBunker = entity.isBuilding && entity.garrisonUnit;
+        const isAPC = entity.isUnit && entity.type === 'apc' && entity.garrison;
+        if (!isBunker && !isAPC) continue;
         entity.mesh.traverse((child) => {
           if (child.isMesh) {
             friendlyMeshes.push(child);
@@ -100,23 +104,31 @@ export class CommandSystem {
       if (friendlyMeshes.length > 0) {
         const friendlyHits = this.raycaster.intersectObjects(friendlyMeshes, false);
         if (friendlyHits.length > 0) {
-          let bunker = null;
+          let target = null;
           for (const hit of friendlyHits) {
             let obj = hit.object;
             while (obj) {
-              if (friendlyMeshToEntity.has(obj)) { bunker = friendlyMeshToEntity.get(obj); break; }
+              if (friendlyMeshToEntity.has(obj)) { target = friendlyMeshToEntity.get(obj); break; }
               obj = obj.parent;
             }
-            if (bunker) break;
+            if (target) break;
           }
-          if (bunker) {
+          if (target) {
             const infantry = selectedUnits.filter(u => u.type === 'infantry');
             let garrisoned = 0;
-            for (const unit of infantry) {
-              if (bunker.garrisonUnit(unit)) garrisoned++;
+            if (target.isBuilding && target.garrisonUnit) {
+              // Bunker garrison
+              for (const unit of infantry) {
+                if (target.garrisonUnit(unit)) garrisoned++;
+              }
+            } else if (target.isUnit && target.type === 'apc' && target.garrison) {
+              // APC garrison
+              for (const unit of infantry) {
+                if (target.garrison(unit)) garrisoned++;
+              }
             }
             if (garrisoned > 0) {
-              this.game.eventBus.emit('command:garrison', { bunker, count: garrisoned });
+              this.game.eventBus.emit('command:garrison', { target, count: garrisoned });
               if (this.game.soundManager) this.game.soundManager.play('move');
               return;
             }
@@ -372,7 +384,7 @@ export class CommandSystem {
         break;
 
       case 'v': {
-        // Cycle unit stance (aggressive → defensive → hold fire)
+        // Cycle unit stance (aggressive -> defensive -> hold fire)
         const stanceUnits = selected.filter(e => e.isUnit);
         if (stanceUnits.length > 0) {
           const newStance = stanceUnits[0].cycleStance();
@@ -383,6 +395,18 @@ export class CommandSystem {
           const stanceLabels = { aggressive: 'Aggressive', defensive: 'Defensive', holdfire: 'Hold Fire' };
           this.game.eventBus.emit('command:stance', { stance: newStance });
           this.game.eventBus.emit('notification', { message: `Stance: ${stanceLabels[newStance]}`, color: '#ffcc00' });
+        }
+        break;
+      }
+
+      case 'u': {
+        // Unload APC
+        const apcs = selected.filter(e => e.isUnit && e.type === 'apc' && e.garrisoned && e.garrisoned.length > 0);
+        for (const apc of apcs) {
+          apc.ejectAll();
+        }
+        if (apcs.length > 0) {
+          if (this.game.soundManager) this.game.soundManager.play('move');
         }
         break;
       }

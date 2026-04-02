@@ -11,6 +11,7 @@ import { Turret } from './Turret.js';
 import { AATurret } from './AATurret.js';
 import { Wall } from './Wall.js';
 import { SuperweaponFacility } from './SuperweaponFacility.js';
+import { TechLab } from './TechLab.js';
 
 const BUILDING_MAP = {
   headquarters: Headquarters,
@@ -25,7 +26,8 @@ const BUILDING_MAP = {
   turret: Turret,
   aaturret: AATurret,
   wall: Wall,
-  superweapon: SuperweaponFacility
+  superweapon: SuperweaponFacility,
+  techlab: TechLab
 };
 
 export class BuildingFactory {

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { DAMAGE_MODIFIERS, NATIONS, UNIT_ABILITIES } from '../core/Constants.js';
+import { DAMAGE_MODIFIERS, NATIONS, UNIT_ABILITIES, UNIT_STATS } from '../core/Constants.js';
 import { Projectile } from '../entities/Projectile.js';
 
 export class CombatSystem {
@@ -37,6 +37,34 @@ export class CombatSystem {
       }
     }
 
+    // Handle APC garrisoned infantry firing
+    const apcs = allUnits.filter(u => u.type === 'apc' && u.garrisoned && u.garrisoned.length > 0);
+    for (const apc of apcs) {
+      if (!apc.attackTarget || !apc.attackTarget.alive) continue;
+      const dist = apc.distanceTo(apc.attackTarget);
+      // Garrisoned infantry fire at 50% of infantry range
+      const garrisonRange = (UNIT_STATS.infantry?.range || 6) * 3 * 0.5;
+      if (dist <= garrisonRange) {
+        // Each garrisoned infantry adds damage
+        for (const inf of apc.garrisoned) {
+          if (!inf.alive) continue;
+          if (inf.attackCooldown > 0) {
+            inf.attackCooldown -= delta;
+            continue;
+          }
+          const infDmg = Math.max(1, (UNIT_STATS.infantry?.damage || 8) * 0.5);
+          apc.attackTarget.takeDamage(infDmg);
+          inf.attackCooldown = 1 / (UNIT_STATS.infantry?.attackRate || 1.5);
+          if (!apc.attackTarget.alive) {
+            if (inf.addKill) inf.addKill();
+            this.game.eventBus.emit('combat:kill', { attacker: inf, defender: apc.attackTarget });
+            apc.attackTarget = null;
+            break;
+          }
+        }
+      }
+    }
+
     // Handle turret attacks (buildings with isTurret flag)
     const turrets = this.game.entities.filter(e => e.isBuilding && e.isTurret && e.alive);
     for (const turret of turrets) {
@@ -64,6 +92,22 @@ export class CombatSystem {
 
   performAttack(attacker, defender) {
     if (!attacker.alive || !defender.alive) return;
+
+    // Minimum range check (mortar, SPG)
+    const stats = attacker.isUnit ? UNIT_STATS[attacker.type] : null;
+    if (stats && stats.minRange) {
+      const dist = attacker.distanceTo(defender);
+      if (dist < stats.minRange * 3) return; // Too close
+    }
+
+    // Air-only targeting (AA Half-Track)
+    if (stats && stats.airOnly && defender.domain !== 'air') return;
+
+    // SPG must be deployed to fire
+    if (attacker.type === 'spg' && attacker._deployed === false) return;
+
+    // Scout car cannot attack air
+    if (attacker.type === 'scoutcar' && defender.domain === 'air') return;
 
     // Calculate damage with modifiers
     const baseDmg = attacker.damage;
@@ -104,6 +148,21 @@ export class CombatSystem {
 
     // Apply damage
     defender.takeDamage(finalDmg);
+
+    // AOE splash damage for mortar, SPG, bomber
+    if (stats && stats.aoeRadius) {
+      const defPos = defender.getPosition();
+      const enemyTeam = attacker.team === 'player' ? 'enemy' : 'player';
+      const splashTargets = this.game.getEntitiesByTeam(enemyTeam);
+      for (const target of splashTargets) {
+        if (!target.alive || target === defender) continue;
+        const d = target.getPosition().distanceTo(defPos);
+        if (d <= stats.aoeRadius) {
+          const splashDmg = finalDmg * (1 - d / stats.aoeRadius) * 0.5;
+          if (splashDmg > 0) target.takeDamage(splashDmg);
+        }
+      }
+    }
 
     // Spatial awareness: notify if player unit attacked off-screen
     if (defender.team === 'player' && this.game.soundManager?.notifyCombatOffscreen) {
@@ -289,6 +348,10 @@ export class CombatSystem {
       case 'barrage': return this.executeBarrage(unit, targetPos);
       case 'launch_squadron': return this.executeLaunchSquadron(unit, targetPos);
       case 'torpedo_salvo': return this.executeTorpedoSalvo(unit, targetEntity);
+      case 'smoke_screen': return this.executeSmokeScreen(unit, targetPos);
+      case 'flare': return this.executeFlare(unit, targetPos);
+      case 'deploy': return this.executeDeploy(unit);
+      case 'sonar_ping': return this.executeSonarPing(unit);
       default: return false;
     }
   }
@@ -460,6 +523,93 @@ export class CombatSystem {
     return true;
   }
 
+  executeSmokeScreen(unit, targetPos) {
+    const ab = UNIT_ABILITIES.mortar;
+    if (!ab) return false;
+    const unitPos = unit.getPosition();
+    if (unitPos.distanceTo(targetPos) > ab.range * 3) return false;
+    unit.abilityCooldown = ab.cooldown;
+
+    // Create a smoke effect at target position
+    if (this.game.effectsManager) {
+      this.game.effectsManager.createExplosion(targetPos);
+    }
+
+    // Smoke blocks vision: temporarily reduce vision for enemies near the smoke
+    // We'll track active smoke zones on the game object
+    if (!this.game._smokeZones) this.game._smokeZones = [];
+    this.game._smokeZones.push({
+      position: targetPos.clone(),
+      radius: ab.radius,
+      timer: ab.duration,
+      team: unit.team
+    });
+
+    if (this.game.soundManager) this.game.soundManager.play('explosion');
+    this.game.eventBus.emit('ability:used', { unit, ability: 'smoke_screen', target: targetPos });
+    return true;
+  }
+
+  executeFlare(unit, targetPos) {
+    const ab = UNIT_ABILITIES.scoutcar;
+    if (!ab) return false;
+    const unitPos = unit.getPosition();
+    if (unitPos.distanceTo(targetPos) > ab.range * 3) return false;
+    unit.abilityCooldown = ab.cooldown;
+
+    // Temporarily reveal an area through fog of war
+    if (this.game.fogOfWar) {
+      if (!this.game._flareZones) this.game._flareZones = [];
+      this.game._flareZones.push({
+        position: targetPos.clone(),
+        radius: ab.radius,
+        timer: ab.duration
+      });
+    }
+
+    if (this.game.effectsManager) {
+      this.game.effectsManager.createMuzzleFlash(targetPos);
+    }
+    if (this.game.soundManager) this.game.soundManager.play('attack');
+    this.game.eventBus.emit('ability:used', { unit, ability: 'flare', target: targetPos });
+    return true;
+  }
+
+  executeDeploy(unit) {
+    if (unit.type !== 'spg' || !unit.toggleDeploy) return false;
+    unit.toggleDeploy();
+    if (this.game.soundManager) this.game.soundManager.play('build');
+    this.game.eventBus.emit('ability:used', { unit, ability: 'deploy', active: unit._deployed });
+    return true;
+  }
+
+  executeSonarPing(unit) {
+    const ab = UNIT_ABILITIES.patrolboat;
+    if (!ab) return false;
+    unit.abilityCooldown = ab.cooldown;
+
+    // Reveal submarines in radius for duration
+    const unitPos = unit.getPosition();
+    const enemyTeam = unit.team === 'player' ? 'enemy' : 'player';
+    const enemies = this.game.getUnits(enemyTeam);
+
+    for (const enemy of enemies) {
+      if (enemy.type !== 'submarine' || !enemy.alive) continue;
+      const dist = enemy.getPosition().distanceTo(unitPos);
+      if (dist <= ab.radius * 3) {
+        // Temporarily make submarine visible
+        enemy._sonarRevealed = ab.duration;
+      }
+    }
+
+    if (this.game.effectsManager) {
+      this.game.effectsManager.createMuzzleFlash(unitPos);
+    }
+    if (this.game.soundManager) this.game.soundManager.play('select');
+    this.game.eventBus.emit('ability:used', { unit, ability: 'sonar_ping' });
+    return true;
+  }
+
   autoAcquireTarget(unit) {
     // Hold fire stance: never auto-acquire targets
     if (unit.stance === 'holdfire') return;
@@ -481,9 +631,18 @@ export class CombatSystem {
     // Player units should only auto-acquire visible targets
     const fog = this.game.fogOfWar;
 
+    // Get unit stats for special targeting rules
+    const unitStats = UNIT_STATS[unit.type];
+
     for (const enemy of enemies) {
       if (!enemy.alive) continue;
       if (enemy.isGarrisoned) continue;
+
+      // Air-only targeting (AA Half-Track)
+      if (unitStats && unitStats.airOnly && enemy.domain !== 'air') continue;
+
+      // Scout car cannot target air
+      if (unit.type === 'scoutcar' && enemy.domain === 'air') continue;
 
       // If this unit belongs to the player team, check fog visibility
       if (fog && unit.team === 'player') {
@@ -492,6 +651,10 @@ export class CombatSystem {
       }
 
       const dist = unit.distanceTo(enemy);
+
+      // Minimum range check
+      if (unitStats && unitStats.minRange && dist < unitStats.minRange * 3) continue;
+
       if (dist <= autoRange && dist < nearestDist) {
         nearestDist = dist;
         nearestEnemy = enemy;
