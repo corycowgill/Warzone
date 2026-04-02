@@ -257,6 +257,14 @@ export const VETERANCY = {
   }
 };
 
+export const FORMATION_CONFIG = {
+  types: ['box', 'line'],
+  defaultType: 'box',
+  spacing: 4,
+  separationRadius: 3,
+  separationForce: 8,
+};
+
 export const GAME_CONFIG = {
   mapSize: 128,
   worldScale: 2,

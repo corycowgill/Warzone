@@ -35,6 +35,13 @@ export class Game {
     this.activeTeam = 'player'; // For 2P hot-seat
     this.clock = new THREE.Clock();
 
+    // Game timer and stats
+    this.gameElapsed = 0;
+    this.stats = {
+      player: { unitsProduced: 0, unitsLost: 0, buildingsDestroyed: 0, damageDealt: 0 },
+      enemy: { unitsProduced: 0, unitsLost: 0, buildingsDestroyed: 0, damageDealt: 0 }
+    };
+
     // Systems (initialized in startGame)
     this.sceneManager = null;
     this.cameraController = null;
@@ -285,6 +292,21 @@ export class Game {
       this.aiController.update(delta);
     }
 
+    // Passive heal near HQ for both teams
+    for (const team of ['player', 'enemy']) {
+      const hq = this.getHQ(team);
+      if (!hq) continue;
+      const units = this.getUnits(team);
+      for (const unit of units) {
+        if (unit.health < unit.maxHealth && unit.distanceTo(hq) < 30) {
+          unit.health = Math.min(unit.maxHealth, unit.health + 2 * delta);
+        }
+      }
+    }
+
+    // Update game timer
+    this.gameElapsed += delta;
+
     // Update UI
     this.uiManager.updateHUD();
 
@@ -304,6 +326,28 @@ export class Game {
       this.setState('GAME_OVER');
       this.uiManager.showGameOver(true);
       if (this.soundManager) this.soundManager.play('victory');
+    } else {
+      // Total annihilation check: if enemy has no units AND no production buildings
+      const enemyUnits = this.getUnits('enemy');
+      const enemyBuildings = this.getBuildings('enemy').filter(b =>
+        b.produces && b.produces.length > 0
+      );
+      if (enemyUnits.length === 0 && enemyBuildings.length === 0) {
+        this.setState('GAME_OVER');
+        this.uiManager.showGameOver(true);
+        if (this.soundManager) this.soundManager.play('victory');
+      }
+
+      // Same for player
+      const playerUnits = this.getUnits('player');
+      const playerBuildings = this.getBuildings('player').filter(b =>
+        b.produces && b.produces.length > 0
+      );
+      if (playerUnits.length === 0 && playerBuildings.length === 0) {
+        this.setState('GAME_OVER');
+        this.uiManager.showGameOver(false);
+        if (this.soundManager) this.soundManager.play('defeat');
+      }
     }
   }
 

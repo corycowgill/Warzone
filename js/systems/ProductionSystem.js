@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { UNIT_STATS, BUILDING_STATS, TECH_TREE, NATIONS } from '../core/Constants.js';
+import { UNIT_STATS, BUILDING_STATS, TECH_TREE, NATIONS, GAME_CONFIG } from '../core/Constants.js';
 
 export class ProductionSystem {
   constructor(game) {
@@ -67,6 +67,17 @@ export class ProductionSystem {
       return false;
     }
 
+    // Check population cap
+    const currentUnits = this.game.getUnits(building.team).length;
+    if (currentUnits >= GAME_CONFIG.maxUnitsPerTeam) {
+      this.game.eventBus.emit('production:error', {
+        message: `Population cap reached!`,
+        reason: 'popcap'
+      });
+      if (this.game.soundManager) this.game.soundManager.play('error');
+      return false;
+    }
+
     // Check cost (with nation cost reduction)
     const stats = UNIT_STATS[unitType];
     if (!stats) return false;
@@ -82,7 +93,8 @@ export class ProductionSystem {
 
     if (!this.game.resourceSystem.canAfford(building.team, cost)) {
       this.game.eventBus.emit('production:error', {
-        message: `Not enough SP (need ${cost})`
+        message: `Not enough SP (need ${cost})`,
+        reason: 'cost'
       });
       if (this.game.soundManager) this.game.soundManager.play('error');
       return false;
@@ -112,7 +124,8 @@ export class ProductionSystem {
     // Check if team can afford
     if (!this.game.resourceSystem.canAfford(team, cost)) {
       this.game.eventBus.emit('production:error', {
-        message: `Not enough SP (need ${cost})`
+        message: `Not enough SP (need ${cost})`,
+        reason: 'cost'
       });
       if (this.game.soundManager) this.game.soundManager.play('error');
       return false;

@@ -13,6 +13,11 @@ export class SelectionManager {
     this._lastGroupKeyIndex = -1;
     this._doubleTapThreshold = 300; // ms
 
+    // Double-click detection for select-all-same-type
+    this._lastClickTime = 0;
+    this._lastClickedEntity = null;
+    this._doubleClickThreshold = 350; // ms
+
     this.createSelectionBoxElement();
     this.setupControlGroupKeys();
   }
@@ -169,10 +174,16 @@ export class SelectionManager {
 
     const shiftHeld = event.shiftKey;
 
+    const now = Date.now();
     if (clickedEntity) {
       // Only allow selecting own team entities
       if (clickedEntity.team === ownTeam) {
-        if (shiftHeld) {
+        // Double-click: select all visible same-type units
+        if (this._lastClickedEntity === clickedEntity &&
+            (now - this._lastClickTime) < this._doubleClickThreshold) {
+          this._lastClickedEntity = null;
+          this.selectAllSameTypeOnScreen(clickedEntity, camera, shiftHeld);
+        } else if (shiftHeld) {
           // Toggle selection
           const idx = this.selected.indexOf(clickedEntity);
           if (idx !== -1) {
@@ -200,6 +211,8 @@ export class SelectionManager {
         this.clearSelection();
       }
     }
+    this._lastClickTime = now;
+    this._lastClickedEntity = clickedEntity;
 
     this.game.eventBus.emit('selection:changed', { entities: [...this.selected] });
   }
@@ -278,6 +291,30 @@ export class SelectionManager {
     }
 
     this.game.eventBus.emit('selection:changed', { entities: [...this.selected] });
+  }
+
+  selectAllSameTypeOnScreen(entity, camera, addToSelection) {
+    const ownTeam = this.game.mode === '2P' ? this.game.activeTeam : 'player';
+    const units = this.game.getUnits(ownTeam).filter(u => u.alive && u.type === entity.type);
+    const onScreen = units.filter(u => {
+      const sp = this.worldToScreen(u.getPosition(), camera);
+      return sp && sp.x >= 0 && sp.x <= window.innerWidth && sp.y >= 0 && sp.y <= window.innerHeight;
+    });
+    if (onScreen.length === 0) return;
+    if (addToSelection) {
+      for (const u of onScreen) {
+        if (!this.selected.includes(u)) {
+          u.setSelected(true);
+          this.selected.push(u);
+        }
+      }
+    } else {
+      this.selectEntities(onScreen);
+    }
+    this.game.eventBus.emit('selection:changed', { entities: [...this.selected] });
+    if (this.game.uiManager?.hud) {
+      this.game.uiManager.hud.showNotification(`Selected ${onScreen.length} ${entity.type}`, '#00ccff');
+    }
   }
 
   getSelected() {

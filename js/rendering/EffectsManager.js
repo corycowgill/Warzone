@@ -135,6 +135,64 @@ export class EffectsManager {
     }
   }
 
+  createDamageNumber(position, damage, effectiveness) {
+    // effectiveness: 'high' (red), 'normal' (white), 'low' (grey)
+    const canvas = document.createElement('canvas');
+    canvas.width = 128;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+
+    const dmgText = Math.round(damage).toString();
+    ctx.font = 'bold 48px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Color by effectiveness
+    let fillColor;
+    if (effectiveness === 'high') {
+      fillColor = '#ff3333';
+    } else if (effectiveness === 'low') {
+      fillColor = '#999999';
+    } else {
+      fillColor = '#ffffff';
+    }
+
+    // Draw text with black outline for readability
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 4;
+    ctx.strokeText(dmgText, 64, 32);
+    ctx.fillStyle = fillColor;
+    ctx.fillText(dmgText, 64, 32);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    const material = new THREE.SpriteMaterial({
+      map: texture,
+      transparent: true,
+      opacity: 1.0,
+      depthTest: false
+    });
+    const sprite = new THREE.Sprite(material);
+    sprite.scale.set(3, 1.5, 1);
+    sprite.position.copy(position);
+    sprite.position.y += 4;
+
+    // Small random horizontal offset so overlapping numbers spread out
+    sprite.position.x += (Math.random() - 0.5) * 1.5;
+    sprite.position.z += (Math.random() - 0.5) * 1.5;
+
+    this.scene.add(sprite);
+
+    this.activeEffects.push({
+      type: 'damageNumber',
+      group: sprite,
+      material: material,
+      texture: texture,
+      lifetime: 1.0,
+      elapsed: 0,
+      startY: sprite.position.y
+    });
+  }
+
   update(delta) {
     for (let i = this.activeEffects.length - 1; i >= 0; i--) {
       const effect = this.activeEffects[i];
@@ -144,10 +202,15 @@ export class EffectsManager {
       if (progress >= 1.0) {
         // Remove completed effect
         this.scene.remove(effect.group);
-        effect.group.traverse(child => {
-          if (child.geometry) child.geometry.dispose();
-          if (child.material) child.material.dispose();
-        });
+        if (effect.type === 'damageNumber') {
+          effect.material.dispose();
+          effect.texture.dispose();
+        } else {
+          effect.group.traverse(child => {
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) child.material.dispose();
+          });
+        }
         this.activeEffects.splice(i, 1);
         continue;
       }
@@ -167,6 +230,10 @@ export class EffectsManager {
         effect.light.intensity = 3 * (1.0 - progress);
         const scale = 1.0 + progress * 2;
         effect.flash.scale.set(scale, scale, scale);
+      } else if (effect.type === 'damageNumber') {
+        // Float upward and fade out
+        effect.group.position.y = effect.startY + progress * 4;
+        effect.material.opacity = 1.0 - progress;
       }
     }
   }

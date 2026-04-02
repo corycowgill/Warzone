@@ -109,8 +109,8 @@ export class CameraController {
   }
 
   moveTo(x, z) {
-    this.target.x = x;
-    this.target.z = z;
+    this.target.x = Math.max(this.bounds.minX, Math.min(this.bounds.maxX, x));
+    this.target.z = Math.max(this.bounds.minZ, Math.min(this.bounds.maxZ, z));
     this.updateCamera();
   }
 }

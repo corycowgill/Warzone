@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { UNIT_STATS, BUILDING_STATS, TECH_TREE, NATIONS } from '../core/Constants.js';
 
 export class HUD {
@@ -15,12 +16,22 @@ export class HUD {
     this.productionOptions = document.getElementById('production-options');
     this.buildMenu = document.getElementById('build-menu');
     this.buildOptions = document.getElementById('build-options');
+    this.gameTimerDisplay = document.getElementById('game-timer-display');
 
     // State
     this.visible = false;
     this.buildMenuOpen = false;
     this.buildPlacementMode = false;
     this.buildPlacementType = null;
+
+    // Ghost building preview (3D)
+    this.ghostMesh = null;
+    this.ghostValid = false;
+
+    // Rally point visualization (3D)
+    this.rallyLine = null;
+    this.rallyFlag = null;
+    this.rallyTargetBuilding = null;
 
     // Create notification area (top-center, below resource bar)
     this.notificationArea = document.createElement('div');
@@ -72,6 +83,7 @@ export class HUD {
       <div>A: Attack move</div>
       <div>S: Stop</div>
       <div>D: Hold position</div>
+      <div>G: Use ability</div>
       <div>B: Build menu</div>
       <div>Tab: Cycle buildings</div>
       <div>Esc: Cancel</div>
@@ -204,7 +216,21 @@ export class HUD {
     });
 
     this.game.eventBus.on('production:error', (data) => {
-      this.showNotification(data.message, '#ff4444');
+      if (data.reason === 'cost') {
+        // Flash the SP display red for 0.5s
+        if (this.spDisplay) {
+          this.spDisplay.classList.remove('sp-flash-red');
+          // Force reflow to restart animation
+          void this.spDisplay.offsetWidth;
+          this.spDisplay.classList.add('sp-flash-red');
+          setTimeout(() => this.spDisplay.classList.remove('sp-flash-red'), 500);
+        }
+        this.showNotification(data.message, '#ff4444');
+      } else if (data.reason === 'popcap') {
+        this.showNotification(data.message, '#ff8800');
+      } else {
+        this.showNotification(data.message, '#ff4444');
+      }
     });
 
     this.game.eventBus.on('production:cancelled', (data) => {
@@ -254,6 +280,10 @@ export class HUD {
     // Handle build placement click
     const canvas = this.game.sceneManager.renderer.domElement;
     canvas.addEventListener('click', (e) => {
+      if (this.game.commandSystem.abilityTargetMode) {
+        this.handleAbilityClick(e);
+        return;
+      }
       if (this.buildPlacementMode) {
         this.handleBuildPlacement(e);
       }
@@ -289,6 +319,7 @@ export class HUD {
     if (!this.visible) return;
     this.updateResourceDisplay();
     this.updateProductionPanel();
+    this.updateRallyPointVisuals();
   }
 
   // ============================
@@ -299,10 +330,28 @@ export class HUD {
     const sp = Math.floor(this.game.teams[activeTeam].sp);
     const income = this.game.resourceSystem ? this.game.resourceSystem.getIncomeRate(activeTeam) : 0;
     const unitCount = this.game.getUnits(activeTeam).length;
+    const maxUnits = GAME_CONFIG.maxUnitsPerTeam;
 
     if (this.spDisplay) this.spDisplay.textContent = sp;
     if (this.incomeDisplay) this.incomeDisplay.textContent = `+${income}/s`;
-    if (this.unitCountDisplay) this.unitCountDisplay.textContent = unitCount;
+    if (this.unitCountDisplay) {
+      this.unitCountDisplay.textContent = `${unitCount}/${maxUnits}`;
+      // Apply warning/maxed styling
+      this.unitCountDisplay.classList.remove('unit-count-warning', 'unit-count-maxed');
+      if (unitCount >= maxUnits) {
+        this.unitCountDisplay.classList.add('unit-count-maxed');
+      } else if (unitCount >= maxUnits - 5) {
+        this.unitCountDisplay.classList.add('unit-count-warning');
+      }
+    }
+
+    // Update game timer
+    if (this.gameTimerDisplay && this.game.gameElapsed !== undefined) {
+      const totalSeconds = Math.floor(this.game.gameElapsed);
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      this.gameTimerDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
   }
 
   // ============================
@@ -340,6 +389,28 @@ export class HUD {
           <span><span style="color:#888;">Rate:</span> <span style="color:#cccc88;">${entity.attackRate}/s</span></span>
         </div>
       `;
+
+      // Show ability info if unit has one
+      if (entity.ability) {
+        const ab = entity.ability;
+        const cdPercent = entity.getAbilityCooldownPercent();
+        const ready = cdPercent >= 1;
+        const cdColor = ready ? '#00ff44' : '#ff8844';
+        const cdWidth = Math.round(cdPercent * 100);
+
+        statsHtml += `
+          <div style="margin-top:8px;padding:6px 8px;background:#1a2a1a;border:1px solid ${ready ? '#00ff44' : '#445544'};border-radius:4px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="color:${ready ? '#00ff44' : '#888'};font-weight:bold;font-size:12px;">[G] ${ab.name}</span>
+              <span style="color:${cdColor};font-size:11px;">${ready ? 'READY' : Math.ceil(entity.abilityCooldown) + 's'}</span>
+            </div>
+            <div style="background:#333;height:4px;border-radius:2px;margin-top:4px;overflow:hidden;">
+              <div style="background:${cdColor};height:100%;width:${cdWidth}%;transition:width 0.3s;"></div>
+            </div>
+            <div style="color:#666;font-size:10px;margin-top:3px;">${ab.description}</div>
+          </div>
+        `;
+      }
     }
 
     if (entity.isBuilding) {
@@ -689,11 +760,30 @@ export class HUD {
     this.buildMenuOpen = false;
     document.body.style.cursor = 'crosshair';
     this.showNotification(`Click to place ${this.formatName(buildingType)}. ESC to cancel.`, '#ffcc00');
+
+    // Create ghost preview mesh
+    this.createGhostMesh(buildingType);
   }
 
   cancelBuildPlacement() {
     this.buildPlacementMode = false;
     this.buildPlacementType = null;
+    document.body.style.cursor = 'default';
+    this.removeGhostMesh();
+  }
+
+  handleAbilityClick(event) {
+    const worldPos = this.game.inputManager.getWorldPosition(event.clientX, event.clientY);
+    if (!worldPos) return;
+
+    const selected = this.game.selectionManager.getSelected().filter(e => e.isUnit && e.ability);
+    for (const unit of selected) {
+      if (unit.canUseAbility()) {
+        this.game.combatSystem.executeAbility(unit, worldPos, null);
+      }
+    }
+
+    this.game.commandSystem.abilityTargetMode = false;
     document.body.style.cursor = 'default';
   }
 
@@ -751,6 +841,202 @@ export class HUD {
     while (this.notificationArea.children.length > 5) {
       this.notificationArea.removeChild(this.notificationArea.firstChild);
     }
+  }
+
+  // ============================
+  // Ghost Building Preview
+  // ============================
+  createGhostMesh(buildingType) {
+    this.removeGhostMesh();
+    const stats = BUILDING_STATS[buildingType];
+    if (!stats) return;
+
+    const size = (stats.size || 2) * 2.5;
+    const height = Math.max(2, size * 0.8);
+
+    const group = new THREE.Group();
+
+    // Simple box representing the building footprint
+    const geo = new THREE.BoxGeometry(size, height, size);
+    const mat = new THREE.MeshPhongMaterial({
+      color: 0x00ff44,
+      transparent: true,
+      opacity: 0.35,
+      depthWrite: false
+    });
+    const box = new THREE.Mesh(geo, mat);
+    box.position.y = height / 2;
+    group.add(box);
+
+    // Footprint ring on the ground
+    const ringGeo = new THREE.RingGeometry(size * 0.7, size * 0.75, 32);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0x00ff44,
+      transparent: true,
+      opacity: 0.5,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.15;
+    group.add(ring);
+
+    group.userData.ghostMat = mat;
+    group.userData.ghostRingMat = ringMat;
+
+    this.ghostMesh = group;
+    this.ghostValid = false;
+
+    const scene = this.game.sceneManager?.scene;
+    if (scene) scene.add(this.ghostMesh);
+  }
+
+  removeGhostMesh() {
+    if (this.ghostMesh) {
+      const scene = this.game.sceneManager?.scene;
+      if (scene) scene.remove(this.ghostMesh);
+      this.ghostMesh = null;
+    }
+  }
+
+  updateGhostPosition(worldPos) {
+    if (!this.ghostMesh || !worldPos) return;
+
+    this.ghostMesh.position.set(worldPos.x, worldPos.y || 0, worldPos.z);
+
+    // Check placement validity
+    const valid = this.checkPlacementValid(worldPos);
+    if (valid !== this.ghostValid) {
+      this.ghostValid = valid;
+      const color = valid ? 0x00ff44 : 0xff3333;
+      const mat = this.ghostMesh.userData.ghostMat;
+      const ringMat = this.ghostMesh.userData.ghostRingMat;
+      if (mat) mat.color.setHex(color);
+      if (ringMat) ringMat.color.setHex(color);
+    }
+  }
+
+  checkPlacementValid(worldPos) {
+    if (!this.buildPlacementType) return false;
+    const stats = BUILDING_STATS[this.buildPlacementType];
+    if (!stats) return false;
+
+    // Check terrain walkability (water check)
+    if (this.game.terrain && !this.game.terrain.isWalkable(worldPos.x, worldPos.z)) {
+      return false;
+    }
+
+    // Check overlap with existing buildings
+    const allBuildings = this.game.entities.filter(e => e.isBuilding && e.alive);
+    const buildSize = (stats.size || 2) * 5;
+    for (const existing of allBuildings) {
+      const dist = existing.getPosition().distanceTo(worldPos);
+      const existingSize = (BUILDING_STATS[existing.type]?.size || 2) * 5;
+      if (dist < (buildSize + existingSize) / 2) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  // ============================
+  // Rally Point Visualization
+  // ============================
+  updateRallyPointVisuals() {
+    const selected = this.game.selectionManager?.getSelected() || [];
+    const building = (selected.length === 1 && selected[0].isBuilding && selected[0].produces && selected[0].produces.length > 0)
+      ? selected[0] : null;
+
+    // If the selected production building changed, rebuild visuals
+    if (building !== this.rallyTargetBuilding) {
+      this.removeRallyVisuals();
+      this.rallyTargetBuilding = building;
+    }
+
+    if (!building || !building.rallyPoint) {
+      this.removeRallyVisuals();
+      return;
+    }
+
+    const scene = this.game.sceneManager?.scene;
+    if (!scene) return;
+
+    const buildingPos = building.getPosition();
+    const rallyPos = building.rallyPoint;
+
+    // Create or update rally line
+    if (!this.rallyLine) {
+      const lineMat = new THREE.LineBasicMaterial({ color: 0x00ff44, linewidth: 2, transparent: true, opacity: 0.7 });
+      const lineGeo = new THREE.BufferGeometry();
+      lineGeo.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, 0], 3));
+      this.rallyLine = new THREE.Line(lineGeo, lineMat);
+      scene.add(this.rallyLine);
+    }
+
+    // Update line endpoints
+    const positions = this.rallyLine.geometry.attributes.position;
+    positions.setXYZ(0, buildingPos.x, buildingPos.y + 1.5, buildingPos.z);
+    positions.setXYZ(1, rallyPos.x, (rallyPos.y || 0) + 0.5, rallyPos.z);
+    positions.needsUpdate = true;
+
+    // Create or update rally flag
+    if (!this.rallyFlag) {
+      const flagGroup = new THREE.Group();
+
+      // Pole
+      const poleGeo = new THREE.CylinderGeometry(0.06, 0.06, 2.5, 6);
+      const poleMat = new THREE.MeshPhongMaterial({ color: 0xcccccc });
+      const pole = new THREE.Mesh(poleGeo, poleMat);
+      pole.position.y = 1.25;
+      flagGroup.add(pole);
+
+      // Flag triangle
+      const flagShape = new THREE.Shape();
+      flagShape.moveTo(0, 0);
+      flagShape.lineTo(1.2, 0.35);
+      flagShape.lineTo(0, 0.7);
+      flagShape.closePath();
+      const flagGeo = new THREE.ShapeGeometry(flagShape);
+      const flagMat = new THREE.MeshPhongMaterial({
+        color: 0x00ff44,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.85
+      });
+      const flag = new THREE.Mesh(flagGeo, flagMat);
+      flag.position.set(0.06, 1.8, 0);
+      flagGroup.add(flag);
+
+      // Base marker circle
+      const baseGeo = new THREE.RingGeometry(0.3, 0.5, 16);
+      const baseMat = new THREE.MeshBasicMaterial({ color: 0x00ff44, side: THREE.DoubleSide, transparent: true, opacity: 0.6 });
+      const base = new THREE.Mesh(baseGeo, baseMat);
+      base.rotation.x = -Math.PI / 2;
+      base.position.y = 0.1;
+      flagGroup.add(base);
+
+      this.rallyFlag = flagGroup;
+      scene.add(this.rallyFlag);
+    }
+
+    this.rallyFlag.position.set(rallyPos.x, rallyPos.y || 0, rallyPos.z);
+  }
+
+  removeRallyVisuals() {
+    const scene = this.game.sceneManager?.scene;
+    if (this.rallyLine) {
+      if (scene) scene.remove(this.rallyLine);
+      this.rallyLine.geometry.dispose();
+      this.rallyLine.material.dispose();
+      this.rallyLine = null;
+    }
+    if (this.rallyFlag) {
+      if (scene) scene.remove(this.rallyFlag);
+      this.rallyFlag = null;
+    }
+    this.rallyTargetBuilding = null;
   }
 
   // ============================

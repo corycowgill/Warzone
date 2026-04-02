@@ -28,6 +28,9 @@ export class SoundManager {
     this._lastPlayTime = {};
     this._minInterval = 0.05; // 50ms minimum between same sound
 
+    // Off-screen combat ping throttle
+    this._lastPingTime = 0;
+
     // Initialize on first user interaction
     this._initOnInteraction = () => {
       if (!this.initialized) {
@@ -161,6 +164,49 @@ export class SoundManager {
     this._combatDecayTimer = 0;
   }
 
+  // Spatial awareness: play a warning ping when player units are attacked off-screen
+  notifyCombatOffscreen(position) {
+    if (!this.enabled || !this.audioContext || !this.initialized) return;
+
+    // Check if position is on screen
+    const camera = this.game.sceneManager?.camera;
+    if (!camera) return;
+
+    const vec = position.clone().project(camera);
+    const onScreen = vec.x >= -1 && vec.x <= 1 && vec.y >= -1 && vec.y <= 1 && vec.z < 1;
+
+    if (!onScreen) {
+      // Play a subtle warning ping - different tone based on direction
+      this.playWarningPing(vec.x);
+    }
+  }
+
+  playWarningPing(direction) {
+    // Throttle: don't spam pings
+    const now = Date.now();
+    if (this._lastPingTime && now - this._lastPingTime < 3000) return;
+    this._lastPingTime = now;
+
+    if (!this.audioContext) return;
+    const ctx = this.audioContext;
+    const gain = ctx.createGain();
+    gain.connect(this.sfxGain);
+    gain.gain.value = 0.1;
+
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    // Higher pitch for right, lower for left
+    osc.frequency.value = 600 + direction * 100;
+    osc.connect(gain);
+
+    const t = ctx.currentTime;
+    gain.gain.setValueAtTime(0.1, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+
+    osc.start(t);
+    osc.stop(t + 0.3);
+  }
+
   // ==================== PLAY DISPATCHER ====================
 
   play(soundName, options) {
@@ -218,11 +264,12 @@ export class SoundManager {
 
     const hp = ctx.createBiquadFilter();
     hp.type = 'highpass';
-    hp.frequency.value = 2000;
+    hp.frequency.value = 2000 * (0.95 + Math.random() * 0.1);
     hp.Q.value = 2;
 
+    const volumeVariation = 0.85 + Math.random() * 0.3;
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.18, now);
+    gain.gain.setValueAtTime(0.18 * volumeVariation, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
 
     noise.connect(hp);
@@ -236,14 +283,16 @@ export class SoundManager {
     // Low cannon boom: low osc + noise thump
     const ctx = this.audioContext;
     const now = ctx.currentTime;
+    const pitchVariation = 0.95 + Math.random() * 0.1;
+    const volumeVariation = 0.85 + Math.random() * 0.3;
 
     // Low boom oscillator
     const osc = ctx.createOscillator();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(80, now);
-    osc.frequency.exponentialRampToValueAtTime(30, now + 0.3);
+    osc.frequency.setValueAtTime(80 * pitchVariation, now);
+    osc.frequency.exponentialRampToValueAtTime(30 * pitchVariation, now + 0.3);
     const oscGain = ctx.createGain();
-    oscGain.gain.setValueAtTime(0.25, now);
+    oscGain.gain.setValueAtTime(0.25 * volumeVariation, now);
     oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
 
     // Impact noise
@@ -255,7 +304,7 @@ export class SoundManager {
     lp.frequency.value = 400;
     lp.Q.value = 1;
     const noiseGain = ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.2, now);
+    noiseGain.gain.setValueAtTime(0.2 * volumeVariation, now);
     noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
 
     osc.connect(oscGain);
@@ -274,14 +323,16 @@ export class SoundManager {
     // Quick electric burst: high freq oscillator + fast modulation
     const ctx = this.audioContext;
     const now = ctx.currentTime;
+    const pitchVariation = 0.95 + Math.random() * 0.1;
+    const volumeVariation = 0.85 + Math.random() * 0.3;
 
     const osc = ctx.createOscillator();
     osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(1200, now);
-    osc.frequency.exponentialRampToValueAtTime(800, now + 0.08);
+    osc.frequency.setValueAtTime(1200 * pitchVariation, now);
+    osc.frequency.exponentialRampToValueAtTime(800 * pitchVariation, now + 0.08);
 
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.1, now);
+    gain.gain.setValueAtTime(0.1 * volumeVariation, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
 
     osc.connect(gain);
@@ -294,6 +345,8 @@ export class SoundManager {
     // Strafing run: descending noise burst with midrange
     const ctx = this.audioContext;
     const now = ctx.currentTime;
+    const pitchVariation = 0.95 + Math.random() * 0.1;
+    const volumeVariation = 0.85 + Math.random() * 0.3;
 
     const buffer = this._makeNoiseBuffer(0.15);
     const noise = ctx.createBufferSource();
@@ -301,20 +354,20 @@ export class SoundManager {
 
     const bp = ctx.createBiquadFilter();
     bp.type = 'bandpass';
-    bp.frequency.setValueAtTime(3000, now);
-    bp.frequency.exponentialRampToValueAtTime(1500, now + 0.15);
+    bp.frequency.setValueAtTime(3000 * pitchVariation, now);
+    bp.frequency.exponentialRampToValueAtTime(1500 * pitchVariation, now + 0.15);
     bp.Q.value = 3;
 
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.15, now);
+    gain.gain.setValueAtTime(0.15 * volumeVariation, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
 
     // Add a low rumble under it
     const osc = ctx.createOscillator();
     osc.type = 'sine';
-    osc.frequency.value = 120;
+    osc.frequency.value = 120 * pitchVariation;
     const oscGain = ctx.createGain();
-    oscGain.gain.setValueAtTime(0.08, now);
+    oscGain.gain.setValueAtTime(0.08 * volumeVariation, now);
     oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
 
     noise.connect(bp);
@@ -333,22 +386,24 @@ export class SoundManager {
     // Deep naval cannon: very low boom with reverb-like tail
     const ctx = this.audioContext;
     const now = ctx.currentTime;
+    const pitchVariation = 0.95 + Math.random() * 0.1;
+    const volumeVariation = 0.85 + Math.random() * 0.3;
 
     const osc = ctx.createOscillator();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(60, now);
-    osc.frequency.exponentialRampToValueAtTime(20, now + 0.5);
+    osc.frequency.setValueAtTime(60 * pitchVariation, now);
+    osc.frequency.exponentialRampToValueAtTime(20 * pitchVariation, now + 0.5);
     const oscGain = ctx.createGain();
-    oscGain.gain.setValueAtTime(0.3, now);
+    oscGain.gain.setValueAtTime(0.3 * volumeVariation, now);
     oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
 
     // Mid rumble layer
     const osc2 = ctx.createOscillator();
     osc2.type = 'triangle';
-    osc2.frequency.setValueAtTime(120, now);
-    osc2.frequency.exponentialRampToValueAtTime(50, now + 0.4);
+    osc2.frequency.setValueAtTime(120 * pitchVariation, now);
+    osc2.frequency.exponentialRampToValueAtTime(50 * pitchVariation, now + 0.4);
     const osc2Gain = ctx.createGain();
-    osc2Gain.gain.setValueAtTime(0.15, now);
+    osc2Gain.gain.setValueAtTime(0.15 * volumeVariation, now);
     osc2Gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
 
     // Noise crack
@@ -359,7 +414,7 @@ export class SoundManager {
     lp.type = 'lowpass';
     lp.frequency.value = 300;
     const noiseGain = ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.15, now);
+    noiseGain.gain.setValueAtTime(0.15 * volumeVariation, now);
     noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
 
     osc.connect(oscGain); oscGain.connect(this.sfxGain);
@@ -396,6 +451,8 @@ export class SoundManager {
     // Torpedo launch: rising whoosh + ping
     const ctx = this.audioContext;
     const now = ctx.currentTime;
+    const pitchVariation = 0.95 + Math.random() * 0.1;
+    const volumeVariation = 0.85 + Math.random() * 0.3;
 
     // Whoosh
     const buffer = this._makeNoiseBuffer(0.3);
@@ -403,20 +460,20 @@ export class SoundManager {
     noise.buffer = buffer;
     const bp = ctx.createBiquadFilter();
     bp.type = 'bandpass';
-    bp.frequency.setValueAtTime(200, now);
-    bp.frequency.exponentialRampToValueAtTime(800, now + 0.2);
+    bp.frequency.setValueAtTime(200 * pitchVariation, now);
+    bp.frequency.exponentialRampToValueAtTime(800 * pitchVariation, now + 0.2);
     bp.Q.value = 2;
     const noiseGain = ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.12, now);
+    noiseGain.gain.setValueAtTime(0.12 * volumeVariation, now);
     noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
 
     // Sonar ping
     const osc = ctx.createOscillator();
     osc.type = 'sine';
-    osc.frequency.value = 1400;
+    osc.frequency.value = 1400 * pitchVariation;
     const pingGain = ctx.createGain();
     pingGain.gain.setValueAtTime(0, now);
-    pingGain.gain.linearRampToValueAtTime(0.08, now + 0.01);
+    pingGain.gain.linearRampToValueAtTime(0.08 * volumeVariation, now + 0.01);
     pingGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
 
     noise.connect(bp); bp.connect(noiseGain); noiseGain.connect(this.sfxGain);
@@ -445,12 +502,14 @@ export class SoundManager {
     // Quick thud + short cry-like descending tone
     const ctx = this.audioContext;
     const now = ctx.currentTime;
+    const pitchVariation = 0.95 + Math.random() * 0.1;
+    const volumeVariation = 0.85 + Math.random() * 0.3;
     const osc = ctx.createOscillator();
     osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(300, now);
-    osc.frequency.exponentialRampToValueAtTime(80, now + 0.2);
+    osc.frequency.setValueAtTime(300 * pitchVariation, now);
+    osc.frequency.exponentialRampToValueAtTime(80 * pitchVariation, now + 0.2);
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.12, now);
+    gain.gain.setValueAtTime(0.12 * volumeVariation, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
     osc.connect(gain); gain.connect(this.sfxGain);
     osc.start(now); osc.stop(now + 0.25);
@@ -460,13 +519,15 @@ export class SoundManager {
     // Big explosion: low rumble + noise + secondary boom
     const ctx = this.audioContext;
     const now = ctx.currentTime;
+    const pitchVariation = 0.95 + Math.random() * 0.1;
+    const volumeVariation = 0.85 + Math.random() * 0.3;
 
     const osc = ctx.createOscillator();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(100, now);
-    osc.frequency.exponentialRampToValueAtTime(25, now + 0.6);
+    osc.frequency.setValueAtTime(100 * pitchVariation, now);
+    osc.frequency.exponentialRampToValueAtTime(25 * pitchVariation, now + 0.6);
     const oscGain = ctx.createGain();
-    oscGain.gain.setValueAtTime(0.3, now);
+    oscGain.gain.setValueAtTime(0.3 * volumeVariation, now);
     oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
 
     const buffer = this._makeNoiseBuffer(0.5);
@@ -503,13 +564,15 @@ export class SoundManager {
     // Descending whine + explosion
     const ctx = this.audioContext;
     const now = ctx.currentTime;
+    const pitchVariation = 0.95 + Math.random() * 0.1;
+    const volumeVariation = 0.85 + Math.random() * 0.3;
 
     const osc = ctx.createOscillator();
     osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(1200, now);
-    osc.frequency.exponentialRampToValueAtTime(200, now + 0.5);
+    osc.frequency.setValueAtTime(1200 * pitchVariation, now);
+    osc.frequency.exponentialRampToValueAtTime(200 * pitchVariation, now + 0.5);
     const oscGain = ctx.createGain();
-    oscGain.gain.setValueAtTime(0.1, now);
+    oscGain.gain.setValueAtTime(0.1 * volumeVariation, now);
     oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
 
     // Crash noise at end
@@ -535,14 +598,16 @@ export class SoundManager {
     // Deep hull breach: metallic groan + water rush
     const ctx = this.audioContext;
     const now = ctx.currentTime;
+    const pitchVariation = 0.95 + Math.random() * 0.1;
+    const volumeVariation = 0.85 + Math.random() * 0.3;
 
     // Metal groan
     const osc = ctx.createOscillator();
     osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(150, now);
-    osc.frequency.exponentialRampToValueAtTime(40, now + 0.8);
+    osc.frequency.setValueAtTime(150 * pitchVariation, now);
+    osc.frequency.exponentialRampToValueAtTime(40 * pitchVariation, now + 0.8);
     const oscGain = ctx.createGain();
-    oscGain.gain.setValueAtTime(0.15, now);
+    oscGain.gain.setValueAtTime(0.15 * volumeVariation, now);
     oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
 
     // Water rush noise
@@ -568,20 +633,22 @@ export class SoundManager {
   _playGenericDeath() {
     const ctx = this.audioContext;
     const now = ctx.currentTime;
+    const pitchVariation = 0.95 + Math.random() * 0.1;
+    const volumeVariation = 0.85 + Math.random() * 0.3;
 
     const osc = ctx.createOscillator();
     osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(200, now);
-    osc.frequency.exponentialRampToValueAtTime(40, now + 0.3);
+    osc.frequency.setValueAtTime(200 * pitchVariation, now);
+    osc.frequency.exponentialRampToValueAtTime(40 * pitchVariation, now + 0.3);
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.setValueAtTime(0.2 * volumeVariation, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
 
     const buffer = this._makeNoiseBuffer(0.3);
     const noise = ctx.createBufferSource();
     noise.buffer = buffer;
     const noiseGain = ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.12, now);
+    noiseGain.gain.setValueAtTime(0.12 * volumeVariation, now);
     noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
 
     osc.connect(gain); gain.connect(this.sfxGain);

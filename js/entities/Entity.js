@@ -88,6 +88,36 @@ export class Entity {
       this.health = 0;
       this.alive = false;
     }
+
+    // Flash red/white on hit for 100ms
+    if (this.mesh && !this._flashing) {
+      this._flashing = true;
+      const savedMaterials = [];
+
+      const healthBarGroup = this.healthBar;
+      this.mesh.traverse(child => {
+        if (child.isMesh && child !== this.selectionRing &&
+            !(healthBarGroup && child.parent === healthBarGroup)) {
+          savedMaterials.push({ mesh: child, material: child.material });
+          child.material = new THREE.MeshBasicMaterial({
+            color: this.alive ? 0xff3333 : 0xffffff,
+            transparent: child.material.transparent,
+            opacity: child.material.opacity
+          });
+        }
+      });
+
+      setTimeout(() => {
+        for (const entry of savedMaterials) {
+          // Dispose temporary flash material
+          if (entry.mesh.material && entry.mesh.material !== entry.material) {
+            entry.mesh.material.dispose();
+          }
+          entry.mesh.material = entry.material;
+        }
+        this._flashing = false;
+      }, 100);
+    }
   }
 
   getPosition() {

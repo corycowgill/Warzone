@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Entity } from './Entity.js';
-import { UNIT_STATS, GAME_CONFIG, NATIONS, UNIT_ABILITIES, VETERANCY } from '../core/Constants.js';
+import { UNIT_STATS, GAME_CONFIG, NATIONS, UNIT_ABILITIES, VETERANCY, FORMATION_CONFIG } from '../core/Constants.js';
 
 export class Unit extends Entity {
   constructor(type, team, position, stats) {
@@ -31,9 +31,9 @@ export class Unit extends Entity {
     this.attackCooldown = 0;
     this.isMoving = false;
 
-    // Waypoint queue for pathfinding
     this.waypoints = [];
     this._attackMove = false;
+    this.formationSpeed = null;
 
     // Game reference (set by Game.createUnit)
     this.game = null;
@@ -324,6 +324,7 @@ export class Unit extends Entity {
     this.isMoving = false;
     this.waypoints = [];
     this._attackMove = false;
+    this.formationSpeed = null;
   }
 
   update(deltaTime) {
@@ -361,13 +362,38 @@ export class Unit extends Entity {
     // Movement
     if (this.moveTarget) {
       const pos = this.mesh.position;
-      const dx = this.moveTarget.x - pos.x;
-      const dz = this.moveTarget.z - pos.z;
+      let dx = this.moveTarget.x - pos.x;
+      let dz = this.moveTarget.z - pos.z;
       const dist = Math.sqrt(dx * dx + dz * dz);
 
       if (dist > 1) {
-        const moveAmount = this.speed * deltaTime * GAME_CONFIG.unitSpeedMultiplier;
-        const ratio = Math.min(moveAmount / dist, 1);
+        const effSpeed = this.formationSpeed !== null ? Math.min(this.formationSpeed, this.speed) : this.speed;
+        const moveAmount = effSpeed * deltaTime * GAME_CONFIG.unitSpeedMultiplier;
+
+        let sepX = 0, sepZ = 0;
+        if (this.game) {
+          const nearby = this.game.getUnits(this.team);
+          const sepR = FORMATION_CONFIG.separationRadius;
+          const sepR2 = sepR * sepR;
+          for (const other of nearby) {
+            if (other === this || !other.alive || !other.mesh) continue;
+            const odx = pos.x - other.mesh.position.x;
+            const odz = pos.z - other.mesh.position.z;
+            const d2 = odx * odx + odz * odz;
+            if (d2 > 0 && d2 < sepR2) {
+              const d = Math.sqrt(d2);
+              const strength = (sepR - d) / sepR;
+              sepX += (odx / d) * strength;
+              sepZ += (odz / d) * strength;
+            }
+          }
+        }
+        const sepForce = FORMATION_CONFIG.separationForce * deltaTime;
+        dx += sepX * sepForce;
+        dz += sepZ * sepForce;
+        const adjDist = Math.sqrt(dx * dx + dz * dz);
+
+        const ratio = Math.min(moveAmount / adjDist, 1);
         const nextX = pos.x + dx * ratio;
         const nextZ = pos.z + dz * ratio;
 
@@ -415,9 +441,7 @@ export class Unit extends Entity {
           }
         }
       } else {
-        // Reached current waypoint
         if (this.waypoints.length > 0) {
-          // Move to next waypoint
           this.moveTarget = this.waypoints.shift();
           if (this.domain !== 'air') {
             this.moveTarget.y = 0;
@@ -425,6 +449,7 @@ export class Unit extends Entity {
         } else {
           this.moveTarget = null;
           this.isMoving = false;
+          this.formationSpeed = null;
         }
       }
     }

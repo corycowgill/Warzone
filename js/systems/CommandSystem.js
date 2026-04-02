@@ -1,14 +1,15 @@
 import * as THREE from 'three';
-import { UNIT_STATS, UNIT_ABILITIES } from '../core/Constants.js';
+import { UNIT_STATS, UNIT_ABILITIES, FORMATION_CONFIG } from '../core/Constants.js';
 
 export class CommandSystem {
   constructor(game) {
     this.game = game;
     this.attackMoveMode = false;
-    this.abilityTargetMode = false; // G key targeting mode
+    this.abilityTargetMode = false;
     this.buildPlacementMode = false;
     this.buildPlacementType = null;
     this.raycaster = new THREE.Raycaster();
+    this.formationType = FORMATION_CONFIG.defaultType;
   }
 
   handleRightClick(event) {
@@ -151,24 +152,69 @@ export class CommandSystem {
     }
   }
 
+  getFormationOffsets(count, type) {
+    const spacing = FORMATION_CONFIG.spacing;
+    const offsets = [];
+
+    if (type === 'line') {
+      for (let i = 0; i < count; i++) {
+        offsets.push({
+          x: (i - (count - 1) / 2) * spacing,
+          z: 0
+        });
+      }
+    } else {
+      const perRow = Math.max(1, Math.ceil(Math.sqrt(count)));
+      const totalRows = Math.ceil(count / perRow);
+      for (let i = 0; i < count; i++) {
+        const row = Math.floor(i / perRow);
+        const col = i % perRow;
+        const rowCount = (row < totalRows - 1) ? perRow : count - row * perRow;
+        offsets.push({
+          x: (col - (rowCount - 1) / 2) * spacing,
+          z: (row - (totalRows - 1) / 2) * spacing
+        });
+      }
+    }
+    return offsets;
+  }
+
+  getFormationHeading(units, position) {
+    let cx = 0, cz = 0;
+    for (const u of units) {
+      const p = u.getPosition();
+      cx += p.x;
+      cz += p.z;
+    }
+    cx /= units.length;
+    cz /= units.length;
+    const dx = position.x - cx;
+    const dz = position.z - cz;
+    return Math.atan2(dx, dz);
+  }
+
   moveUnits(units, position) {
-    const formationSpacing = 4;
-    const unitsPerRow = Math.max(1, Math.ceil(Math.sqrt(units.length)));
+    const groupSpeed = Math.min(...units.map(u => u.speed));
+    const offsets = this.getFormationOffsets(units.length, this.formationType);
+    const heading = this.getFormationHeading(units, position);
+    const cosH = Math.cos(heading);
+    const sinH = Math.sin(heading);
 
     for (let i = 0; i < units.length; i++) {
       const unit = units[i];
-      const row = Math.floor(i / unitsPerRow);
-      const col = i % unitsPerRow;
-      const offsetX = (col - (unitsPerRow - 1) / 2) * formationSpacing;
-      const offsetZ = (row - (Math.ceil(units.length / unitsPerRow) - 1) / 2) * formationSpacing;
+      const ox = offsets[i].x;
+      const oz = offsets[i].z;
+      const rx = ox * cosH - oz * sinH;
+      const rz = ox * sinH + oz * cosH;
 
       const targetPos = new THREE.Vector3(
-        position.x + offsetX,
+        position.x + rx,
         0,
-        position.z + offsetZ
+        position.z + rz
       );
 
-      // Use pathfinding for land/naval units
+      unit.formationSpeed = groupSpeed;
+
       if ((unit.domain === 'land' || unit.domain === 'naval') && this.game.pathfinding) {
         const path = this.game.pathfinding.findPathForDomain(
           unit.getPosition(),
@@ -176,7 +222,6 @@ export class CommandSystem {
           unit.domain
         );
         if (path && path.length > 1) {
-          // Use full waypoint path instead of just the last point
           unit.followPath(path);
         } else if (path && path.length === 1) {
           unit.moveTo(path[0]);
@@ -184,7 +229,6 @@ export class CommandSystem {
           unit.moveTo(targetPos);
         }
       } else {
-        // Air units or no pathfinding: direct move
         unit.moveTo(targetPos);
       }
 
@@ -194,7 +238,6 @@ export class CommandSystem {
 
     this.game.eventBus.emit('command:move', { units, position });
 
-    // Play move sound (use first unit's type for the bark)
     if (this.game.soundManager) {
       const unitType = units.length > 0 ? units[0].type : null;
       this.game.soundManager.play('move', { unitType });
@@ -268,8 +311,9 @@ export class CommandSystem {
         break;
 
       case 'escape':
-        // Cancel attack-move mode or build placement
+        // Cancel attack-move mode, ability targeting, or build placement
         this.attackMoveMode = false;
+        this.abilityTargetMode = false;
         this.buildPlacementMode = false;
         this.buildPlacementType = null;
         document.body.style.cursor = 'default';
@@ -286,12 +330,45 @@ export class CommandSystem {
         break;
       }
 
+      case 'g': {
+        // Activate ability for selected units
+        const abilityUnits = selected.filter(e => e.isUnit && e.ability);
+        if (abilityUnits.length > 0) {
+          const firstAbility = abilityUnits[0].ability;
+          if (firstAbility.type === 'toggle') {
+            // Toggle abilities (like siege_mode) execute immediately
+            for (const unit of abilityUnits) {
+              if (unit.canUseAbility()) {
+                this.game.combatSystem.executeAbility(unit);
+              }
+            }
+          } else {
+            // Targeted abilities enter targeting mode
+            this.abilityTargetMode = true;
+            document.body.style.cursor = 'crosshair';
+            this.game.eventBus.emit('notification', { message: `Click to use ${firstAbility.name}`, color: '#ffcc00' });
+          }
+        }
+        event.preventDefault();
+        break;
+      }
+
+      case 'f':
+        this.cycleFormation();
+        break;
+
       case 'tab':
-        // Cycle through production buildings
         event.preventDefault();
         this.cycleProductionBuildings();
         break;
     }
+  }
+
+  cycleFormation() {
+    const types = FORMATION_CONFIG.types;
+    const idx = types.indexOf(this.formationType);
+    this.formationType = types[(idx + 1) % types.length];
+    this.game.eventBus.emit('command:formation', { type: this.formationType });
   }
 
   cycleProductionBuildings() {

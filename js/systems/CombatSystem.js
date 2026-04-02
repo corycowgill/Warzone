@@ -72,6 +72,17 @@ export class CombatSystem {
     // Apply damage
     defender.takeDamage(finalDmg);
 
+    // Spatial awareness: notify if player unit attacked off-screen
+    if (defender.team === 'player' && this.game.soundManager?.notifyCombatOffscreen) {
+      this.game.soundManager.notifyCombatOffscreen(defender.getPosition());
+    }
+
+    // Create floating damage number
+    if (this.game.effectsManager) {
+      const effectiveness = modifier > 1.1 ? 'high' : modifier < 0.9 ? 'low' : 'normal';
+      this.game.effectsManager.createDamageNumber(defender.getPosition().clone(), finalDmg, effectiveness);
+    }
+
     // Reset attack cooldown on the attacker (this is the ONLY place it's set)
     attacker.attackCooldown = 1 / attacker.attackRate;
 
@@ -139,6 +150,17 @@ export class CombatSystem {
 
     defender.takeDamage(finalDmg);
     turret.attackCooldown = 1 / turret.attackRate;
+
+    // Spatial awareness: notify if player unit attacked off-screen
+    if (defender.team === 'player' && this.game.soundManager?.notifyCombatOffscreen) {
+      this.game.soundManager.notifyCombatOffscreen(defender.getPosition());
+    }
+
+    // Create floating damage number
+    if (this.game.effectsManager) {
+      const effectiveness = modifier > 1.1 ? 'high' : modifier < 0.9 ? 'low' : 'normal';
+      this.game.effectsManager.createDamageNumber(defender.getPosition().clone(), finalDmg, effectiveness);
+    }
 
     // Projectile visual
     const projectile = new Projectile(turret, defender, 0, 100);

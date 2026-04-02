@@ -607,6 +607,11 @@ export class AIController {
     const myUnits = this.game.getUnits(this.team);
 
     for (const unit of myUnits) {
+      // Use abilities
+      if (unit.ability && unit.canUseAbility()) {
+        this.tryUseAbility(unit);
+      }
+
       // Retreat critically damaged units
       if (unit.health / unit.maxHealth < 0.2) {
         this.retreatUnit(unit);
@@ -629,6 +634,131 @@ export class AIController {
         if (nearbyEnemy) {
           unit.attackEntity(nearbyEnemy);
         }
+      }
+
+      // Passive heal near HQ
+      const hq = this.game.getHQ(this.team);
+      if (hq && unit.health < unit.maxHealth * 0.95) {
+        const distToHQ = unit.distanceTo(hq);
+        if (distToHQ < 30) {
+          unit.health = Math.min(unit.maxHealth, unit.health + 1);
+        }
+      }
+    }
+  }
+
+  tryUseAbility(unit) {
+    if (!unit.ability || !unit.canUseAbility()) return;
+
+    const abilityId = unit.ability.id;
+
+    switch (abilityId) {
+      case 'siege_mode': {
+        // Tanks: enter siege mode when near enemies and not moving, exit when no enemies nearby
+        if (unit.attackTarget && unit.isInRange(unit.attackTarget)) {
+          if (!unit._siegeMode) {
+            this.game.combatSystem.executeAbility(unit);
+          }
+        } else if (unit._siegeMode && !unit.attackTarget) {
+          // Exit siege mode to allow movement
+          this.game.combatSystem.executeAbility(unit);
+        }
+        break;
+      }
+
+      case 'grenade': {
+        // Infantry: throw grenade at clusters of enemies
+        if (!unit.attackTarget) break;
+        const targetPos = unit.attackTarget.getPosition();
+        const enemies = this.game.getEntitiesByTeam(this.enemyTeam);
+        // Check if there are multiple enemies near the target
+        let nearbyCount = 0;
+        for (const enemy of enemies) {
+          if (!enemy.alive) continue;
+          if (enemy.getPosition().distanceTo(targetPos) < 8) nearbyCount++;
+        }
+        if (nearbyCount >= 2) {
+          this.game.combatSystem.executeAbility(unit, targetPos, null);
+        }
+        break;
+      }
+
+      case 'emp': {
+        // Drones: use EMP on high-value targets (tanks, planes)
+        if (!unit.attackTarget || !unit.attackTarget.alive) break;
+        const target = unit.attackTarget;
+        if ((target.type === 'tank' || target.type === 'plane' || target.type === 'battleship') && unit.distanceTo(target) <= unit.ability.range * 3) {
+          this.game.combatSystem.executeAbility(unit, null, target);
+        }
+        break;
+      }
+
+      case 'bombing_run': {
+        // Planes: bombing run on enemy clusters or buildings
+        const enemies = this.game.getEntitiesByTeam(this.enemyTeam);
+        let bestPos = null;
+        let bestCount = 0;
+        for (const enemy of enemies) {
+          if (!enemy.alive) continue;
+          const pos = enemy.getPosition();
+          if (unit.getPosition().distanceTo(pos) > unit.ability.range * 3) continue;
+          let count = 0;
+          for (const other of enemies) {
+            if (other.alive && other.getPosition().distanceTo(pos) < 10) count++;
+          }
+          if (count > bestCount) {
+            bestCount = count;
+            bestPos = pos.clone();
+          }
+        }
+        if (bestPos && bestCount >= 2) {
+          this.game.combatSystem.executeAbility(unit, bestPos, null);
+        }
+        break;
+      }
+
+      case 'barrage': {
+        // Battleships: barrage enemy building clusters
+        const enemyBuildings = this.game.getBuildings(this.enemyTeam);
+        if (enemyBuildings.length > 0) {
+          const target = enemyBuildings[0];
+          const targetPos = target.getPosition();
+          if (unit.getPosition().distanceTo(targetPos) <= unit.ability.range * 3) {
+            this.game.combatSystem.executeAbility(unit, targetPos, null);
+          }
+        }
+        break;
+      }
+
+      case 'torpedo_salvo': {
+        // Submarines: torpedo high-HP naval targets
+        if (!unit.attackTarget || !unit.attackTarget.alive) break;
+        const target = unit.attackTarget;
+        if (target.domain === 'naval' && unit.distanceTo(target) <= unit.ability.range * 3) {
+          this.game.combatSystem.executeAbility(unit, null, target);
+        }
+        break;
+      }
+
+      case 'launch_squadron': {
+        // Carriers: launch squadron at largest enemy concentration
+        const enemies = this.game.getEntitiesByTeam(this.enemyTeam);
+        if (enemies.length >= 2) {
+          // Target the center of enemy cluster
+          let cx = 0, cz = 0, count = 0;
+          for (const e of enemies) {
+            if (!e.alive) continue;
+            const p = e.getPosition();
+            cx += p.x; cz += p.z; count++;
+          }
+          if (count > 0) {
+            const targetPos = new THREE.Vector3(cx / count, 0, cz / count);
+            if (unit.getPosition().distanceTo(targetPos) <= unit.ability.range * 3) {
+              this.game.combatSystem.executeAbility(unit, targetPos, null);
+            }
+          }
+        }
+        break;
       }
     }
   }

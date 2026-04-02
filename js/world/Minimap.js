@@ -23,24 +23,51 @@ export class Minimap {
   }
 
   setupListeners() {
-    // Click on minimap to move camera
-    this.canvas.addEventListener('mousedown', (e) => this.handleClick(e));
+    // Left-click on minimap to move camera
+    this.canvas.addEventListener('mousedown', (e) => {
+      if (e.button === 0) this.handleClick(e);
+      if (e.button === 2) this.handleRightClick(e);
+    });
+    // Drag on minimap to continuously update camera
     this.canvas.addEventListener('mousemove', (e) => {
       if (e.buttons === 1) this.handleClick(e);
     });
+    // Prevent browser context menu on minimap
+    this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   }
 
-  handleClick(e) {
+  minimapToWorld(e) {
     const rect = this.canvas.getBoundingClientRect();
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
+    return {
+      x: (mx / this.size) * this.worldSize,
+      z: (my / this.size) * this.worldSize
+    };
+  }
 
-    // Convert minimap pixel to world coordinates
-    const worldX = (mx / this.size) * this.worldSize;
-    const worldZ = (my / this.size) * this.worldSize;
-
+  handleClick(e) {
+    const { x, z } = this.minimapToWorld(e);
     if (this.game.cameraController) {
-      this.game.cameraController.moveTo(worldX, worldZ);
+      this.game.cameraController.moveTo(x, z);
+    }
+  }
+
+  handleRightClick(e) {
+    const selected = this.game.selectionManager
+      ? this.game.selectionManager.getSelected()
+      : [];
+    const units = selected.filter(ent => ent.isUnit && ent.alive);
+    if (units.length === 0) return;
+
+    const { x, z } = this.minimapToWorld(e);
+    const worldPos = { x, y: 0, z };
+
+    if (this.game.commandSystem) {
+      this.game.commandSystem.moveUnits(units, worldPos);
+      if (this.game.soundManager) {
+        this.game.soundManager.play('move', { unitType: units[0].type });
+      }
     }
   }
 

@@ -40,6 +40,15 @@ export class InputManager {
           this.isDragging = true;
         }
       }
+
+      // Update ghost building preview during placement mode
+      const hud = this.game.uiManager?.hud;
+      if (hud && hud.buildPlacementMode) {
+        const worldPos = this.getWorldPosition(e.clientX, e.clientY);
+        if (worldPos) {
+          hud.updateGhostPosition(worldPos);
+        }
+      }
     });
 
     canvas.addEventListener('mouseup', (e) => {
