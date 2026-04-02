@@ -47,6 +47,15 @@ GD-065: Enhanced Combat Effects (smoke particles, debris, projectile trails, tan
 - Cycle 7: 5 fixes (research building destroyed, blitz_training effect, income display, research DOM leak, AI retreat timer)
 - Cycle 8: 7 fixes (wall pathfinding O(1) cache, production progress bar, queue time estimate, AI shipyard filter, turret ditch reduction, research refund, scout timer)
 
+## Cycle 10 - Completed (7 features)
+GD-066: Mortar Team & Scout Car (indirect fire AOE, fast recon with flare ability, smoke screen)
+GD-067: Map Selection UI (random map option with seed input for reproducible maps)
+GD-068: AA Half-Track & APC (air-only AA targeting, APC garrison with 4 infantry slots + garrisoned firing)
+GD-069: Heavy Tank, SPG, Bomber & Tech Lab (T3 units gated behind Tech Lab, SPG deploy mechanic, bomber AOE)
+GD-070: Patrol Boat (cheap naval unit with sonar ping ability revealing submarines)
+GD-071: Day/Night Cycle (8-min rotation, sine-based lighting, night vision reduction in FogOfWar)
+GD-072: Minimap Tactical Drawing (Ctrl+drag to draw, auto-fade, Ctrl+right-click to clear)
+
 ## Pending / Deferred
 | ID | Priority | Status | Description |
 |----|----------|--------|-------------|
@@ -59,7 +68,7 @@ GD-065: Enhanced Combat Effects (smoke particles, debris, projectile trails, tan
 | GD-028 | MEDIUM | DONE (as GD-035) | Smart Control Group Auto-Refill |
 | GD-029 | MEDIUM | PENDING | Last Seen Ghost Overlay (partially done via GD-017) |
 
-## Total Features Implemented: 54
+## Total Features Implemented: 61
 ## Total QA Fixes: 41
-## Git Commits: 24
+## Git Commits: 25
 ## Game Designer Rating: 9/10 - "Exceptionally well-architected single-player military RTS"
