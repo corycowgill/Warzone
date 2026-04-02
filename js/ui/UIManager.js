@@ -374,7 +374,7 @@ export class UIManager {
     // Show/hide enemy nation selection based on mode
     const enemyPanel = document.querySelector('.enemy-panel');
     if (enemyPanel) {
-      if (this.game.mode === '1P') {
+      if (this.game.mode === '1P' || this.game.mode === 'SPECTATE') {
         enemyPanel.style.opacity = '0.5';
         enemyPanel.style.pointerEvents = 'none';
         enemyPanel.querySelector('.panel-header').textContent = 'Enemy Nation (Auto)';
@@ -392,6 +392,27 @@ export class UIManager {
     this.selectedMap = 'continental';
     this.selectedGameMode = 'annihilation';
     document.querySelectorAll('.nation-card').forEach(c => c.classList.remove('selected'));
+
+    // Reset button visual states to defaults
+    const resetBtnGroup = (selector, defaultAttr, defaultVal) => {
+      document.querySelectorAll(selector).forEach(b => {
+        b.classList.remove('selected');
+        b.style.background = 'rgba(22,33,62,0.6)';
+        b.style.borderColor = 'rgba(255,255,255,0.08)';
+        b.style.boxShadow = 'none';
+      });
+      const def = document.querySelector(`${selector}[${defaultAttr}="${defaultVal}"]`);
+      if (def) {
+        def.classList.add('selected');
+        def.style.background = 'rgba(0,255,65,0.1)';
+        def.style.borderColor = '#00ff41';
+        def.style.boxShadow = '0 0 10px rgba(0,255,65,0.2)';
+      }
+    };
+    resetBtnGroup('.difficulty-btn', 'data-difficulty', 'normal');
+    resetBtnGroup('.map-btn', 'data-map', 'continental');
+    resetBtnGroup('.gamemode-btn', 'data-gamemode', 'annihilation');
+
     const startBtn = document.getElementById('btn-start-game');
     if (startBtn) startBtn.disabled = true;
   }
@@ -465,23 +486,6 @@ export class UIManager {
   showGameOver(won) {
     this.hideAll();
     this.gameOverEl?.classList.remove('hidden');
-
-    // Show post-game stats
-    const statsEl = document.getElementById('game-over-stats');
-    if (statsEl && this.game.stats) {
-      const s = this.game.stats.player;
-      const mins = Math.floor(this.game.gameElapsed / 60);
-      const secs = Math.floor(this.game.gameElapsed % 60);
-      statsEl.innerHTML = `
-        <div style="border-top:1px solid #333;padding-top:10px;">
-          <div><span style="color:#888;">Duration:</span> ${mins}:${secs.toString().padStart(2, '0')}</div>
-          <div><span style="color:#888;">Units Produced:</span> <span style="color:#88ff88;">${s.unitsProduced}</span></div>
-          <div><span style="color:#888;">Units Lost:</span> <span style="color:#ff8888;">${s.unitsLost}</span></div>
-          <div><span style="color:#888;">Buildings Destroyed:</span> <span style="color:#ffcc00;">${s.buildingsDestroyed}</span></div>
-          <div><span style="color:#888;">Damage Dealt:</span> <span style="color:#ff8866;">${Math.floor(s.damageDealt)}</span></div>
-        </div>
-      `;
-    }
 
     if (!this.gameOverScreen) {
       this.gameOverScreen = new GameOverScreen(this.game);

@@ -468,7 +468,7 @@ export class Game {
     this.productionSystem.update(delta);
     this.effectsManager.update(delta);
     this.cameraController.update(delta);
-    this.minimap.update();
+    this.minimap.update(delta);
 
     if (this.soundManager) {
       this.soundManager.update(delta);
@@ -547,7 +547,6 @@ export class Game {
       }).length;
 
       if (!this._hillControl) this._hillControl = { player: 0, enemy: 0 };
-      const delta = this.clock.elapsedTime > 0 ? 0.016 : 0; // approximate
 
       if (playerNearCenter > enemyNearCenter) {
         this._hillControl.player += this._lastDelta || 0.016;
@@ -561,31 +560,40 @@ export class Game {
       else if (this._hillControl.enemy >= 120) won = false;
     }
 
-    // Annihilation checks (always active as fallback)
+    // Annihilation / fallback checks
     if (won === null) {
-      const playerHQ = this.getHQ('player');
-      const enemyHQ = this.getHQ('enemy');
+      if (this.gameMode === 'annihilation' || !this.gameMode) {
+        // Full annihilation logic
+        const playerHQ = this.getHQ('player');
+        const enemyHQ = this.getHQ('enemy');
 
-      if (!playerHQ) {
-        won = false;
-      } else if (!enemyHQ) {
-        won = true;
-      } else {
-        const enemyUnits = this.getUnits('enemy');
-        const enemyBuildings = this.getBuildings('enemy').filter(b =>
-          b.produces && b.produces.length > 0
-        );
-        if (enemyUnits.length === 0 && enemyBuildings.length === 0) {
-          won = true;
-        }
-
-        const playerUnits = this.getUnits('player');
-        const playerBuildings = this.getBuildings('player').filter(b =>
-          b.produces && b.produces.length > 0
-        );
-        if (playerUnits.length === 0 && playerBuildings.length === 0) {
+        if (!playerHQ) {
           won = false;
+        } else if (!enemyHQ) {
+          won = true;
+        } else {
+          const enemyUnits = this.getUnits('enemy');
+          const enemyBuildings = this.getBuildings('enemy').filter(b =>
+            b.produces && b.produces.length > 0
+          );
+          if (enemyUnits.length === 0 && enemyBuildings.length === 0) {
+            won = true;
+          }
+
+          const playerUnits = this.getUnits('player');
+          const playerBuildings = this.getBuildings('player').filter(b =>
+            b.produces && b.produces.length > 0
+          );
+          if (playerUnits.length === 0 && playerBuildings.length === 0) {
+            won = false;
+          }
         }
+      } else {
+        // For timed/koth: only end early if HQ is destroyed (mercy rule)
+        const playerHQ = this.getHQ('player');
+        const enemyHQ = this.getHQ('enemy');
+        if (!playerHQ) won = false;
+        else if (!enemyHQ) won = true;
       }
     }
 
@@ -606,6 +614,7 @@ export class Game {
         playerNation: this.teams.player.nation,
         enemyNation: this.teams.enemy.nation,
         difficulty: this.aiDifficulty || 'normal',
+        gameMode: this.gameMode || 'annihilation',
         duration: Math.floor(this.gameElapsed),
         stats: { ...this.stats.player }
       });
@@ -798,6 +807,17 @@ export class Game {
       this._hillRing = null;
     }
     this._hillControl = null;
+    this.gameMode = null;
+    // Clean up GameOverScreen event listeners
+    if (this.uiManager && this.uiManager.gameOverScreen && this.uiManager.gameOverScreen.dispose) {
+      this.uiManager.gameOverScreen.dispose();
+      this.uiManager.gameOverScreen = null;
+    }
+    // Clean up minimap event listeners
+    if (this.minimap && this.minimap.dispose) {
+      this.minimap.dispose();
+      this.minimap = null;
+    }
     // Clean up event listeners to prevent leaks across game sessions
     if (this._onUnitPromoted) {
       this.eventBus.off('unit:promoted', this._onUnitPromoted);

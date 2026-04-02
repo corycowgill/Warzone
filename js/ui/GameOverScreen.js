@@ -19,23 +19,26 @@ export class GameOverScreen {
   }
 
   setupTracking() {
-    // Record game start time
-    this.game.eventBus.on('game:stateChange', (data) => {
+    this._listeners = [];
+    const on = (event, fn) => {
+      this.game.eventBus.on(event, fn);
+      this._listeners.push({ event, fn });
+    };
+
+    on('game:stateChange', (data) => {
       if (data.state === 'PLAYING') {
         this.gameStartTime = Date.now();
         this.resetStats();
       }
     });
 
-    // Track unit production
-    this.game.eventBus.on('unit:created', (data) => {
+    on('unit:created', (data) => {
       if (data.unit && data.unit.team === 'player') {
         this.stats.unitsProduced++;
       }
     });
 
-    // Track unit destruction
-    this.game.eventBus.on('unit:destroyed', (data) => {
+    on('unit:destroyed', (data) => {
       if (data.entity) {
         if (data.entity.team === 'player') {
           this.stats.unitsLost++;
@@ -45,25 +48,26 @@ export class GameOverScreen {
       }
     });
 
-    // Track building events
-    this.game.eventBus.on('building:placed', () => {
+    on('building:placed', () => {
       this.stats.buildingsBuilt++;
     });
 
-    this.game.eventBus.on('building:destroyed', (data) => {
+    on('building:destroyed', (data) => {
       if (data.entity) {
         if (data.entity.team === 'player') {
           this.stats.buildingsLost++;
         }
       }
     });
+  }
 
-    // Track combat kills
-    this.game.eventBus.on('combat:kill', (data) => {
-      if (data.defender && data.defender.team !== 'player') {
-        // Already tracked in unit:destroyed
+  dispose() {
+    if (this._listeners) {
+      for (const { event, fn } of this._listeners) {
+        this.game.eventBus.off(event, fn);
       }
-    });
+      this._listeners = [];
+    }
   }
 
   resetStats() {

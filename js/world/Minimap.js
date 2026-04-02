@@ -43,7 +43,7 @@ export class Minimap {
 
   setupCombatPings() {
     // Listen for combat to create minimap pings
-    this.game.eventBus.on('combat:kill', (data) => {
+    this._onCombatKill = (data) => {
       if (data.defender) {
         const pos = data.defender.getPosition();
         this._pings.push({
@@ -53,7 +53,15 @@ export class Minimap {
           color: data.defender.team === 'player' ? '#ff4444' : '#44ff44'
         });
       }
-    });
+    };
+    this.game.eventBus.on('combat:kill', this._onCombatKill);
+  }
+
+  dispose() {
+    if (this._onCombatKill) {
+      this.game.eventBus.off('combat:kill', this._onCombatKill);
+      this._onCombatKill = null;
+    }
   }
 
   minimapToWorld(e) {
@@ -155,7 +163,7 @@ export class Minimap {
     };
   }
 
-  update() {
+  update(delta) {
     // Render terrain background once
     if (!this.terrainRendered) {
       this.renderTerrain();
@@ -305,7 +313,7 @@ export class Minimap {
     // Draw combat pings
     for (let i = this._pings.length - 1; i >= 0; i--) {
       const ping = this._pings[i];
-      ping.time -= 0.016; // approximate frame time
+      ping.time -= delta || 0.016;
       if (ping.time <= 0) {
         this._pings.splice(i, 1);
         continue;

@@ -15,11 +15,15 @@ GD-031: Unit Stance System | GD-032: Patrol Command | GD-033: Pause/Resume | GD-
 ## Cycle 5 - Completed (5 features)
 GD-036: AI vs AI Spectator Mode | GD-037: Supply Caches | GD-038: Dynamic Map Events | GD-039: Unit Status Badges | GD-040: Tutorial System
 
+## Cycle 6 - Completed (5 features)
+GD-041: Three Game Modes (Annihilation/Timed/King of the Hill) | GD-042: Enhanced Spectator HUD | GD-043: Minimap Combat Pings | GD-044: King of the Hill Control Point | GD-045: Game Mode Selection UI
+
 ## QA Fixes Applied
 - Cycle 1: 6 fixes (GAME_CONFIG import, minimap Vector3, ability mode reset, double-click state, entity flash null check, production panel alive check)
 - Cycle 2: 4 fixes (aura position, event listener leak, fog ghost position, ace attack balance)
 - Cycle 3: 3 fixes (productionProgress property, getTotalQueueTime tier bonus, getRemainingTime simplification)
 - Cycle 4: 3 fixes (defensive stance freeze, patrol mode exit, listener reference)
+- Cycle 5: 4 fixes (map event timer reset, spectate input guard, aiController2 leak, supply cache targeting)
 
 ## Pending / Deferred
 | ID | Priority | Status | Description |
@@ -33,6 +37,6 @@ GD-036: AI vs AI Spectator Mode | GD-037: Supply Caches | GD-038: Dynamic Map Ev
 | GD-028 | MEDIUM | DONE (as GD-035) | Smart Control Group Auto-Refill |
 | GD-029 | MEDIUM | PENDING | Last Seen Ghost Overlay (partially done via GD-017) |
 
-## Total Features Implemented: 29
-## Total QA Fixes: 16
-## Git Commits: 13
+## Total Features Implemented: 34
+## Total QA Fixes: 20
+## Git Commits: 15
