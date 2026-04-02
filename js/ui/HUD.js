@@ -64,8 +64,22 @@ export class HUD {
     // GD-128: Exchange cooldown timer
     this._exchangeCooldown = 0;
 
+    // Cycle 15: Production Overview Panel
+    this._prodOverviewPanel = document.getElementById('prod-overview-panel');
+    this._prodOverviewEntries = document.getElementById('po-entries');
+    this._prodOverviewOpen = false;
+    this._prodOverviewCache = ''; // minimize DOM updates
+
+    // Cycle 15: Hover Tooltip
+    this._tooltipEl = document.getElementById('entity-tooltip');
+    this._hoveredEntity = null;
+    this._tooltipRaycaster = new THREE.Raycaster();
+    this._lastTooltipRaycast = 0;
+    this._tooltipThrottleMs = 100;
+
     this.populateBuildMenu();
     this.setupEventListeners();
+    this._setupTooltipListener();
   }
 
   createHelpOverlay() {
@@ -123,6 +137,10 @@ export class HUD {
       <div>, : Select idle units</div>
       <div>. : Select all units</div>
       <div>Space: Jump to alert</div>
+      <div>\` : Production overview</div>
+      <div>Ctrl+A: Select all units</div>
+      <div>Ctrl+Z: Select all of type</div>
+      <div>Dbl-click: Same type on screen</div>
     `;
     document.body.appendChild(this.helpEl);
   }
@@ -466,6 +484,40 @@ export class HUD {
         }
       }
 
+      // Cycle 15: Backtick toggles production overview panel
+      if (e.key === '`' && this.game.state === 'PLAYING') {
+        this.toggleProductionOverview();
+      }
+
+      // Cycle 15: Ctrl+A selects all military units
+      if (e.key === 'a' && (e.ctrlKey || e.metaKey) && this.game.state === 'PLAYING') {
+        e.preventDefault();
+        const ownTeam = this.game.mode === '2P' ? this.game.activeTeam : 'player';
+        const allUnits = this.game.getUnits(ownTeam);
+        if (allUnits.length > 0 && this.game.selectionManager) {
+          this.game.selectionManager.selectEntities(allUnits);
+          this.showNotification(`Selected all ${allUnits.length} units`, '#00ccff');
+        }
+        return; // prevent 'a' from triggering attack-move
+      }
+
+      // Cycle 15: Ctrl+Z selects all units of selected type globally
+      if (e.key === 'z' && (e.ctrlKey || e.metaKey) && this.game.state === 'PLAYING') {
+        e.preventDefault();
+        const selected = this.game.selectionManager?.getSelected() || [];
+        const units = selected.filter(e => e.isUnit);
+        if (units.length > 0) {
+          const type = units[0].type;
+          const ownTeam = this.game.mode === '2P' ? this.game.activeTeam : 'player';
+          const allOfType = this.game.getUnits(ownTeam).filter(u => u.type === type);
+          if (allOfType.length > 0 && this.game.selectionManager) {
+            this.game.selectionManager.selectEntities(allOfType);
+            this.showNotification(`Selected all ${allOfType.length} ${this.formatName(type)}`, '#00ccff');
+          }
+        }
+        return;
+      }
+
       // Production hotkeys when a production building is selected
       if (this.game.state === 'PLAYING' && !this.buildPlacementMode) {
         this.handleProductionHotkey(e);
@@ -479,6 +531,247 @@ export class HUD {
           this.toggleResearchPanel();
         }
       }
+    });
+  }
+
+  // ============================
+  // Cycle 15: Hover Tooltip System
+  // ============================
+  _setupTooltipListener() {
+    const canvas = this.game.sceneManager?.renderer?.domElement;
+    if (!canvas) return;
+
+    this._tooltipMouseX = 0;
+    this._tooltipMouseY = 0;
+
+    canvas.addEventListener('mousemove', (e) => {
+      this._tooltipMouseX = e.clientX;
+      this._tooltipMouseY = e.clientY;
+    });
+
+    // Hide tooltip on click (selection takes over)
+    canvas.addEventListener('mousedown', () => {
+      this._hideTooltip();
+    });
+  }
+
+  _updateTooltip() {
+    if (!this._tooltipEl || this.game.state !== 'PLAYING') return;
+
+    const now = performance.now();
+    if (now - this._lastTooltipRaycast < this._tooltipThrottleMs) {
+      // Just reposition if still hovering
+      if (this._hoveredEntity && this._tooltipEl.style.display !== 'none') {
+        this._tooltipEl.style.left = (this._tooltipMouseX + 16) + 'px';
+        this._tooltipEl.style.top = (this._tooltipMouseY - 10) + 'px';
+      }
+      return;
+    }
+    this._lastTooltipRaycast = now;
+
+    const camera = this.game.sceneManager?.camera;
+    if (!camera) return;
+
+    const mouse = new THREE.Vector2(
+      (this._tooltipMouseX / window.innerWidth) * 2 - 1,
+      -(this._tooltipMouseY / window.innerHeight) * 2 + 1
+    );
+    this._tooltipRaycaster.setFromCamera(mouse, camera);
+
+    // Gather all visible entity meshes
+    const entityMeshes = [];
+    const meshToEntity = new Map();
+    for (const entity of this.game.entities) {
+      if (!entity.alive || !entity.mesh || entity.mesh.visible === false) continue;
+      entity.mesh.traverse((child) => {
+        if (child.isMesh) {
+          entityMeshes.push(child);
+          meshToEntity.set(child, entity);
+        }
+      });
+    }
+
+    const intersects = this._tooltipRaycaster.intersectObjects(entityMeshes, false);
+    let hovered = null;
+    if (intersects.length > 0) {
+      for (const intersect of intersects) {
+        let obj = intersect.object;
+        while (obj) {
+          if (meshToEntity.has(obj)) { hovered = meshToEntity.get(obj); break; }
+          obj = obj.parent;
+        }
+        if (!hovered) hovered = meshToEntity.get(intersects[0].object);
+        if (hovered) break;
+      }
+    }
+
+    // Don't show tooltip for selected entities (already shown in selection panel)
+    const selected = this.game.selectionManager?.getSelected() || [];
+    if (hovered && selected.includes(hovered)) hovered = null;
+
+    if (hovered !== this._hoveredEntity) {
+      this._hoveredEntity = hovered;
+      if (hovered) {
+        this._showTooltip(hovered);
+      } else {
+        this._hideTooltip();
+      }
+    } else if (hovered) {
+      // Update position
+      this._tooltipEl.style.left = (this._tooltipMouseX + 16) + 'px';
+      this._tooltipEl.style.top = (this._tooltipMouseY - 10) + 'px';
+      // Update HP bar live
+      this._updateTooltipHP(hovered);
+    }
+  }
+
+  _showTooltip(entity) {
+    if (!this._tooltipEl) return;
+
+    const hpPercent = Math.round((entity.health / entity.maxHealth) * 100);
+    const hpColor = hpPercent > 50 ? '#00ff00' : hpPercent > 25 ? '#ffaa00' : '#ff0000';
+    const teamColor = entity.team === 'player' ? '#4488ff' : entity.team === 'enemy' ? '#ff4444' : '#cccccc';
+
+    let html = `<div class="tt-name" style="color:${teamColor}">${entity.factionName || this.formatName(entity.type)}`;
+
+    // Veterancy rank
+    if (entity.isUnit && entity.veterancyRank > 0) {
+      const rank = VETERANCY.ranks[entity.veterancyRank];
+      if (rank) html += ` <span style="color:${rank.color};font-size:11px;">${rank.symbol}</span>`;
+    }
+    html += `</div>`;
+
+    // HP bar
+    html += `<div class="tt-hp-bar"><div class="tt-hp-fill" style="width:${hpPercent}%;background:${hpColor};"></div></div>`;
+    html += `<div class="tt-detail">${Math.round(entity.health)}/${entity.maxHealth} HP</div>`;
+
+    if (entity.isUnit) {
+      html += `<div class="tt-detail">ATK:${entity.damage} RNG:${entity.range} SPD:${entity.speed}</div>`;
+
+      // Counter info
+      const counters = UNIT_COUNTERS[entity.type];
+      if (counters) {
+        html += `<div class="tt-strong">Strong vs: ${counters.strong.map(t => this.formatName(t)).join(', ')}</div>`;
+        html += `<div class="tt-weak">Weak vs: ${counters.weak.map(t => this.formatName(t)).join(', ')}</div>`;
+      }
+    }
+
+    if (entity.isBuilding) {
+      // Current production
+      if (entity.currentProduction) {
+        const progress = entity.getProductionProgress ? Math.round(entity.getProductionProgress() * 100) : 0;
+        html += `<div class="tt-detail">Producing: ${this.formatName(entity.currentProduction)} (${progress}%)</div>`;
+      }
+      // Tier
+      if (entity.tier > 1) {
+        html += `<div class="tt-detail" style="color:#ffcc00;">Tier ${entity.tier}</div>`;
+      }
+    }
+
+    this._tooltipEl.innerHTML = html;
+    this._tooltipEl.style.display = 'block';
+    this._tooltipEl.style.left = (this._tooltipMouseX + 16) + 'px';
+    this._tooltipEl.style.top = (this._tooltipMouseY - 10) + 'px';
+  }
+
+  _updateTooltipHP(entity) {
+    const fill = this._tooltipEl.querySelector('.tt-hp-fill');
+    if (fill) {
+      const hpPercent = Math.round((entity.health / entity.maxHealth) * 100);
+      const hpColor = hpPercent > 50 ? '#00ff00' : hpPercent > 25 ? '#ffaa00' : '#ff0000';
+      fill.style.width = hpPercent + '%';
+      fill.style.background = hpColor;
+    }
+  }
+
+  _hideTooltip() {
+    if (this._tooltipEl) {
+      this._tooltipEl.style.display = 'none';
+    }
+    this._hoveredEntity = null;
+  }
+
+  // ============================
+  // Cycle 15: Production Overview Panel
+  // ============================
+  toggleProductionOverview() {
+    this._prodOverviewOpen = !this._prodOverviewOpen;
+    if (this._prodOverviewPanel) {
+      this._prodOverviewPanel.style.display = this._prodOverviewOpen ? 'block' : 'none';
+    }
+    if (this._prodOverviewOpen) {
+      this._prodOverviewCache = ''; // force refresh
+      this._updateProductionOverview();
+    }
+  }
+
+  _updateProductionOverview() {
+    if (!this._prodOverviewOpen || !this._prodOverviewEntries) return;
+
+    const activeTeam = this.game.mode === '2P' ? this.game.activeTeam : 'player';
+    const buildings = this.game.getBuildings(activeTeam).filter(b =>
+      b.produces && b.produces.length > 0
+    );
+
+    // Build a content signature to avoid unnecessary DOM rebuilds
+    let sig = '';
+    for (const b of buildings) {
+      const prod = b.currentProduction || 'idle';
+      const progress = b.getProductionProgress ? Math.round(b.getProductionProgress() * 100) : 0;
+      const qLen = b.productionQueue ? b.productionQueue.length : 0;
+      sig += `${b.id}:${prod}:${progress}:${qLen};`;
+    }
+
+    if (sig === this._prodOverviewCache) return;
+    this._prodOverviewCache = sig;
+
+    let html = '';
+    for (const b of buildings) {
+      const bName = b.factionName || this.formatName(b.type);
+      const hasProd = !!b.currentProduction;
+
+      html += `<div class="po-entry" data-building-id="${b.id}">`;
+      html += `<div class="po-building-name">${bName}</div>`;
+
+      if (hasProd) {
+        const progress = b.getProductionProgress ? Math.round(b.getProductionProgress() * 100) : 0;
+        const unitName = this.formatName(b.currentProduction);
+        html += `<div style="font-size:10px;color:#88ff88;">${unitName} - ${progress}%</div>`;
+        html += `<div class="po-progress-bar"><div class="po-progress-fill" style="width:${progress}%"></div></div>`;
+
+        // Queue items
+        if (b.productionQueue && b.productionQueue.length > 0) {
+          html += `<div class="po-queue-row">`;
+          html += `<div class="po-queue-icon current">${unitName.substring(0, 3)}</div>`;
+          for (const qi of b.productionQueue) {
+            const qn = this.formatName(qi.type || qi);
+            html += `<div class="po-queue-icon">${qn.substring(0, 3)}</div>`;
+          }
+          html += `</div>`;
+        }
+      } else {
+        html += `<div class="po-idle">IDLE</div>`;
+      }
+
+      html += `</div>`;
+    }
+
+    if (buildings.length === 0) {
+      html = '<div style="padding:10px;color:#666;text-align:center;">No production buildings</div>';
+    }
+
+    this._prodOverviewEntries.innerHTML = html;
+
+    // Add click-to-center handlers
+    this._prodOverviewEntries.querySelectorAll('.po-entry').forEach(entry => {
+      entry.addEventListener('click', () => {
+        const bid = parseInt(entry.dataset.buildingId);
+        const building = this.game.entities.find(e => e.id === bid && e.alive);
+        if (building && this.game.cameraController) {
+          const pos = building.getPosition();
+          this.game.cameraController.moveTo(pos.x, pos.z);
+        }
+      });
     });
   }
 
@@ -507,6 +800,10 @@ export class HUD {
     }
     // GD-139: Auto-resolve button
     this.updateAutoResolve();
+    // Cycle 15: Production Overview
+    this._updateProductionOverview();
+    // Cycle 15: Hover tooltip
+    this._updateTooltip();
   }
 
   // GD-139: Show/hide auto-resolve button
@@ -681,8 +978,13 @@ export class HUD {
         buttons.push({
           icon: this._getUnitIcon(unitType),
           key: hk,
-          label: `${this.formatName(unitType)} (${stats.cost})`,
-          action: () => game.productionSystem.requestProduction(building, unitType)
+          label: `${this.formatName(unitType)} (${stats.cost}) Shift=5x`,
+          action: (e) => {
+            const count = (e && e.shiftKey) ? 5 : 1;
+            for (let qi = 0; qi < count; qi++) {
+              game.productionSystem.requestProduction(building, unitType);
+            }
+          }
         });
       }
     }
@@ -2047,7 +2349,11 @@ export class HUD {
 
     e.preventDefault();
     if (this.game.productionSystem) {
-      this.game.productionSystem.requestProduction(building, unitType);
+      // Cycle 15: Shift+hotkey queues 5 units
+      const count = e.shiftKey ? 5 : 1;
+      for (let qi = 0; qi < count; qi++) {
+        this.game.productionSystem.requestProduction(building, unitType);
+      }
     }
   }
 

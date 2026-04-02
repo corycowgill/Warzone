@@ -311,6 +311,11 @@ export class CommandSystem {
 
     this.game.eventBus.emit('command:move', { units, position });
 
+    // Cycle 15: Show move marker on ground
+    if (this.game.effectsManager) {
+      this.game.effectsManager.createMoveMarker(position, 'move');
+    }
+
     if (this.game.soundManager) {
       const unitType = units.length > 0 ? units[0].type : null;
       this.game.soundManager.play('move', { unitType });
@@ -334,6 +339,10 @@ export class CommandSystem {
     // Mark units as attack-moving (they will engage any enemy in range while moving)
     for (const unit of units) {
       unit._attackMove = true;
+    }
+    // Cycle 15: Show attack-move marker (red) - override the green one from moveUnits
+    if (this.game.effectsManager) {
+      this.game.effectsManager.createMoveMarker(position, 'attackmove');
     }
     this.game.eventBus.emit('command:attackmove', { units, position });
   }

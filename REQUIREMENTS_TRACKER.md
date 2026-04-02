@@ -101,15 +101,22 @@ GD-139: Victory Condition Polish (auto-resolve button when enemy has no producti
 | GD-028 | MEDIUM | DONE (as GD-035) | Smart Control Group Auto-Refill |
 | GD-029 | MEDIUM | WONT_DO | Last Seen Ghost Overlay (partially covered by GD-017 fog improvements; full ghost overlay not needed at 9.5/10) |
 
-## Total Features Implemented: 85
+## Cycle 15 - Final Polish
+GD-140: Production Queue Overview Panel (backtick toggle, lists all production buildings with progress, click-to-center)
+GD-141: Minimap Right-Click Move Command (already functional, added green ping flash at target)
+GD-142: Move Order Ground Markers (green ring for move, red ring for attack-move, fade over 1s, pooled max 10)
+GD-143: Hover Tooltip System (mouseover shows name, HP bar, stats, counter matchups; throttled raycasting at 100ms)
+GD-144: Selection Quality-of-Life (Shift+click/hotkey queues 5 units, Ctrl+A selects all military, Ctrl+Z selects all of type, double-click verified working)
+
+## Total Features Implemented: 90
 ## Total QA Fixes: 52
-## Git Commits: 28
+## Git Commits: 29
 ## Game Designer Rating: 9.5/10 - "Exceptionally well-architected single-player military RTS"
 
 ---
 
 ## Current Status
-- **Total Features:** 85
+- **Total Features:** 90
 - **Total QA Fixes:** 52
-- **Total Cycles:** 14
+- **Total Cycles:** 15
 - **Game Designer Final Rating:** 9.5/10

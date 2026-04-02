@@ -578,6 +578,62 @@ export class EffectsManager {
     });
   }
 
+  // ============================
+  // Cycle 15: Move Order Ground Markers
+  // ============================
+  createMoveMarker(position, type) {
+    // type: 'move' (green) or 'attackmove' (red)
+    const color = type === 'attackmove' ? 0xff3333 : 0x00ff44;
+
+    // Pool management: reuse oldest if at max
+    if (!this._moveMarkerPool) this._moveMarkerPool = [];
+    if (this._moveMarkerPool.length >= 10) {
+      const oldest = this._moveMarkerPool.shift();
+      // Remove it from activeEffects
+      const idx = this.activeEffects.indexOf(oldest);
+      if (idx !== -1) {
+        this.scene.remove(oldest.group);
+        oldest.group.traverse(child => {
+          if (child.geometry) child.geometry.dispose();
+          if (child.material) child.material.dispose();
+        });
+        this.activeEffects.splice(idx, 1);
+      }
+    }
+
+    const ringGeo = new THREE.RingGeometry(1.2, 1.6, 24);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: color,
+      transparent: true,
+      opacity: 0.8,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.rotation.x = -Math.PI / 2;
+
+    // Get terrain height
+    let y = 0.2;
+    if (this.game.terrain) {
+      y = this.game.terrain.getHeightAt(position.x, position.z) + 0.2;
+    }
+    ring.position.set(position.x, y, position.z);
+
+    this.scene.add(ring);
+
+    const effect = {
+      type: 'moveMarker',
+      group: ring,
+      material: ringMat,
+      geometry: ringGeo,
+      lifetime: 1.0,
+      elapsed: 0
+    };
+
+    this.activeEffects.push(effect);
+    this._moveMarkerPool.push(effect);
+  }
+
   createDamageVignette() {
     // Create a full-screen red border flash using CSS overlay
     if (this._vignetteEl) return; // already active
@@ -635,6 +691,14 @@ export class EffectsManager {
           if (effect.material) effect.material.dispose();
           if (effect.texture) effect.texture.dispose();
           if (effect.geometry) effect.geometry.dispose();
+        } else if (effect.type === 'moveMarker') {
+          if (effect.material) effect.material.dispose();
+          if (effect.geometry) effect.geometry.dispose();
+          // Remove from pool
+          if (this._moveMarkerPool) {
+            const pi = this._moveMarkerPool.indexOf(effect);
+            if (pi !== -1) this._moveMarkerPool.splice(pi, 1);
+          }
         } else {
           effect.group.traverse(child => {
             if (child.userData && child.userData.isPooled) return; // skip pooled sprites
@@ -688,6 +752,11 @@ export class EffectsManager {
       } else if (effect.type === 'scorch') {
         // GD-129: Fade scorch marks over time
         effect.material.opacity = 0.7 * (1.0 - progress);
+      } else if (effect.type === 'moveMarker') {
+        // Cycle 15: Fade out + slight expand
+        effect.material.opacity = 0.8 * (1.0 - progress);
+        const scale = 1.0 + progress * 0.5;
+        effect.group.scale.set(scale, scale, scale);
       }
     }
   }

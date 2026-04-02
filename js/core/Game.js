@@ -2011,6 +2011,10 @@ export class Game {
         if (effect.group) this.sceneManager.scene.remove(effect.group);
       }
       this.effectsManager.activeEffects = [];
+      // Cycle 15: Clear move marker pool
+      if (this.effectsManager._moveMarkerPool) {
+        this.effectsManager._moveMarkerPool = [];
+      }
       // Return all pooled sprites
       for (const sprite of this.effectsManager._spritePool) {
         if (sprite.parent) sprite.parent.remove(sprite);
@@ -2052,6 +2056,14 @@ export class Game {
     // GD-128: Reset exchange cooldown in HUD on restart
     if (this.uiManager && this.uiManager.hud) {
       this.uiManager.hud._exchangeCooldown = 0;
+      // Cycle 15: Reset production overview panel
+      this.uiManager.hud._prodOverviewOpen = false;
+      this.uiManager.hud._prodOverviewCache = '';
+      if (this.uiManager.hud._prodOverviewPanel) {
+        this.uiManager.hud._prodOverviewPanel.style.display = 'none';
+      }
+      // Cycle 15: Hide tooltip
+      this.uiManager.hud._hideTooltip();
     }
 
     // GD-139: Remove any lingering victory overlay

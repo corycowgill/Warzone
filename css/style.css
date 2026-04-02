@@ -825,3 +825,163 @@ body {
   from { transform: translateX(0); opacity: 1; }
   to { transform: translateX(300px); opacity: 0; }
 }
+
+/* ============================================
+   PRODUCTION QUEUE OVERVIEW PANEL (Cycle 15)
+   ============================================ */
+#prod-overview-panel {
+  position: fixed;
+  top: 44px;
+  left: 0;
+  bottom: 60px;
+  width: 220px;
+  background: rgba(0, 0, 0, 0.88);
+  border-right: 1px solid #333;
+  z-index: 101;
+  overflow-y: auto;
+  font-family: sans-serif;
+  font-size: 12px;
+  color: #ccc;
+  display: none;
+  scrollbar-width: thin;
+  scrollbar-color: #444 transparent;
+}
+
+#prod-overview-panel::-webkit-scrollbar {
+  width: 4px;
+}
+#prod-overview-panel::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 2px;
+}
+
+#prod-overview-panel .po-header {
+  padding: 8px 10px;
+  color: #ffcc00;
+  font-weight: bold;
+  font-size: 13px;
+  border-bottom: 1px solid #333;
+  letter-spacing: 1px;
+  position: sticky;
+  top: 0;
+  background: rgba(0, 0, 0, 0.95);
+  z-index: 1;
+}
+
+#prod-overview-panel .po-entry {
+  padding: 6px 10px;
+  border-bottom: 1px solid #222;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+#prod-overview-panel .po-entry:hover {
+  background: rgba(0, 255, 65, 0.08);
+}
+
+#prod-overview-panel .po-building-name {
+  font-weight: 600;
+  color: #aac;
+  font-size: 11px;
+}
+
+#prod-overview-panel .po-idle {
+  color: #cc9900;
+  font-size: 10px;
+  font-style: italic;
+}
+
+#prod-overview-panel .po-progress-bar {
+  height: 4px;
+  background: #333;
+  border-radius: 2px;
+  margin-top: 3px;
+  overflow: hidden;
+}
+
+#prod-overview-panel .po-progress-fill {
+  height: 100%;
+  background: #00ff88;
+  transition: width 0.3s;
+}
+
+#prod-overview-panel .po-queue-row {
+  display: flex;
+  gap: 2px;
+  margin-top: 3px;
+  flex-wrap: wrap;
+}
+
+#prod-overview-panel .po-queue-icon {
+  width: 20px;
+  height: 18px;
+  background: #1a2a1a;
+  border: 1px solid #445544;
+  border-radius: 2px;
+  font-size: 8px;
+  color: #aaa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+#prod-overview-panel .po-queue-icon.current {
+  border-color: #00ff88;
+  color: #fff;
+}
+
+/* ============================================
+   HOVER TOOLTIP (Cycle 15)
+   ============================================ */
+#entity-tooltip {
+  position: fixed;
+  pointer-events: none;
+  z-index: 300;
+  background: rgba(0, 0, 0, 0.92);
+  border: 1px solid #555;
+  border-radius: 5px;
+  padding: 8px 12px;
+  font-family: sans-serif;
+  font-size: 12px;
+  color: #ccc;
+  max-width: 240px;
+  display: none;
+  white-space: nowrap;
+}
+
+#entity-tooltip .tt-name {
+  font-weight: bold;
+  font-size: 13px;
+  color: #fff;
+  margin-bottom: 3px;
+}
+
+#entity-tooltip .tt-hp-bar {
+  height: 5px;
+  background: #333;
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 3px 0;
+}
+
+#entity-tooltip .tt-hp-fill {
+  height: 100%;
+  transition: width 0.2s;
+}
+
+#entity-tooltip .tt-detail {
+  font-size: 10px;
+  color: #999;
+  margin-top: 2px;
+}
+
+#entity-tooltip .tt-strong {
+  color: #88ff88;
+  font-size: 10px;
+}
+
+#entity-tooltip .tt-weak {
+  color: #ff8888;
+  font-size: 10px;
+}

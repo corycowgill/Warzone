@@ -131,6 +131,14 @@ export class Minimap {
         this.game.soundManager.play('move', { unitType: units[0].type });
       }
     }
+
+    // Cycle 15: Flash ping at move target on minimap
+    this._pings.push({
+      x: x,
+      z: z,
+      time: 1.5,
+      color: '#00ff44'
+    });
   }
 
   renderTerrain() {
