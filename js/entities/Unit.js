@@ -439,6 +439,13 @@ export class Unit extends Entity {
   update(deltaTime) {
     if (!this.alive || !this.mesh) return;
 
+    // ===== GD-108: Procedural Animation State =====
+    this._animTime = (this._animTime || 0) + deltaTime;
+    this.updateProceduralAnimation(deltaTime);
+
+    // ===== GD-105: Faction passive updates =====
+    this.updateFactionPassives(deltaTime);
+
     // Tick ability cooldown
     if (this.abilityCooldown > 0) {
       this.abilityCooldown -= deltaTime;
@@ -488,13 +495,26 @@ export class Unit extends Entity {
       if (dist > 1) {
         let effSpeed = this.formationSpeed !== null ? Math.min(this.formationSpeed, this.speed) : this.speed;
 
-        // GD-078: Forest speed reduction
+        // GD-112: Weather speed effect
+        if (this.domain === 'land' && this.game && this.game.weatherSystem) {
+          effSpeed *= this.game.weatherSystem.getSpeedMultiplier();
+        }
+
+        // GD-111: Commander aura speed buff
+        if (this._cmdAuraSpd) {
+          effSpeed *= this._cmdAuraSpd;
+        }
+
+        // GD-078: Forest speed reduction (Jaeger faction passive: no forest penalty)
         if (this.domain === 'land' && this.game && this.game.terrain && this.game.terrain.isInForest) {
           if (this.game.terrain.isInForest(pos.x, pos.z)) {
-            if (this.type === 'infantry') {
-              effSpeed = Math.max(1, effSpeed - 1); // Infantry: -1 speed in forest
-            } else {
-              effSpeed = Math.max(1, effSpeed - 2); // Vehicles: -2 speed in forest
+            const noForestPenalty = this.factionPassive && this.factionPassive.noForestPenalty;
+            if (!noForestPenalty) {
+              if (this.type === 'infantry') {
+                effSpeed = Math.max(1, effSpeed - 1); // Infantry: -1 speed in forest
+              } else {
+                effSpeed = Math.max(1, effSpeed - 2); // Vehicles: -2 speed in forest
+              }
             }
           }
         }
@@ -670,6 +690,179 @@ export class Unit extends Entity {
         this.mesh.rotation.y = Math.atan2(fdx, fdz) + this.modelRotationOffset;
       }
     }
+  }
+
+  // ===== GD-108: Procedural Animations =====
+  updateProceduralAnimation(dt) {
+    const t = this._animTime;
+
+    if (this.domain === 'land' && this.type === 'infantry') {
+      // Walking bob and leg oscillation
+      if (this.isMoving) {
+        const bobFreq = 8;
+        const bobAmp = 0.15;
+        // Whole group Y bob
+        this.mesh.position.y += Math.sin(t * bobFreq) * bobAmp * 0.3;
+
+        // Leg swing (children 0,1 = left/right leg in Infantry mesh)
+        const legSwing = Math.sin(t * bobFreq) * 0.4;
+        if (this.mesh.children[0]) this.mesh.children[0].rotation.x = legSwing;
+        if (this.mesh.children[1]) this.mesh.children[1].rotation.x = -legSwing;
+
+        // Arm swing (children ~10,11)
+        const armChild1 = this.mesh.children[10];
+        const armChild2 = this.mesh.children[11];
+        if (armChild1 && armChild1.geometry?.type === 'BoxGeometry') {
+          armChild1.rotation.x = -legSwing * 0.5;
+        }
+        if (armChild2 && armChild2.geometry?.type === 'BoxGeometry') {
+          armChild2.rotation.x = legSwing * 0.3;
+        }
+      } else {
+        // Return to idle
+        if (this.mesh.children[0]) this.mesh.children[0].rotation.x *= 0.9;
+        if (this.mesh.children[1]) this.mesh.children[1].rotation.x *= 0.9;
+      }
+
+      // Weapon recoil on attack
+      if (this._recoilTimer > 0) {
+        this._recoilTimer -= dt;
+        const recoil = Math.max(0, this._recoilTimer) * 2;
+        // Push gun backward slightly (gun is typically child ~14-16)
+        for (let i = 14; i < Math.min(this.mesh.children.length, 20); i++) {
+          const c = this.mesh.children[i];
+          if (c && c.geometry) {
+            c.position.z = (c._origZ || c.position.z) - recoil * 0.3;
+            if (!c._origZ) c._origZ = c.position.z + recoil * 0.3;
+          }
+        }
+      }
+    }
+
+    // Tank animations
+    if (this.type === 'tank' || this.type === 'heavytank') {
+      // Body rumble when moving
+      if (this.isMoving) {
+        this.mesh.rotation.z = Math.sin(t * 12) * 0.008;
+        this.mesh.rotation.x = Math.sin(t * 8) * 0.005;
+      } else {
+        this.mesh.rotation.z *= 0.95;
+        this.mesh.rotation.x *= 0.95;
+      }
+
+      // Barrel recoil
+      if (this._recoilTimer > 0) {
+        this._recoilTimer -= dt;
+      }
+    }
+
+    // Plane/drone banking during turns
+    if (this.domain === 'air') {
+      // Slight pitch variation (bob)
+      const airBob = Math.sin(t * 1.5) * 0.3;
+      this.mesh.position.y = this.flyHeight + airBob;
+
+      // Bank into turns
+      if (this._lastRotY !== undefined) {
+        const rotDiff = this.mesh.rotation.y - this._lastRotY;
+        this._bankTarget = Math.max(-0.3, Math.min(0.3, rotDiff * 5));
+      }
+      this._bankCurrent = (this._bankCurrent || 0) * 0.95 + (this._bankTarget || 0) * 0.05;
+      this.mesh.rotation.z = this._bankCurrent;
+      this._lastRotY = this.mesh.rotation.y;
+    }
+
+    // Ship bob and roll
+    if (this.domain === 'naval') {
+      const bobAmp = 0.3;
+      const rollAmp = 0.02;
+      this.mesh.position.y = Math.sin(t * 1.2) * bobAmp;
+      this.mesh.rotation.z = Math.sin(t * 0.8) * rollAmp;
+      this.mesh.rotation.x = Math.sin(t * 0.6 + 1) * rollAmp * 0.5;
+    }
+  }
+
+  /** Trigger weapon recoil animation */
+  triggerRecoil() {
+    this._recoilTimer = 0.15;
+  }
+
+  // ===== GD-105: Faction Passive Updates =====
+  updateFactionPassives(dt) {
+    // Ranger camo: invisible when stationary for 3s
+    if (this.factionPassive && this.factionPassive.camoDelay !== undefined) {
+      if (!this.isMoving && !this.attackTarget) {
+        this._camoTimer = (this._camoTimer || 0) + dt;
+        if (this._camoTimer >= this.factionPassive.camoDelay && !this._isCamoed) {
+          this._isCamoed = true;
+          // Make semi-transparent
+          this.mesh.traverse(child => {
+            if (child.isMesh && child.material) {
+              child.material.transparent = true;
+              child.material.opacity = 0.3;
+            }
+          });
+        }
+      } else {
+        if (this._isCamoed) {
+          this._isCamoed = false;
+          this.mesh.traverse(child => {
+            if (child.isMesh && child.material) {
+              child.material.opacity = 1.0;
+            }
+          });
+        }
+        this._camoTimer = 0;
+      }
+    }
+
+    // Banzai charge timer
+    if (this._banzaiTimer > 0) {
+      this._banzaiTimer -= dt;
+      if (this._banzaiTimer <= 0) {
+        // Banzai ends: revert stats, lose 50% HP
+        this.speed = this.baseSpeed;
+        this.damage = this.baseDamage;
+        this.health = Math.max(1, Math.floor(this.health * 0.5));
+        this._banzaiActive = false;
+      }
+    }
+
+    // Churchill aura: apply armor buff to nearby vehicles
+    if (this.factionAura && this.factionAura.type === 'armor' && this.game) {
+      this._auraTimer = (this._auraTimer || 0) + dt;
+      if (this._auraTimer >= 2.0) { // Check every 2s
+        this._auraTimer = 0;
+        const radius = this.factionAura.radius;
+        const bonus = this.factionAura.bonus;
+        const allies = this.game.getUnits(this.team);
+        for (const ally of allies) {
+          if (ally === this || !ally.alive || ally.domain !== 'land') continue;
+          if (this.distanceTo(ally) <= radius * 3) {
+            if (!ally._churchillArmor) {
+              ally._churchillArmor = true;
+              const armorBoost = Math.round(ally.baseArmor * bonus);
+              ally.armor = ally.baseArmor + Math.max(1, armorBoost);
+            }
+          } else if (ally._churchillArmor) {
+            ally._churchillArmor = false;
+            ally.armor = ally.baseArmor;
+          }
+        }
+      }
+    }
+  }
+
+  /** Activate banzai charge (Imperial Marine) */
+  activateBanzai() {
+    if (this._banzaiActive) return;
+    const ab = this.ability;
+    if (!ab || ab.id !== 'banzai') return;
+    this._banzaiActive = true;
+    this._banzaiTimer = ab.duration;
+    this.speed = this.baseSpeed * ab.speedMult;
+    this.damage = this.baseDamage * ab.damageMult;
+    this.abilityCooldown = ab.cooldown;
   }
 
   canAttack() {

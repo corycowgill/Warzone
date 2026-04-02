@@ -196,7 +196,10 @@ export class CombatSystem {
       }
     }
 
-    const finalDmg = Math.max(1, baseDmg * modifier * armorReduction * terrainMod * ditchMod * banzaiMod * forestMod);
+    // GD-111: Commander aura damage buff
+    const cmdDmgMod = attacker._cmdAuraDmg || 1.0;
+
+    const finalDmg = Math.max(1, baseDmg * modifier * armorReduction * terrainMod * ditchMod * banzaiMod * forestMod * cmdDmgMod);
 
     // GD-075: Track committed damage for overkill protection
     this.addCommittedDamage(defender, finalDmg);
@@ -259,6 +262,9 @@ export class CombatSystem {
       this.game.effectsManager.createProjectileTrail(attackerPos, defenderPos);
     }
 
+    // GD-108: Trigger recoil animation
+    if (attacker.triggerRecoil) attacker.triggerRecoil();
+
     // Play attack sound (unit-type-specific)
     if (this.game.soundManager) {
       this.game.soundManager.play('attack', { unitType: attacker.type });
@@ -302,6 +308,29 @@ export class CombatSystem {
       });
       // Clear attack target since defender is dead
       attacker.attackTarget = null;
+
+      // GD-105: Faction on-death effects (Zero kamikaze)
+      if (defender.factionOnDeath && defender.factionOnDeath.type === 'kamikaze') {
+        const deathPos = defender.getPosition();
+        const kamiDmg = defender.factionOnDeath.damage;
+        const kamiRadius = defender.factionOnDeath.radius;
+        const enemyTeam = defender.team === 'player' ? 'enemy' : 'player';
+        const targets = this.game.getEntitiesByTeam(enemyTeam);
+        for (const target of targets) {
+          if (!target.alive) continue;
+          const d = target.getPosition().distanceTo(deathPos);
+          if (d <= kamiRadius) {
+            const dmg = kamiDmg * (1 - d / kamiRadius);
+            if (dmg > 0) target.takeDamage(dmg);
+          }
+        }
+        if (this.game.effectsManager) {
+          this.game.effectsManager.createExplosion(deathPos, kamiRadius * 0.5);
+        }
+        if (this.game.cameraController) {
+          this.game.cameraController.shake(1.5);
+        }
+      }
 
       // Play death sound (unit-type-specific)
       if (this.game.soundManager) {
@@ -417,6 +446,17 @@ export class CombatSystem {
       if (this.game.resourceSystem) {
         this.game.resourceSystem.spendMU(team, abilityDef.muCost);
       }
+    }
+
+    // Check faction ability overrides first
+    const factionAbility = unit.ability;
+    if (factionAbility && factionAbility.id === 'banzai') {
+      unit.activateBanzai();
+      this.game.eventBus.emit('ability:used', { unit, ability: 'banzai' });
+      return true;
+    }
+    if (factionAbility && factionAbility.id === 'smoke_pop') {
+      return this.executeSmokeScreen(unit, targetPos || unit.getPosition());
     }
 
     switch (abilityDef.id) {

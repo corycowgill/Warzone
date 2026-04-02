@@ -19,11 +19,13 @@ export const UNIT_STATS = {
   // Cycle 10 - Naval
   patrolboat: { hp: 80, speed: 4, damage: 12, range: 8, cost: 100, domain: 'naval', buildTime: 4, attackRate: 1.0, armor: 1, vision: 12 },
   // GD-089: Engineer unit
-  engineer: { hp: 80, speed: 4, damage: 0, range: 2, cost: 200, domain: 'land', buildTime: 5, attackRate: 0, armor: 0, vision: 10 }
+  engineer: { hp: 80, speed: 4, damage: 0, range: 2, cost: 200, domain: 'land', buildTime: 5, attackRate: 0, armor: 0, vision: 10 },
+  // GD-111: Commander/Hero unit
+  commander: { hp: 600, speed: 3, damage: 40, range: 10, cost: 500, domain: 'land', buildTime: 30, attackRate: 0.8, armor: 5, vision: 16 }
 };
 
 export const BUILDING_STATS = {
-  headquarters: { hp: 1000, cost: 0, produces: ['infantry'], size: 4, requires: [] },
+  headquarters: { hp: 1000, cost: 0, produces: ['infantry', 'commander'], size: 4, requires: [] },
   barracks: { hp: 400, cost: 200, produces: ['infantry', 'mortar', 'engineer'], size: 2, requires: [] },
   warfactory: { hp: 600, cost: 400, produces: ['tank', 'scoutcar', 'aahalftrack', 'apc', 'heavytank', 'spg'], size: 3, requires: ['barracks'] },
   airfield: { hp: 500, cost: 500, produces: ['drone', 'plane', 'bomber'], size: 3, requires: ['warfactory'] },
@@ -99,7 +101,8 @@ export const TECH_TREE = {
   carrier: { building: 'shipyard', requires: ['warfactory'] },
   submarine: { building: 'shipyard', requires: ['barracks'] },
   patrolboat: { building: 'shipyard', requires: [] },
-  engineer: { building: 'barracks', requires: [] }
+  engineer: { building: 'barracks', requires: [] },
+  commander: { building: 'headquarters', requires: ['warfactory'] }
 };
 
 // ============================================================
@@ -237,7 +240,8 @@ export const DAMAGE_MODIFIERS = {
   spg: { infantry: 1.5, tank: 1.0, drone: 0.3, plane: 0.2, battleship: 0.5, carrier: 0.5, submarine: 0.1, building: 2.5, mortar: 1.5, scoutcar: 1.5, aahalftrack: 1.0, apc: 1.2, heavytank: 0.8, spg: 1.0, bomber: 0.1, patrolboat: 0.5, engineer: 1.5 },
   bomber: { infantry: 1.5, tank: 1.5, drone: 0.3, plane: 0.3, battleship: 1.5, carrier: 1.2, submarine: 0.5, building: 2.0, mortar: 1.5, scoutcar: 1.5, aahalftrack: 0.3, apc: 1.5, heavytank: 1.2, spg: 1.5, bomber: 0.5, patrolboat: 1.5, engineer: 1.5 },
   patrolboat: { infantry: 0.5, tank: 0.3, drone: 0.3, plane: 0.2, battleship: 0.3, carrier: 0.5, submarine: 2.0, building: 0.5, mortar: 0.5, scoutcar: 0.3, aahalftrack: 0.3, apc: 0.3, heavytank: 0.2, spg: 0.3, bomber: 0.2, patrolboat: 1.0, engineer: 0.5 },
-  engineer: { infantry: 0.0, tank: 0.0, drone: 0.0, plane: 0.0, battleship: 0.0, carrier: 0.0, submarine: 0.0, building: 0.0, mortar: 0.0, scoutcar: 0.0, aahalftrack: 0.0, apc: 0.0, heavytank: 0.0, spg: 0.0, bomber: 0.0, patrolboat: 0.0, engineer: 0.0 }
+  engineer: { infantry: 0.0, tank: 0.0, drone: 0.0, plane: 0.0, battleship: 0.0, carrier: 0.0, submarine: 0.0, building: 0.0, mortar: 0.0, scoutcar: 0.0, aahalftrack: 0.0, apc: 0.0, heavytank: 0.0, spg: 0.0, bomber: 0.0, patrolboat: 0.0, engineer: 0.0, commander: 0.0 },
+  commander: { infantry: 1.5, tank: 1.0, drone: 0.5, plane: 0.3, battleship: 0.5, carrier: 0.5, submarine: 0.3, building: 1.5, mortar: 1.5, scoutcar: 1.5, aahalftrack: 1.0, apc: 1.0, heavytank: 0.8, spg: 1.5, bomber: 0.3, patrolboat: 0.5, engineer: 1.5, commander: 1.0 }
 };
 
 // Rock-Paper-Scissors counter lookup for UI tooltips
@@ -257,7 +261,8 @@ export const UNIT_COUNTERS = {
   spg: { strong: ['building', 'infantry'], weak: ['scoutcar', 'plane', 'tank'] },
   bomber: { strong: ['building', 'infantry', 'tank'], weak: ['aahalftrack', 'plane', 'aaturret'] },
   patrolboat: { strong: ['submarine'], weak: ['battleship'] },
-  engineer: { strong: ['building'], weak: ['infantry', 'tank'] }
+  engineer: { strong: ['building'], weak: ['infantry', 'tank'] },
+  commander: { strong: ['infantry', 'mortar'], weak: ['plane', 'heavytank', 'spg'] }
 };
 
 // ============================================================
@@ -845,5 +850,197 @@ export const MAP_TEMPLATES = {
     label: 'Open Plains',
     description: 'Wide open terrain with minimal water and rolling hills',
     waterStyle: 'minimal'
+  }
+};
+
+// ============================================================
+// GD-105: FACTION-UNIQUE UNITS
+// Maps nation → unit type overrides with modified stats and abilities
+// ============================================================
+export const FACTION_UNITS = {
+  america: {
+    infantry: {
+      factionType: 'ranger',
+      name: 'Ranger',
+      description: 'Elite infantry with camo when stationary, +20% damage',
+      statsOverride: { damage: 10 }, // 8 * 1.2 = ~10
+      abilities: {
+        id: 'camo',
+        name: 'Camo',
+        passive: true,
+        description: 'Invisible when stationary for 3s. +20% base damage.',
+        camoDelay: 3.0
+      }
+    },
+    heavytank: {
+      factionType: 'sherman_jumbo',
+      name: 'Sherman Jumbo',
+      description: 'Extra frontal armor +3, slightly lower speed',
+      statsOverride: { armor: 9, speed: 2.0 } // base 6+3=9, slower
+    }
+  },
+  britain: {
+    infantry: {
+      factionType: 'commando',
+      name: 'Commando',
+      description: 'Captures at 75% HP, +30% speed',
+      statsOverride: { speed: 3.9 } // 3 * 1.3
+    },
+    heavytank: {
+      factionType: 'churchill',
+      name: 'Churchill Tank',
+      description: 'Slow but aura gives +10% armor to nearby vehicles',
+      statsOverride: { speed: 1.8 },
+      aura: { type: 'armor', bonus: 0.10, radius: 20, domain: 'land' }
+    }
+  },
+  france: {
+    infantry: {
+      factionType: 'maquis',
+      name: 'Maquis',
+      description: 'Guerrilla fighter, spawns from forests on 60s cooldown',
+      statsOverride: {},
+      abilities: {
+        id: 'forest_spawn',
+        name: 'Forest Spawn',
+        passive: true,
+        description: 'Can be spawned from any forest tile (60s cooldown)',
+        forestSpawnCooldown: 60
+      }
+    },
+    scoutcar: {
+      factionType: 'amx_light',
+      name: 'AMX Light Tank',
+      description: 'Fast tank with smoke, lower HP',
+      statsOverride: { hp: 50, speed: 9, damage: 12 },
+      abilities: {
+        id: 'smoke_pop',
+        name: 'Smoke Pop',
+        key: 'g',
+        cooldown: 20,
+        radius: 8,
+        duration: 5,
+        description: 'Pop smoke concealing the area for 5s (20s CD)'
+      }
+    }
+  },
+  germany: {
+    infantry: {
+      factionType: 'stormtrooper',
+      name: 'Stormtrooper',
+      description: 'Higher fire rate 2x, SMG, lower range 4',
+      statsOverride: { attackRate: 3.0, range: 4 }
+    },
+    heavytank: {
+      factionType: 'tiger',
+      name: 'Tiger',
+      description: 'Highest damage tank, +25% damage, +1 range, expensive',
+      statsOverride: { damage: 69, range: 13, cost: 550 } // 55*1.25=~69
+    }
+  },
+  japan: {
+    infantry: {
+      factionType: 'imperial_marine',
+      name: 'Imperial Marine',
+      description: 'Banzai charge: +50% speed +30% damage for 5s, then 50% HP loss',
+      statsOverride: {},
+      abilities: {
+        id: 'banzai',
+        name: 'Banzai Charge',
+        key: 'g',
+        cooldown: 30,
+        duration: 5,
+        speedMult: 1.5,
+        damageMult: 1.3,
+        hpCost: 0.5,
+        description: 'Charge! +50% speed, +30% damage for 5s, then lose 50% HP'
+      }
+    },
+    plane: {
+      factionType: 'zero',
+      name: 'Zero Fighter',
+      description: 'Kamikaze on death dealing 200 AOE damage',
+      statsOverride: {},
+      onDeath: { type: 'kamikaze', damage: 200, radius: 8 }
+    }
+  },
+  austria: {
+    infantry: {
+      factionType: 'jaeger',
+      name: 'Jaeger',
+      description: 'Mountain infantry, no forest penalty, +50% elevation bonus',
+      statsOverride: {},
+      passive: { noForestPenalty: true, elevationBonusMult: 1.5 }
+    },
+    spg: {
+      factionType: 'sturmhaubitze',
+      name: 'Sturmhaubitze',
+      description: 'Faster deploy/undeploy, +10% fire rate',
+      statsOverride: { attackRate: 0.33 } // 0.3 * 1.1
+    }
+  }
+};
+
+// ============================================================
+// GD-111: COMMANDER/HERO UNITS
+// ============================================================
+export const COMMANDER_CONFIG = {
+  cost: 500,
+  muCost: 200,
+  buildTime: 30,
+  respawnCooldown: 90,
+  stats: { hp: 600, speed: 3, damage: 40, range: 10, domain: 'land', attackRate: 0.8, armor: 5, vision: 16 },
+  abilities: {
+    america: [
+      { id: 'airborne_drop', name: 'Airborne Drop', cooldown: 90, description: 'Paradrop 3 infantry at target', range: 40, spawnCount: 3 },
+      { id: 'rally_cry', name: 'Rally Cry', cooldown: 60, duration: 10, description: '+20% damage aura', aura: { damageMult: 1.2, radius: 25 } },
+      { id: 'artillery_strike', name: 'Artillery Strike', cooldown: 120, description: '3 shells at target', range: 40, shells: 3, damage: 80, radius: 8 }
+    ],
+    britain: [
+      { id: 'smoke_barrage', name: 'Smoke Barrage', cooldown: 60, description: 'Large smoke area', range: 35, radius: 15, duration: 8 },
+      { id: 'inspire', name: 'Inspire', cooldown: 60, duration: 10, description: '+25% speed aura', aura: { speedMult: 1.25, radius: 25 } },
+      { id: 'naval_bombardment', name: 'Naval Bombardment', cooldown: 120, description: 'Massive damage line near water', range: 40, damage: 150, radius: 12 }
+    ],
+    france: [
+      { id: 'resistance_cell', name: 'Resistance Cell', cooldown: 90, description: 'Spawn 5 Maquis from nearest forest', spawnCount: 5 },
+      { id: 'sabotage', name: 'Sabotage', cooldown: 60, description: 'Disable target building 15s', range: 30, disableDuration: 15 },
+      { id: 'fortify', name: 'Fortify', cooldown: 120, duration: 20, description: 'All buildings +50% HP', hpMult: 1.5 }
+    ],
+    germany: [
+      { id: 'blitzkrieg_cmd', name: 'Blitzkrieg', cooldown: 90, duration: 10, description: '+30% speed all vehicles', aura: { speedMult: 1.3, radius: 999, domain: 'land' } },
+      { id: 'panzer_ace', name: 'Panzer Ace', cooldown: 60, duration: 10, description: 'Commander deals 2x damage', selfDamageMult: 2.0 },
+      { id: 'v2_strike', name: 'V2 Strike', cooldown: 120, description: 'Huge damage at target', range: 50, damage: 300, radius: 10 }
+    ],
+    japan: [
+      { id: 'divine_wind', name: 'Divine Wind', cooldown: 90, duration: 10, description: 'All air +50% damage', aura: { damageMult: 1.5, radius: 999, domain: 'air' } },
+      { id: 'banzai_wave', name: 'Banzai Wave', cooldown: 90, duration: 10, description: 'All infantry +40% speed', aura: { speedMult: 1.4, radius: 999, domain: 'infantry' } },
+      { id: 'torpedo_barrage', name: 'Torpedo Barrage', cooldown: 120, description: 'Naval area damage', range: 40, damage: 200, radius: 15 }
+    ],
+    austria: [
+      { id: 'mountain_fortress', name: 'Mountain Fortress', cooldown: 90, description: 'Spawn 3 turrets at location 30s', range: 35, turretCount: 3, turretDuration: 30 },
+      { id: 'iron_discipline', name: 'Iron Discipline', cooldown: 60, duration: 15, description: '+3 armor all units', aura: { armor: 3, radius: 999 } },
+      { id: 'siege_bombardment_cmd', name: 'Siege Bombardment', cooldown: 120, description: 'Long range artillery barrage', range: 50, damage: 100, shells: 5, radius: 10 }
+    ]
+  }
+};
+
+// ============================================================
+// GD-112: WEATHER SYSTEM
+// ============================================================
+export const WEATHER_CONFIG = {
+  types: {
+    clear: { name: 'Clear', visionMult: 1.0, speedMult: 1.0, infantryDPS: 0, color: null, particleColor: null },
+    rain: { name: 'Rain', visionMult: 0.8, speedMult: 0.9, infantryDPS: 0, color: 0x556688, particleColor: 0x8899bb },
+    fog: { name: 'Fog', visionMult: 0.6, speedMult: 1.0, infantryDPS: 0, color: 0xaabbcc, particleColor: null },
+    sandstorm: { name: 'Sandstorm', visionMult: 0.7, speedMult: 1.0, infantryDPS: 1, color: 0xccaa77, particleColor: 0xddbb88 }
+  },
+  changeInterval: [180, 240], // 3-4 minutes
+  transitionDuration: 30,
+  mapWeatherPool: {
+    continental: ['clear', 'rain', 'fog'],
+    islands: ['clear', 'rain', 'fog'],
+    river: ['clear', 'rain', 'fog'],
+    plains: ['clear', 'sandstorm', 'clear'],
+    random: ['clear', 'rain', 'fog', 'sandstorm']
   }
 };

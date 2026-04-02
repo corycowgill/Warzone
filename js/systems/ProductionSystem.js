@@ -122,6 +122,28 @@ export class ProductionSystem {
       return false;
     }
 
+    // GD-111: Commander requires MU cost
+    if (unitType === 'commander') {
+      const muCost = 200;
+      if (!this.game.resourceSystem.canAffordMU(building.team, muCost)) {
+        this.game.eventBus.emit('production:error', {
+          message: `Not enough MU (need ${muCost})`,
+          reason: 'cost'
+        });
+        if (this.game.soundManager) this.game.soundManager.play('error');
+        return false;
+      }
+      this.game.resourceSystem.spendMU(building.team, muCost);
+
+      // Check commander limit
+      const hasCommander = this.game.entities.some(e => e.isUnit && e.type === 'commander' && e.team === building.team && e.alive);
+      if (hasCommander) {
+        this.game.eventBus.emit('production:error', { message: 'Commander already exists!' });
+        if (this.game.soundManager) this.game.soundManager.play('error');
+        return false;
+      }
+    }
+
     // Spend resources immediately
     this.game.resourceSystem.spend(building.team, cost);
 

@@ -44,8 +44,23 @@ export class Building extends Entity {
     // Skip production during construction phase (GD-063)
     if (this._constructing) return;
 
+    // GD-111: Skip production while sabotaged by enemy commander
+    if (this._sabotaged) return;
+
     // GD-076: Building damage states visual
     this._updateDamageState(deltaTime);
+
+    // GD-108: Chimney smoke while producing
+    if (this.currentProduction && this.game && this.game.effectsManager) {
+      this._smokeEmitTimer = (this._smokeEmitTimer || 0) + deltaTime;
+      if (this._smokeEmitTimer > 1.5) {
+        this._smokeEmitTimer = 0;
+        const pos = this.getPosition().clone();
+        pos.y += 8; // Above building roof
+        pos.x += (Math.random() - 0.5) * 2;
+        this.game.effectsManager.createSmoke(pos);
+      }
+    }
 
     // Handle production
     if (this.currentProduction) {

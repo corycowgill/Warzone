@@ -228,9 +228,9 @@ export class SoundManager {
       case 'death': this.playDeath(unitType); break;
       case 'explosion': this.playExplosion(); break;
       case 'produce': this.playProduce(); break;
-      case 'move': this.playMoveAck(unitType); break;
-      case 'select': this.playSelectAck(unitType); break;
-      case 'acknowledge': this.playAttackAck(unitType); break;
+      case 'move': this.playMoveAck(unitType); this.playVoiceLine('move'); break;
+      case 'select': this.playSelectAck(unitType); this.playVoiceLine('select'); break;
+      case 'acknowledge': this.playAttackAck(unitType); this.playVoiceLine('attack'); break;
       case 'build': this.playBuild(); break;
       case 'error': this.playError(); break;
       case 'victory': this.playVictoryFanfare(); break;
@@ -1578,5 +1578,168 @@ export class SoundManager {
       noise.connect(hp); hp.connect(g); g.connect(destNode);
       noise.start(time); noise.stop(time + 0.03);
     }
+  }
+
+  // ==================== GD-107: VOICE RESPONSES ====================
+  // Uses Web Audio SpeechSynthesis API for unit voice lines
+
+  playVoiceLine(category) {
+    if (!this.enabled || !window.speechSynthesis) return;
+
+    // Throttle voice lines
+    const now = Date.now();
+    if (this._lastVoiceTime && now - this._lastVoiceTime < 2000) return;
+    this._lastVoiceTime = now;
+
+    const lines = {
+      move: ['Moving out', 'Yes sir', 'Copy that', 'On the move', 'Roger that'],
+      attack: ['Engaging', 'Target acquired', 'Weapons free', 'Taking the shot', 'Fire at will'],
+      select: ['Ready', 'Standing by', 'Awaiting orders', 'At your service', 'Reporting'],
+      underfire: ['Under fire!', 'Taking hits!', 'We need support!', 'Incoming!', 'Contact!'],
+      spotted: ['Enemy spotted', 'Tango in sight', 'Hostile detected', 'Eyes on enemy', 'Contact ahead']
+    };
+
+    const pool = lines[category];
+    if (!pool) return;
+    const text = pool[Math.floor(Math.random() * pool.length)];
+
+    try {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1.2;
+      utterance.pitch = 0.8 + Math.random() * 0.4;
+      utterance.volume = this.volume * 0.6;
+      window.speechSynthesis.speak(utterance);
+    } catch (e) {
+      // SpeechSynthesis not available
+    }
+  }
+
+  // ==================== GD-107: ENHANCED AMBIENT SOUNDS ====================
+
+  startAmbient() {
+    if (!this.initialized || !this.audioContext) return;
+    this.stopAmbient();
+
+    const ctx = this.audioContext;
+
+    // Wind (filtered brown noise)
+    this._ambientWind = this._createWindAmbient(ctx);
+
+    // Bird chirps (periodic oscillator chirps)
+    this._ambientBirds = this._createBirdAmbient(ctx);
+
+    // Distant artillery rumble
+    this._ambientArtillery = this._createArtilleryAmbient(ctx);
+  }
+
+  _createWindAmbient(ctx) {
+    const bufferSize = ctx.sampleRate * 4;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    // Brown noise (random walk)
+    let last = 0;
+    for (let i = 0; i < bufferSize; i++) {
+      const white = Math.random() * 2 - 1;
+      last = (last + 0.02 * white) / 1.02;
+      data[i] = last * 3.5;
+    }
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 400;
+
+    const gain = ctx.createGain();
+    gain.gain.value = 0.06;
+
+    source.connect(lp);
+    lp.connect(gain);
+    gain.connect(this.ambientGain);
+    source.start();
+
+    return { source, gain, nodes: [source] };
+  }
+
+  _createBirdAmbient(ctx) {
+    const obj = { nodes: [], interval: null };
+    obj.interval = setInterval(() => {
+      if (!this.enabled || this.audioContext?.state === 'closed') {
+        clearInterval(obj.interval);
+        return;
+      }
+      // Random bird chirp
+      if (Math.random() > 0.6) return;
+      const now = ctx.currentTime;
+      const freq = 2000 + Math.random() * 2000;
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now);
+      osc.frequency.exponentialRampToValueAtTime(freq * 1.3, now + 0.05);
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.8, now + 0.1);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.02, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+
+      osc.connect(gain);
+      gain.connect(this.ambientGain);
+      osc.start(now);
+      osc.stop(now + 0.15);
+    }, 3000 + Math.random() * 5000);
+
+    return obj;
+  }
+
+  _createArtilleryAmbient(ctx) {
+    const obj = { nodes: [], interval: null };
+    obj.interval = setInterval(() => {
+      if (!this.enabled || this.audioContext?.state === 'closed') {
+        clearInterval(obj.interval);
+        return;
+      }
+      if (Math.random() > 0.4) return;
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(40 + Math.random() * 20, now);
+      osc.frequency.exponentialRampToValueAtTime(20, now + 0.5);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.03, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+
+      osc.connect(gain);
+      gain.connect(this.ambientGain);
+      osc.start(now);
+      osc.stop(now + 0.6);
+    }, 8000 + Math.random() * 12000);
+
+    return obj;
+  }
+
+  stopAmbient() {
+    const stops = [this._ambientWind, this._ambientBirds, this._ambientArtillery];
+    for (const obj of stops) {
+      if (!obj) continue;
+      if (obj.interval) clearInterval(obj.interval);
+      if (obj.nodes) {
+        for (const n of obj.nodes) {
+          try { n.stop(); } catch (e) { /* ok */ }
+          try { n.disconnect(); } catch (e) { /* ok */ }
+        }
+      }
+      if (obj.source) {
+        try { obj.source.stop(); } catch (e) { /* ok */ }
+        try { obj.source.disconnect(); } catch (e) { /* ok */ }
+      }
+      if (obj.gain) {
+        try { obj.gain.disconnect(); } catch (e) { /* ok */ }
+      }
+    }
+    this._ambientWind = null;
+    this._ambientBirds = null;
+    this._ambientArtillery = null;
   }
 }

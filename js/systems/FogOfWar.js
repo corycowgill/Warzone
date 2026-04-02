@@ -126,6 +126,11 @@ export class FogOfWar {
         visionRange = Math.floor(visionRange * this.game.sceneManager.getVisionMultiplier(entity.type));
       }
 
+      // GD-112: Weather vision reduction
+      if (this.game.weatherSystem) {
+        visionRange = Math.floor(visionRange * this.game.weatherSystem.getVisionMultiplier());
+      }
+
       // Flare zones temporarily grant full vision (GD-066 smoke_screen/flare)
       if (this.game._flareZones) {
         for (const flare of this.game._flareZones) {

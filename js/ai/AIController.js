@@ -615,7 +615,18 @@ export class AIController {
 
       let unitType = null;
 
-      if (building.type === 'headquarters' || building.type === 'barracks') {
+      // GD-111: AI builds commander from HQ when it can afford it and has warfactory
+      if (building.type === 'headquarters') {
+        const hasCommander = myUnits.some(u => u.type === 'commander');
+        const cmdState = this.game._commanderState?.[this.team];
+        const canBuildCmd = !hasCommander && (!cmdState || cmdState.respawnTimer <= 0);
+        const hasTech = this.game.productionSystem?.hasTechRequirements(this.team, 'commander');
+        if (canBuildCmd && hasTech && this.game.teams[this.team].sp >= 500 && this.game.teams[this.team].mu >= 200) {
+          unitType = 'commander';
+        } else {
+          unitType = this.chooseBarracksUnit(myUnits);
+        }
+      } else if (building.type === 'barracks') {
         unitType = this.chooseBarracksUnit(myUnits);
       } else if (building.type === 'warfactory') {
         unitType = this.chooseFactoryUnit(myUnits);

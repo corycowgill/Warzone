@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { EventBus } from './EventBus.js';
-import { GAME_CONFIG, NATIONS, BUILDING_STATS, UNIT_STATS, RESEARCH_UPGRADES, SALVAGE_CONFIG, RESOURCE_NODE_CONFIG, CONSTRUCTION_CONFIG, TECH_BRANCHES } from './Constants.js';
+import { GAME_CONFIG, NATIONS, BUILDING_STATS, UNIT_STATS, RESEARCH_UPGRADES, SALVAGE_CONFIG, RESOURCE_NODE_CONFIG, CONSTRUCTION_CONFIG, TECH_BRANCHES, COMMANDER_CONFIG } from './Constants.js';
 import { SceneManager } from '../rendering/SceneManager.js';
 import { CameraController } from '../rendering/CameraController.js';
 import { EffectsManager } from '../rendering/EffectsManager.js';
@@ -25,6 +25,8 @@ import { WaveSystem } from '../systems/WaveSystem.js';
 import { NeutralStructureSystem } from '../systems/NeutralStructureSystem.js';
 import { PostProcessing } from '../rendering/PostProcessing.js';
 import { assetManager } from '../rendering/AssetManager.js';
+import { WeatherSystem } from '../systems/WeatherSystem.js';
+import { StrategicOverlay } from '../rendering/StrategicOverlay.js';
 
 export class Game {
   constructor() {
@@ -79,6 +81,8 @@ export class Game {
     this.postProcessing = null;
     this.resourceNodes = [];
     this.aiController2 = null;
+    this.weatherSystem = null;
+    this.strategicOverlay = null;
     this._mapEventTimer = 0;
     this._mapEventInterval = 60; // seconds between events
     this._tutorialStep = 0;
@@ -205,6 +209,12 @@ export class Game {
       // GD-091: Place neutral capturable structures
       this.neutralStructures = new NeutralStructureSystem(this);
 
+      // GD-112: Weather system
+      this.weatherSystem = new WeatherSystem(this);
+
+      // GD-109: Strategic zoom overlay
+      this.strategicOverlay = new StrategicOverlay(this);
+
       // Place resource nodes on the map
       this.placeResourceNodes();
 
@@ -277,6 +287,192 @@ export class Game {
         }
       };
       this.eventBus.on('unit:promoted', this._onUnitPromoted);
+
+      // GD-111: Commander ability execution handler
+      this._onCommanderAbility = (data) => {
+        const { unit, ability, targetPos } = data;
+        if (!unit || !unit.alive) return;
+        const team = unit.team;
+        const otherTeam = team === 'player' ? 'enemy' : 'player';
+
+        switch (ability.id) {
+          case 'airborne_drop':
+          case 'resistance_cell': {
+            // Spawn infantry at target position
+            const count = ability.spawnCount || 3;
+            const pos = targetPos || unit.getPosition();
+            for (let i = 0; i < count; i++) {
+              const offset = new THREE.Vector3((Math.random() - 0.5) * 8, 0, (Math.random() - 0.5) * 8);
+              this.createUnit('infantry', team, pos.clone().add(offset));
+            }
+            if (this.effectsManager) this.effectsManager.createSmoke(pos.clone());
+            if (this.soundManager) this.soundManager.play('produce');
+            break;
+          }
+          case 'rally_cry':
+          case 'inspire':
+          case 'blitzkrieg_cmd':
+          case 'divine_wind':
+          case 'banzai_wave':
+          case 'iron_discipline': {
+            // Timed aura buff applied to friendly units
+            const aura = ability.aura;
+            if (!aura) break;
+            const duration = ability.duration || 10;
+            const affected = this.entities.filter(e => e.isUnit && e.alive && e.team === team);
+            for (const u of affected) {
+              if (aura.domain && aura.domain !== 'infantry' && u.domain !== aura.domain) continue;
+              if (aura.domain === 'infantry' && u.type !== 'infantry') continue;
+              if (aura.damageMult) u._cmdAuraDmg = aura.damageMult;
+              if (aura.speedMult) u._cmdAuraSpd = aura.speedMult;
+              if (aura.armor) u.armor = (u.armor || 0) + aura.armor;
+            }
+            // Schedule removal
+            setTimeout(() => {
+              for (const u of affected) {
+                if (!u.alive) continue;
+                if (aura.damageMult) delete u._cmdAuraDmg;
+                if (aura.speedMult) delete u._cmdAuraSpd;
+                if (aura.armor) u.armor = Math.max(0, (u.armor || 0) - aura.armor);
+              }
+            }, duration * 1000);
+            if (this.soundManager) this.soundManager.play('ability');
+            if (team === 'player' && this.uiManager?.hud) {
+              this.uiManager.hud.showNotification(`${ability.name} activated!`, '#44ff88');
+            }
+            break;
+          }
+          case 'artillery_strike':
+          case 'v2_strike':
+          case 'naval_bombardment':
+          case 'torpedo_barrage':
+          case 'siege_bombardment_cmd': {
+            // AOE damage at target
+            const shells = ability.shells || 1;
+            const dmg = ability.damage || 100;
+            const radius = ability.radius || 10;
+            const pos = targetPos || unit.getPosition();
+            for (let s = 0; s < shells; s++) {
+              const shellOffset = new THREE.Vector3((Math.random() - 0.5) * radius, 0, (Math.random() - 0.5) * radius);
+              const shellPos = pos.clone().add(shellOffset);
+              // Delayed impact for each shell
+              setTimeout(() => {
+                const enemies = this.getEntitiesByTeam(otherTeam);
+                for (const enemy of enemies) {
+                  if (!enemy.alive) continue;
+                  const d = enemy.getPosition().distanceTo(shellPos);
+                  if (d <= radius) {
+                    const falloff = 1 - (d / radius) * 0.5;
+                    enemy.takeDamage(dmg * falloff);
+                    if (!enemy.alive && unit.addKill) {
+                      unit.addKill();
+                      this.eventBus.emit('combat:kill', { attacker: unit, defender: enemy });
+                    }
+                  }
+                }
+                if (this.effectsManager) this.effectsManager.createExplosion(shellPos);
+                if (this.cameraController) this.cameraController.shake(1.5);
+              }, s * 600);
+            }
+            if (this.soundManager) this.soundManager.play('explosion');
+            break;
+          }
+          case 'smoke_barrage': {
+            // Large smoke zone
+            const pos = targetPos || unit.getPosition();
+            const radius = ability.radius || 15;
+            const duration = ability.duration || 8;
+            this._smokeZones = this._smokeZones || [];
+            this._smokeZones.push({ position: pos.clone(), radius, expiry: this.gameElapsed + duration });
+            for (let i = 0; i < 6; i++) {
+              const offset = new THREE.Vector3((Math.random() - 0.5) * radius, 0, (Math.random() - 0.5) * radius);
+              if (this.effectsManager) this.effectsManager.createSmoke(pos.clone().add(offset));
+            }
+            if (this.soundManager) this.soundManager.play('ability');
+            break;
+          }
+          case 'sabotage': {
+            // Disable target building for duration
+            const pos = targetPos || unit.getPosition();
+            const range = ability.range || 30;
+            const disableDur = ability.disableDuration || 15;
+            const enemyBuildings = this.entities.filter(e => e.isBuilding && e.alive && e.team === otherTeam);
+            let closest = null, closestDist = Infinity;
+            for (const b of enemyBuildings) {
+              const d = b.getPosition().distanceTo(pos);
+              if (d < closestDist && d < range) { closest = b; closestDist = d; }
+            }
+            if (closest) {
+              closest._sabotaged = true;
+              const savedProduction = closest.currentProduction;
+              closest.currentProduction = null;
+              setTimeout(() => {
+                if (closest.alive) {
+                  closest._sabotaged = false;
+                  // Restore production if it was interrupted
+                  if (savedProduction && !closest.currentProduction) {
+                    closest.productionQueue.unshift(savedProduction);
+                  }
+                }
+              }, disableDur * 1000);
+              if (this.effectsManager) this.effectsManager.createSmoke(closest.getPosition().clone());
+            }
+            break;
+          }
+          case 'fortify': {
+            // Boost all friendly building HP
+            const duration = ability.duration || 20;
+            const mult = ability.hpMult || 1.5;
+            const buildings = this.entities.filter(e => e.isBuilding && e.alive && e.team === team);
+            for (const b of buildings) {
+              b._origMaxHP = b.maxHealth;
+              b.maxHealth = Math.floor(b.maxHealth * mult);
+              b.health = Math.min(b.health + (b.maxHealth - b._origMaxHP), b.maxHealth);
+            }
+            setTimeout(() => {
+              for (const b of buildings) {
+                if (b.alive && b._origMaxHP) {
+                  b.maxHealth = b._origMaxHP;
+                  b.health = Math.min(b.health, b.maxHealth);
+                  delete b._origMaxHP;
+                }
+              }
+            }, duration * 1000);
+            if (this.soundManager) this.soundManager.play('ability');
+            break;
+          }
+          case 'panzer_ace': {
+            // Commander self-buff: 2x damage
+            const duration = ability.duration || 10;
+            unit._cmdAuraDmg = ability.selfDamageMult || 2.0;
+            setTimeout(() => { if (unit.alive) delete unit._cmdAuraDmg; }, duration * 1000);
+            if (this.soundManager) this.soundManager.play('ability');
+            break;
+          }
+          case 'mountain_fortress': {
+            // Spawn temporary turrets
+            const pos = targetPos || unit.getPosition();
+            const count = ability.turretCount || 3;
+            const dur = ability.turretDuration || 30;
+            for (let i = 0; i < count; i++) {
+              const offset = new THREE.Vector3((Math.random() - 0.5) * 10, 0, (Math.random() - 0.5) * 10);
+              const turret = this.createBuilding('turret', team, pos.clone().add(offset));
+              if (turret) {
+                setTimeout(() => {
+                  if (turret.alive) {
+                    turret.health = 0;
+                    turret.alive = false;
+                    this.eventBus.emit('building:destroyed', { entity: turret });
+                  }
+                }, dur * 1000);
+              }
+            }
+            if (this.soundManager) this.soundManager.play('build');
+            break;
+          }
+        }
+      };
+      this.eventBus.on('commander:ability', this._onCommanderAbility);
 
       // Salvage income: award SP on kills (GD-064)
       this._onSalvageKill = (data) => {
@@ -523,6 +719,15 @@ export class Game {
   }
 
   createUnit(type, team, position) {
+    // GD-111: Commander limit check (1 per team)
+    if (type === 'commander') {
+      const existingCmd = this.entities.find(e => e.isUnit && e.type === 'commander' && e.team === team && e.alive);
+      if (existingCmd) return null; // Already have a commander
+      // Check respawn cooldown
+      const cmdState = this._commanderState = this._commanderState || {};
+      if (cmdState[team] && cmdState[team].respawnTimer > 0) return null;
+    }
+
     const unit = this.unitFactory.create(type, team, position);
     if (unit) {
       // Pass game reference so unit can access terrain for Y updates
@@ -532,6 +737,11 @@ export class Game {
       const nationKey = this.teams[team]?.nation;
       if (nationKey && unit.applyNationBonuses) {
         unit.applyNationBonuses(nationKey);
+      }
+
+      // GD-111: Initialize commander abilities
+      if (type === 'commander' && unit.setNationAbilities && nationKey) {
+        unit.setNationAbilities(nationKey);
       }
 
       // Set Y from terrain height
@@ -681,6 +891,12 @@ export class Game {
           }
         }
 
+        // GD-111: Commander death triggers respawn cooldown
+        if (entity.isUnit && entity.type === 'commander') {
+          this._commanderState = this._commanderState || {};
+          this._commanderState[entity.team] = { respawnTimer: COMMANDER_CONFIG.respawnCooldown };
+        }
+
         // GD-076: Unit corpses for land units (lay flat and fade out)
         if (entity.isUnit && entity.domain === 'land' && entity.mesh) {
           this._createCorpse(entity);
@@ -787,12 +1003,36 @@ export class Game {
       }
     }
 
+    // GD-111: Commander respawn cooldown
+    if (this._commanderState) {
+      for (const team of ['player', 'enemy']) {
+        if (this._commanderState[team] && this._commanderState[team].respawnTimer > 0) {
+          this._commanderState[team].respawnTimer -= delta;
+        }
+      }
+    }
+
     // Update game timer
     this.gameElapsed += delta;
 
     // Day/Night cycle
     if (this.sceneManager) {
       this.sceneManager.updateDayNight(delta, this.gameElapsed);
+    }
+
+    // GD-106: Update water shader animation
+    if (this.terrain && this.terrain.updateWater) {
+      this.terrain.updateWater(delta, this.sceneManager?.camera);
+    }
+
+    // GD-112: Update weather system
+    if (this.weatherSystem) {
+      this.weatherSystem.update(delta);
+    }
+
+    // GD-109: Update strategic zoom overlay
+    if (this.strategicOverlay) {
+      this.strategicOverlay.update(delta);
     }
 
     // Update smoke zones (mortar ability)
@@ -1448,6 +1688,10 @@ export class Game {
       this.eventBus.off('combat:kill', this._onSalvageKill);
       this._onSalvageKill = null;
     }
+    if (this._onCommanderAbility) {
+      this.eventBus.off('commander:ability', this._onCommanderAbility);
+      this._onCommanderAbility = null;
+    }
     if (this._onCombatAlert) {
       this.eventBus.off('combat:attack', this._onCombatAlert);
       this._onCombatAlert = null;
@@ -1504,6 +1748,19 @@ export class Game {
       }
       this.resourceNodes = [];
     }
+    // Clean up weather system
+    if (this.weatherSystem && this.weatherSystem.dispose) {
+      this.weatherSystem.dispose();
+      this.weatherSystem = null;
+    }
+    // Clean up strategic overlay
+    if (this.strategicOverlay && this.strategicOverlay.dispose) {
+      this.strategicOverlay.dispose();
+      this.strategicOverlay = null;
+    }
+    // Reset commander state
+    this._commanderState = null;
+
     // Clean up nation ability button
     const abilityBtn = document.getElementById('nation-ability-btn');
     if (abilityBtn) abilityBtn.style.display = 'none';

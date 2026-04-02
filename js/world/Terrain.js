@@ -349,23 +349,54 @@ export class Terrain {
 
       positions[i * 3 + 1] = height;
 
+      // GD-106: Enhanced terrain vertex colors with noise variation
+      const noiseVal = this.noise2D(x, z, 0.3) * 0.08;
+      const noiseVal2 = this.noise2D(x * 1.7 + 31, z * 1.7 + 47, 0.15) * 0.06;
+
       if (height < -0.5) {
-        colors[i * 3] = 0.1;
-        colors[i * 3 + 1] = 0.3;
-        colors[i * 3 + 2] = 0.7;
-      } else if (height < 0.5) {
-        colors[i * 3] = 0.76;
-        colors[i * 3 + 1] = 0.7;
-        colors[i * 3 + 2] = 0.5;
-      } else if (height < 3) {
-        const variation = this.noise2D(x, z, 0.3) * 0.08;
-        colors[i * 3] = 0.2 + variation;
-        colors[i * 3 + 1] = 0.45 + variation;
-        colors[i * 3 + 2] = 0.15;
+        // Underwater (hidden by water shader) - dark seafloor
+        colors[i * 3] = 0.08 + noiseVal;
+        colors[i * 3 + 1] = 0.15 + noiseVal;
+        colors[i * 3 + 2] = 0.25 + noiseVal;
+      } else if (height < 0.3) {
+        // Beach / sand with variation
+        colors[i * 3] = 0.76 + noiseVal;
+        colors[i * 3 + 1] = 0.68 + noiseVal2;
+        colors[i * 3 + 2] = 0.45 + noiseVal;
+      } else if (height < 1.5) {
+        // Grass lowland with patchy dirt
+        const dirtBlend = this.noise2D(x * 2.3, z * 2.3, 0.4);
+        if (dirtBlend > 0.6) {
+          // Dirt patches
+          colors[i * 3] = 0.4 + noiseVal;
+          colors[i * 3 + 1] = 0.3 + noiseVal2;
+          colors[i * 3 + 2] = 0.18;
+        } else {
+          colors[i * 3] = 0.18 + noiseVal;
+          colors[i * 3 + 1] = 0.42 + noiseVal + noiseVal2;
+          colors[i * 3 + 2] = 0.12;
+        }
+      } else if (height < 4) {
+        // Grass highland
+        colors[i * 3] = 0.22 + noiseVal;
+        colors[i * 3 + 1] = 0.48 + noiseVal;
+        colors[i * 3 + 2] = 0.18 + noiseVal2;
       } else {
-        colors[i * 3] = 0.3;
-        colors[i * 3 + 1] = 0.5;
-        colors[i * 3 + 2] = 0.2;
+        // Rocky high ground
+        const rockBlend = this.noise2D(x * 3, z * 3, 0.5) * 0.1;
+        colors[i * 3] = 0.4 + rockBlend;
+        colors[i * 3 + 1] = 0.38 + rockBlend;
+        colors[i * 3 + 2] = 0.3 + rockBlend;
+      }
+
+      // Shoreline highlight (white-ish vertices near water edge)
+      if (height > -0.3 && height < 0.5) {
+        const shoreBlend = 1 - Math.abs(height - 0.1) / 0.4;
+        if (shoreBlend > 0) {
+          colors[i * 3] = colors[i * 3] * (1 - shoreBlend * 0.3) + 0.85 * shoreBlend * 0.3;
+          colors[i * 3 + 1] = colors[i * 3 + 1] * (1 - shoreBlend * 0.3) + 0.82 * shoreBlend * 0.3;
+          colors[i * 3 + 2] = colors[i * 3 + 2] * (1 - shoreBlend * 0.3) + 0.75 * shoreBlend * 0.3;
+        }
       }
     }
 
@@ -373,19 +404,93 @@ export class Terrain {
     geometry.computeVertexNormals();
     geometry.translate(this.worldSize / 2, 0, this.worldSize / 2);
 
-    const material = new THREE.MeshLambertMaterial({ vertexColors: true });
+    const material = new THREE.MeshPhongMaterial({ vertexColors: true, shininess: 5 });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.receiveShadow = true;
 
-    const waterGeometry = new THREE.PlaneGeometry(this.worldSize, this.worldSize);
+    // GD-106: Water Shader with animated waves, specular, depth color gradient
+    const waterRes = 128;
+    const waterGeometry = new THREE.PlaneGeometry(this.worldSize, this.worldSize, waterRes, waterRes);
     waterGeometry.rotateX(-Math.PI / 2);
-    const waterMaterial = new THREE.MeshLambertMaterial({
-      color: 0x1a6bc4,
+
+    const waterMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uShallowColor: { value: new THREE.Color(0x22aaaa) },
+        uDeepColor: { value: new THREE.Color(0x0a2244) },
+        uFoamColor: { value: new THREE.Color(0xddeeff) },
+        uLightDir: { value: new THREE.Vector3(0.5, 0.8, 0.3).normalize() },
+        uCameraPos: { value: new THREE.Vector3() },
+        uOpacity: { value: 0.75 }
+      },
+      vertexShader: `
+        uniform float uTime;
+        varying vec2 vUv;
+        varying vec3 vWorldPos;
+        varying float vWaveHeight;
+        void main() {
+          vUv = uv;
+          vec3 pos = position;
+          // Multiple sine waves for organic wave motion
+          float wave1 = sin(pos.x * 0.08 + uTime * 1.2) * 0.4;
+          float wave2 = sin(pos.z * 0.12 + uTime * 0.8) * 0.3;
+          float wave3 = sin((pos.x + pos.z) * 0.06 + uTime * 1.5) * 0.2;
+          pos.y += wave1 + wave2 + wave3;
+          vWaveHeight = wave1 + wave2 + wave3;
+          vWorldPos = (modelMatrix * vec4(pos, 1.0)).xyz;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 uShallowColor;
+        uniform vec3 uDeepColor;
+        uniform vec3 uFoamColor;
+        uniform vec3 uLightDir;
+        uniform vec3 uCameraPos;
+        uniform float uTime;
+        uniform float uOpacity;
+        varying vec2 vUv;
+        varying vec3 vWorldPos;
+        varying float vWaveHeight;
+        void main() {
+          // Depth-based color (center = deeper)
+          float edgeDist = min(min(vUv.x, 1.0 - vUv.x), min(vUv.y, 1.0 - vUv.y));
+          float depthFactor = smoothstep(0.0, 0.3, edgeDist);
+          vec3 waterColor = mix(uShallowColor, uDeepColor, depthFactor);
+
+          // Foam at shore edges (where shallow meets land)
+          float foam = smoothstep(0.02, 0.0, edgeDist);
+          // Animated foam line
+          float foamLine = sin(vWorldPos.x * 0.3 + uTime * 2.0) * 0.5 + 0.5;
+          foamLine *= sin(vWorldPos.z * 0.25 + uTime * 1.5) * 0.5 + 0.5;
+          foam += smoothstep(0.06, 0.03, edgeDist) * foamLine * 0.5;
+          // Wave crest foam
+          foam += smoothstep(0.5, 0.8, vWaveHeight) * 0.3;
+          waterColor = mix(waterColor, uFoamColor, clamp(foam, 0.0, 0.6));
+
+          // Specular highlight from directional light
+          vec3 viewDir = normalize(uCameraPos - vWorldPos);
+          vec3 normal = normalize(vec3(
+            sin(vWorldPos.x * 0.1 + uTime) * 0.1,
+            1.0,
+            sin(vWorldPos.z * 0.1 + uTime * 0.7) * 0.1
+          ));
+          vec3 halfDir = normalize(uLightDir + viewDir);
+          float spec = pow(max(dot(normal, halfDir), 0.0), 64.0);
+          waterColor += vec3(1.0) * spec * 0.4;
+
+          gl_FragColor = vec4(waterColor, uOpacity);
+        }
+      `,
       transparent: true,
-      opacity: 0.6
+      side: THREE.DoubleSide,
+      depthWrite: false
     });
+
     const waterMesh = new THREE.Mesh(waterGeometry, waterMaterial);
-    waterMesh.position.set(this.worldSize / 2, -0.5, this.worldSize / 2);
+    waterMesh.position.set(this.worldSize / 2, -0.3, this.worldSize / 2);
+    this.waterMesh = waterMesh;
+    this.waterMaterial = waterMaterial;
 
     const group = new THREE.Group();
     group.add(mesh);
@@ -555,5 +660,14 @@ export class Terrain {
     const gz = Math.floor(worldZ / this.worldScale);
     if (gx < 0 || gx >= this.mapSize || gz < 0 || gz >= this.mapSize) return false;
     return this._forestGrid[gz * this.mapSize + gx] === 1;
+  }
+
+  // GD-106: Update water shader uniforms each frame
+  updateWater(deltaTime, camera) {
+    if (!this.waterMaterial || !this.waterMaterial.uniforms) return;
+    this.waterMaterial.uniforms.uTime.value += deltaTime;
+    if (camera) {
+      this.waterMaterial.uniforms.uCameraPos.value.copy(camera.position);
+    }
   }
 }

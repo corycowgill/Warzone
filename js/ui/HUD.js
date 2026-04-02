@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { UNIT_STATS, BUILDING_STATS, TECH_TREE, NATIONS, GAME_CONFIG, UNIT_COUNTERS, VETERANCY, BUILDING_UPGRADES, RESEARCH_UPGRADES, NATION_ABILITIES, BUILDING_LIMITS, TECH_BRANCHES } from '../core/Constants.js';
+import { UNIT_STATS, BUILDING_STATS, TECH_TREE, NATIONS, GAME_CONFIG, UNIT_COUNTERS, VETERANCY, BUILDING_UPGRADES, RESEARCH_UPGRADES, NATION_ABILITIES, BUILDING_LIMITS, TECH_BRANCHES, FACTION_UNITS, WEATHER_CONFIG } from '../core/Constants.js';
 
 export class HUD {
   constructor(game) {
@@ -550,7 +550,15 @@ export class HUD {
         }
       }
 
-      this.gameTimerDisplay.textContent = timerText;
+      // GD-112: Weather indicator
+      if (this.game.weatherSystem) {
+        const weatherName = this.game.weatherSystem.getWeatherName();
+        const weatherColors = { Clear: '#88ff88', Rain: '#6688ff', Fog: '#aabbcc', Sandstorm: '#ddaa66' };
+        const wColor = weatherColors[weatherName] || '#888';
+        timerText += ` | <span style="color:${wColor}">${weatherName}</span>`;
+      }
+
+      this.gameTimerDisplay.innerHTML = timerText;
     }
 
     // Military score comparison
@@ -724,6 +732,24 @@ export class HUD {
           <span style="color:${deployed ? '#00ff44' : '#ff4444'};">${deployed ? 'DEPLOYED - Can fire' : 'MOBILE - Must deploy to fire [G]'}</span>
         </div>`;
       }
+
+      // GD-111: Commander abilities display
+      if (entity.type === 'commander' && entity.commanderAbilities && entity.commanderAbilities.length > 0) {
+        statsHtml += `<div style="margin-top:8px;color:#ffcc00;font-size:12px;font-weight:bold;">Commander Abilities</div>`;
+        for (let i = 0; i < entity.commanderAbilities.length; i++) {
+          const ab = entity.commanderAbilities[i];
+          const cd = entity.commanderCooldowns[i];
+          const ready = cd <= 0;
+          const cdColor = ready ? '#00ff44' : '#ff8844';
+          statsHtml += `
+            <div style="margin-top:4px;padding:4px 6px;background:#1a2a1a;border:1px solid ${ready ? '#336633' : '#333'};border-radius:3px;font-size:11px;">
+              <span style="color:${cdColor};font-weight:bold;">[${i+1}] ${ab.name}</span>
+              <span style="float:right;color:${cdColor};">${ready ? 'READY' : Math.ceil(cd) + 's'}</span>
+              <div style="color:#666;font-size:10px;">${ab.description}</div>
+            </div>
+          `;
+        }
+      }
     }
 
     if (entity.isBuilding) {
@@ -823,7 +849,7 @@ export class HUD {
 
     this.selectionInfo.innerHTML = `
       <div style="display:flex;align-items:center;gap:10px;">
-        <div style="font-weight:bold;font-size:14px;color:#fff;">${this.formatName(entity.type)}${entity.isUnit && entity.veterancyRank > 0 ? ` <span style="color:${VETERANCY.ranks[entity.veterancyRank].color};font-size:12px;">${VETERANCY.ranks[entity.veterancyRank].symbol} ${VETERANCY.ranks[entity.veterancyRank].name}</span>` : ''}</div>
+        <div style="font-weight:bold;font-size:14px;color:#fff;">${entity.factionName || this.formatName(entity.type)}${entity.isUnit && entity.veterancyRank > 0 ? ` <span style="color:${VETERANCY.ranks[entity.veterancyRank].color};font-size:12px;">${VETERANCY.ranks[entity.veterancyRank].symbol} ${VETERANCY.ranks[entity.veterancyRank].name}</span>` : ''}${entity.factionDescription ? `<div style="font-size:10px;color:#88ddff;">${entity.factionDescription}</div>` : ''}</div>
         <div style="font-size:11px;color:#888;">${entity.domain || ''}</div>
       </div>
       <div style="margin-top:4px;">
@@ -1099,17 +1125,24 @@ export class HUD {
         }
       }
 
+      const playerNation = this.getPlayerNation();
+      const factionOverride = playerNation && FACTION_UNITS[playerNation] ? FACTION_UNITS[playerNation][unitType] : null;
+      const displayName = factionOverride ? factionOverride.name : this.formatName(unitType);
+      const factionDesc = factionOverride ? `<div style="color:#88ddff;font-size:10px;">${factionOverride.description}</div>` : '';
+      const effectiveCost = factionOverride?.statsOverride?.cost || stats.cost;
+
       btn.innerHTML = `
         <div>
-          <strong>${this.formatName(unitType)}</strong>
+          <strong>${displayName}</strong>
+          ${factionDesc}
           ${reqHtml}
         </div>
         <div style="text-align:right;">
-          <span style="color:${canAfford ? '#ffcc00' : '#ff4444'};">${stats.cost} SP</span>
+          <span style="color:${canAfford ? '#ffcc00' : '#ff4444'};">${effectiveCost} SP</span>
           <div style="color:#888;font-size:10px;">${stats.buildTime}s</div>
         </div>
       `;
-      btn.title = `${this.formatName(unitType)} (${stats.cost} SP) — Shift+click to queue 5`;
+      btn.title = `${displayName} (${effectiveCost} SP) — Shift+click to queue 5`;
 
       btn.addEventListener('click', (e) => {
         if (building.alive && this.game.productionSystem && available) {
@@ -1834,8 +1867,12 @@ export class HUD {
     return score;
   }
 
-  formatName(type) {
+  formatName(type, nationKey) {
     if (!type) return '';
+    // Check for faction-specific unit name
+    if (nationKey && FACTION_UNITS[nationKey] && FACTION_UNITS[nationKey][type]) {
+      return FACTION_UNITS[nationKey][type].name;
+    }
     const names = {
       warfactory: 'War Factory',
       resourcedepot: 'Resource Depot',
@@ -1850,9 +1887,17 @@ export class HUD {
       spg: 'SPG/Artillery',
       bomber: 'Bomber',
       patrolboat: 'Patrol Boat',
-      techlab: 'Tech Lab'
+      techlab: 'Tech Lab',
+      commander: 'Commander',
+      munitionscache: 'Munitions Cache'
     };
     if (names[type]) return names[type];
     return type.charAt(0).toUpperCase() + type.slice(1).replace(/([A-Z])/g, ' $1');
+  }
+
+  /** Get player nation key for display */
+  getPlayerNation() {
+    const activeTeam = this.game.mode === '2P' ? this.game.activeTeam : 'player';
+    return this.game.teams[activeTeam]?.nation || null;
   }
 }

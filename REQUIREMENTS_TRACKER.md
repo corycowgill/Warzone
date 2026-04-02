@@ -68,6 +68,15 @@ GD-077: Surrender Button (pause menu surrender with confirmation dialog, trigger
 GD-078: Forest Cover System (grid-based forest lookup from tree positions, -25% damage for infantry in forest, speed reduction, vision blocking, green tint visual)
 GD-079: Building Limits (BUILDING_LIMITS constant, enforced in ProductionSystem and AI, shown in build menu tooltips)
 
+## Cycle 13 - Completed (7 features)
+GD-105: Faction-Unique Units (2 per nation, 12 total: Rangers, Sherman Jumbo, Commandos, Churchill, Maquis, AMX Light, Stormtroopers, Tiger Ace, Imperial Marines, Zero, Jaegers, Sturmhaubitze - stat overrides, passive abilities, visual accents)
+GD-106: Water Shader & Terrain Enhancement (ShaderMaterial water with vertex displacement, specular highlights, depth gradient, animated foam; terrain vertex color variation with noise, dirt patches, shoreline blend)
+GD-107: Enhanced Audio System (SpeechSynthesis voice lines for move/attack/select/underfire/spotted, wind/bird/artillery ambient layers)
+GD-108: Procedural Unit Animations (infantry walking bob/legs/arms, tank rumble, air banking on turns, naval bob, building chimney smoke while producing, weapon recoil)
+GD-109: Strategic Zoom (NATO military symbols via canvas-rendered sprites at zoom >140, smooth model-to-symbol blend 140-170, team-colored backgrounds)
+GD-111: Commander/Hero Units (1 per team from HQ, 600HP officer with gold accents, 3 nation-specific abilities with cooldowns, 90s respawn, AI produces commanders)
+GD-112: Weather System (Clear/Rain/Fog/Sandstorm cycling every 3-4min, vision/speed multipliers, particle systems, fog manipulation, sandstorm infantry DPS, map-specific weather pools)
+
 ## Pending / Deferred
 | ID | Priority | Status | Description |
 |----|----------|--------|-------------|
@@ -80,16 +89,15 @@ GD-079: Building Limits (BUILDING_LIMITS constant, enforced in ProductionSystem 
 | GD-028 | MEDIUM | DONE (as GD-035) | Smart Control Group Auto-Refill |
 | GD-029 | MEDIUM | WONT_DO | Last Seen Ghost Overlay (partially covered by GD-017 fog improvements; full ghost overlay not needed at 9.5/10) |
 
-## Total Features Implemented: 68
+## Total Features Implemented: 75
 ## Total QA Fixes: 52
-## Git Commits: 26
+## Git Commits: 27
 ## Game Designer Rating: 9.5/10 - "Exceptionally well-architected single-player military RTS"
 
 ---
 
-## Final Status
-- **Total Features:** 68
+## Current Status
+- **Total Features:** 75
 - **Total QA Fixes:** 52
-- **Total Cycles:** 12
+- **Total Cycles:** 13
 - **Game Designer Final Rating:** 9.5/10
-- **Status:** COMPLETE - Ready to Ship
