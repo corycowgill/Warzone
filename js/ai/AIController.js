@@ -194,14 +194,14 @@ export class AIController {
     const enemyUnits = this.game.getUnits(this.enemyTeam);
     const mySP = this.game.teams[this.team].sp;
 
-    // Count enemy composition (for counter-play)
+    // GD-086: Every 15 seconds, analyze visible player units by type
     this.lastKnownEnemyComposition = {};
     for (const unit of enemyUnits) {
       this.lastKnownEnemyComposition[unit.type] = (this.lastKnownEnemyComposition[unit.type] || 0) + 1;
     }
 
-    // Adapt strategy based on game state
-    if (this.config.countersPlayer) {
+    // Adapt strategy based on game state (counter-building on normal+hard)
+    if (this.config.countersPlayer || this.difficulty !== 'easy') {
       this.adaptToEnemyComposition();
     }
 
@@ -217,24 +217,106 @@ export class AIController {
   }
 
   adaptToEnemyComposition() {
+    this.counterBuild();
+  }
+
+  /**
+   * GD-086: Analyze visible player units by domain and bias production
+   * toward counter units for the highest threat domain.
+   */
+  counterBuild() {
     const comp = this.lastKnownEnemyComposition;
-    const airCount = (comp.drone || 0) + (comp.plane || 0);
-    const tankCount = comp.tank || 0;
-    const infantryCount = comp.infantry || 0;
-    const totalEnemy = airCount + tankCount + infantryCount;
 
-    if (totalEnemy === 0) return;
+    // Calculate threat score per domain
+    const landTypes = ['infantry', 'tank', 'mortar', 'scoutcar', 'apc', 'heavytank', 'spg'];
+    const airTypes = ['drone', 'plane', 'bomber'];
+    const navalTypes = ['battleship', 'carrier', 'submarine', 'patrolboat'];
 
-    // If enemy is heavy air, prioritize AA and anti-air units
-    if (airCount / totalEnemy > 0.4) {
-      this.tryBuildDefense('aaturret');
+    let landThreat = 0, airThreat = 0, navalThreat = 0;
+    for (const type of landTypes) {
+      const count = comp[type] || 0;
+      const stats = UNIT_STATS[type];
+      if (stats) landThreat += count * stats.damage * (stats.hp / 100);
+    }
+    for (const type of airTypes) {
+      const count = comp[type] || 0;
+      const stats = UNIT_STATS[type];
+      if (stats) airThreat += count * stats.damage * (stats.hp / 100);
+    }
+    for (const type of navalTypes) {
+      const count = comp[type] || 0;
+      const stats = UNIT_STATS[type];
+      if (stats) navalThreat += count * stats.damage * (stats.hp / 100);
     }
 
-    // If enemy is heavy tanks, ensure we have war factory and planes
-    if (tankCount / totalEnemy > 0.5) {
-      // Planes counter tanks well
-      if (!this.chosenBuildOrder.includes('airfield')) {
-        this.chosenBuildOrder.push('airfield');
+    const totalThreat = landThreat + airThreat + navalThreat;
+    if (totalThreat === 0) return;
+
+    // Store threat assessment for production weighting
+    this._threatDomains = { land: landThreat, air: airThreat, naval: navalThreat };
+    this._highestThreat = landThreat >= airThreat && landThreat >= navalThreat ? 'land'
+      : airThreat >= navalThreat ? 'air' : 'naval';
+
+    // Specific counter-building responses
+    const tankCount = (comp.tank || 0) + (comp.heavytank || 0);
+    const airCount = (comp.drone || 0) + (comp.plane || 0) + (comp.bomber || 0);
+    const infantryCount = comp.infantry || 0;
+
+    // If player masses tanks -> AI prioritizes drones, planes, anti-armor
+    if (this._highestThreat === 'land' && tankCount >= 3) {
+      this._counterProductionBias = { drone: 2.0, plane: 1.5, aahalftrack: 0.5 };
+      // Ensure airfield exists
+      if (!this.game.getBuildings(this.team).some(b => b.type === 'airfield' && b.alive)) {
+        if (!this.chosenBuildOrder.includes('airfield')) {
+          this.chosenBuildOrder.push('warfactory', 'airfield');
+        }
+      }
+    }
+    // If player masses air -> AI builds AA half-tracks, rushes airfield
+    else if (this._highestThreat === 'air' || airCount >= 3) {
+      this._counterProductionBias = { aahalftrack: 2.5, plane: 1.5, infantry: 0.5 };
+      this.tryBuildDefense('aaturret');
+      // Rush airfield for fighter planes
+      if (!this.game.getBuildings(this.team).some(b => b.type === 'airfield' && b.alive)) {
+        if (!this.chosenBuildOrder.includes('airfield')) {
+          this.chosenBuildOrder.push('warfactory', 'airfield');
+        }
+      }
+    }
+    // If player masses infantry -> AI builds tanks, mortar teams
+    else if (this._highestThreat === 'land' && infantryCount >= 5) {
+      this._counterProductionBias = { tank: 2.0, mortar: 1.5, infantry: 0.5 };
+    }
+    // Naval threat
+    else if (this._highestThreat === 'naval') {
+      this._counterProductionBias = { patrolboat: 1.5, battleship: 1.5, submarine: 1.2 };
+      if (!this.game.getBuildings(this.team).some(b => b.type === 'shipyard' && b.alive)) {
+        if (!this.chosenBuildOrder.includes('shipyard')) {
+          this.chosenBuildOrder.push('shipyard');
+        }
+      }
+    }
+    else {
+      this._counterProductionBias = null;
+    }
+
+    // On Hard difficulty, also tech toward counters
+    if (this.difficulty === 'hard') {
+      if (this._highestThreat === 'air') {
+        // Rush tech lab for advanced AA
+        if (!this.game.getBuildings(this.team).some(b => b.type === 'techlab' && b.alive)) {
+          if (!this.chosenBuildOrder.includes('techlab')) {
+            this.chosenBuildOrder.push('techlab');
+          }
+        }
+      }
+      if (this._highestThreat === 'land' && tankCount >= 4) {
+        // Get heavy tanks to counter enemy armor
+        if (!this.game.getBuildings(this.team).some(b => b.type === 'techlab' && b.alive)) {
+          if (!this.chosenBuildOrder.includes('techlab')) {
+            this.chosenBuildOrder.push('techlab');
+          }
+        }
       }
     }
   }
@@ -631,16 +713,33 @@ export class AIController {
   }
 
   adjustForCounter(unitType, building, myUnits) {
-    const comp = this.lastKnownEnemyComposition;
-    const airCount = (comp.drone || 0) + (comp.plane || 0);
-    const tankCount = comp.tank || 0;
+    // GD-086: Use counter-production bias from counterBuild()
+    if (this._counterProductionBias) {
+      const bias = this._counterProductionBias;
+      // Check if the building can produce any biased unit
+      for (const [biasType, weight] of Object.entries(bias)) {
+        if (weight > 1.0 && building.canProduce(biasType) && Math.random() < (weight - 1.0) * 0.5) {
+          // Verify tech requirements
+          if (this.game.productionSystem && this.game.productionSystem.hasTechRequirements(this.team, biasType)) {
+            return biasType;
+          }
+        }
+      }
+    }
 
+    // Fallback to simple counters
+    const comp = this.lastKnownEnemyComposition;
+    const airCount = (comp.drone || 0) + (comp.plane || 0) + (comp.bomber || 0);
+    const tankCount = (comp.tank || 0) + (comp.heavytank || 0);
+
+    if (airCount > 3 && building.type === 'warfactory' && building.canProduce('aahalftrack')) {
+      return 'aahalftrack';
+    }
     if (airCount > 3 && building.type === 'airfield') {
-      // Build more planes to counter air
       return 'plane';
     }
-    if (tankCount > 4 && building.type === 'warfactory') {
-      return 'tank';
+    if (tankCount > 4 && building.type === 'airfield') {
+      return 'drone'; // drones counter tanks
     }
     return unitType;
   }
