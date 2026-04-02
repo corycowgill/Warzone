@@ -540,6 +540,16 @@ export class HUD {
         timerText += ` | Hill: P${pc}s E${ec}s`;
       }
 
+      // GD-085: Survival mode wave info
+      if (this.game.gameMode === 'survival' && this.game.waveSystem) {
+        const info = this.game.waveSystem.getDisplayInfo();
+        if (info.betweenWaves) {
+          timerText = `Wave ${info.wave + 1} in ${info.countdown}`;
+        } else {
+          timerText = `Wave ${info.wave} | ${info.enemiesAlive} enemies`;
+        }
+      }
+
       this.gameTimerDisplay.textContent = timerText;
     }
 
@@ -559,11 +569,18 @@ export class HUD {
         else bar.appendChild(scoreItem);
       }
     }
-    const pScore = this.getMilitaryScore('player');
-    const eScore = this.getMilitaryScore('enemy');
-    if (this._scoreDisplay) {
-      const leading = pScore >= eScore;
-      this._scoreDisplay.innerHTML = `<span style="color:${leading ? '#88ff88' : '#ff8888'}">${pScore}</span> vs <span style="color:${!leading ? '#88ff88' : '#ff8888'}">${eScore}</span>`;
+    if (this.game.gameMode === 'survival' && this.game.waveSystem) {
+      const info = this.game.waveSystem.getDisplayInfo();
+      if (this._scoreDisplay) {
+        this._scoreDisplay.innerHTML = `<span style="color:#ffcc00">${info.score}</span> <span style="color:#888;font-size:9px;">HI:${info.highScore}</span>`;
+      }
+    } else {
+      const pScore = this.getMilitaryScore('player');
+      const eScore = this.getMilitaryScore('enemy');
+      if (this._scoreDisplay) {
+        const leading = pScore >= eScore;
+        this._scoreDisplay.innerHTML = `<span style="color:${leading ? '#88ff88' : '#ff8888'}">${pScore}</span> vs <span style="color:${!leading ? '#88ff88' : '#ff8888'}">${eScore}</span>`;
+      }
     }
 
     // Research progress indicator

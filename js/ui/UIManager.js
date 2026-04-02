@@ -184,7 +184,8 @@ export class UIManager {
     const gamemodeDescs = {
       annihilation: 'Destroy all enemy buildings and units to win.',
       timed: '10-minute match. Most units + buildings remaining wins.',
-      king_of_hill: 'Control the center of the map for 120 seconds to win.'
+      king_of_hill: 'Control the center of the map for 120 seconds to win.',
+      survival: 'Survive waves of enemies! Waves every 90s, escalating difficulty.'
     };
     document.querySelectorAll('.gamemode-btn').forEach(btn => {
       btn.addEventListener('click', () => {

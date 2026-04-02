@@ -21,6 +21,7 @@ import { SoundManager } from '../systems/SoundManager.js';
 import { FogOfWar } from '../systems/FogOfWar.js';
 import { NationAbilitySystem } from '../systems/NationAbilitySystem.js';
 import { AlertSystem } from '../systems/AlertSystem.js';
+import { WaveSystem } from '../systems/WaveSystem.js';
 import { PostProcessing } from '../rendering/PostProcessing.js';
 import { assetManager } from '../rendering/AssetManager.js';
 
@@ -72,6 +73,7 @@ export class Game {
     this.fogOfWar = null;
     this.nationAbilitySystem = null;
     this.alertSystem = null;
+    this.waveSystem = null;
     this.postProcessing = null;
     this.resourceNodes = [];
     this.aiController2 = null;
@@ -163,7 +165,7 @@ export class Game {
       this.productionSystem = new ProductionSystem(this);
       this.unitFactory = new UnitFactory(this);
 
-      if (this.mode === '1P') {
+      if (this.mode === '1P' && this.gameMode !== 'survival') {
         this.aiController = new AIController(this, 'enemy', this.aiDifficulty);
       } else if (this.mode === 'SPECTATE') {
         // Both teams controlled by AI
@@ -191,6 +193,11 @@ export class Game {
       // Initialize alert notification system (GD-087)
       if (this.mode !== 'SPECTATE') {
         this.alertSystem = new AlertSystem(this);
+      }
+
+      // GD-085: Initialize wave system for survival mode
+      if (this.gameMode === 'survival') {
+        this.waveSystem = new WaveSystem(this);
       }
 
       // Place resource nodes on the map
@@ -306,14 +313,24 @@ export class Game {
     this.createBuilding('headquarters', 'player', new THREE.Vector3(30, 0, mapSize / 2));
     this.createBuilding('barracks', 'player', new THREE.Vector3(45, 0, mapSize / 2 - 15));
 
-    // Enemy base (right side, but before water)
-    this.createBuilding('headquarters', 'enemy', new THREE.Vector3(mapSize - 60, 0, mapSize / 2));
-    this.createBuilding('barracks', 'enemy', new THREE.Vector3(mapSize - 75, 0, mapSize / 2 - 15));
+    if (this.gameMode === 'survival') {
+      // GD-085: Survival mode - no enemy base, extra starting units/resources
+      this.teams.player.sp += 200;
+      this.teams.player.mu += 50;
+      // Extra starting infantry
+      for (let i = 0; i < 5; i++) {
+        this.createUnit('infantry', 'player', new THREE.Vector3(50 + i * 4, 0, mapSize / 2 + 10));
+      }
+    } else {
+      // Enemy base (right side, but before water)
+      this.createBuilding('headquarters', 'enemy', new THREE.Vector3(mapSize - 60, 0, mapSize / 2));
+      this.createBuilding('barracks', 'enemy', new THREE.Vector3(mapSize - 75, 0, mapSize / 2 - 15));
 
-    // Starting infantry (3 per side)
-    for (let i = 0; i < 3; i++) {
-      this.createUnit('infantry', 'player', new THREE.Vector3(50 + i * 4, 0, mapSize / 2 + 10));
-      this.createUnit('infantry', 'enemy', new THREE.Vector3(mapSize - 80 + i * 4, 0, mapSize / 2 + 10));
+      // Starting infantry (3 per side)
+      for (let i = 0; i < 3; i++) {
+        this.createUnit('infantry', 'player', new THREE.Vector3(50 + i * 4, 0, mapSize / 2 + 10));
+        this.createUnit('infantry', 'enemy', new THREE.Vector3(mapSize - 80 + i * 4, 0, mapSize / 2 + 10));
+      }
     }
 
     // Place supply caches (neutral resource pickups)
@@ -726,6 +743,11 @@ export class Game {
       this.alertSystem.update(delta);
     }
 
+    // GD-085: Update wave system
+    if (this.waveSystem) {
+      this.waveSystem.update(delta);
+    }
+
     if (this.aiController) {
       this.aiController.update(delta);
     }
@@ -846,6 +868,21 @@ export class Game {
 
   checkGameOver() {
     let won = null;
+
+    // GD-085: Survival mode - game over only when player HQ is destroyed
+    if (this.gameMode === 'survival') {
+      const playerHQ = this.getHQ('player');
+      if (!playerHQ) {
+        won = false; // Player lost
+      }
+      if (won !== null) {
+        this.setState('GAME_OVER');
+        this.uiManager.showGameOver(won);
+        if (this.soundManager) this.soundManager.play('defeat');
+        this.saveMatchHistory(won);
+      }
+      return;
+    }
 
     if (this.gameMode === 'timed') {
       // Timed mode: 10 minutes, most military power wins
@@ -1234,6 +1271,11 @@ export class Game {
     if (this.alertSystem) {
       this.alertSystem.destroy();
       this.alertSystem = null;
+    }
+    // Clean up wave system (GD-085)
+    if (this.waveSystem) {
+      this.waveSystem.destroy();
+      this.waveSystem = null;
     }
     // Clean up orphaned UI elements
     const resPanel = document.getElementById('research-panel');

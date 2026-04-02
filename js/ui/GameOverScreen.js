@@ -125,13 +125,17 @@ export class GameOverScreen {
     const seconds = Math.floor((elapsed % 60000) / 1000);
     const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
 
+    // GD-085: Survival mode uses different titles
+    const isSurvival = this.game.gameMode === 'survival';
+    const waveInfo = isSurvival && this.game.waveSystem ? this.game.waveSystem.getDisplayInfo() : null;
+
     // Set result heading
-    const resultTitle = won ? 'VICTORY!' : 'DEFEAT!';
+    const resultTitle = isSurvival ? 'GAME OVER' : (won ? 'VICTORY!' : 'DEFEAT!');
     const resultColor = won ? '#00ff44' : '#ff3333';
-    const resultSubtitle = won
-      ? 'Enemy headquarters destroyed'
-      : 'Your headquarters has been destroyed';
-    const borderColor = won ? '#00ff44' : '#ff3333';
+    const resultSubtitle = isSurvival
+      ? `Survived ${waveInfo ? waveInfo.wave : 0} waves`
+      : (won ? 'Enemy headquarters destroyed' : 'Your headquarters has been destroyed');
+    const borderColor = isSurvival ? '#ffcc00' : (won ? '#00ff44' : '#ff3333');
 
     if (!this.contentEl) {
       this.createContent();
@@ -186,6 +190,19 @@ export class GameOverScreen {
 
             <div style="color: #888;">Salvage Income:</div>
             <div style="color: #ffd700; text-align: right;">${this.game.stats?.player?.salvageIncome || 0} SP</div>
+            ${isSurvival && waveInfo ? `
+            <div style="color: #888;">Waves Survived:</div>
+            <div style="color: #ffcc00; text-align: right; font-weight: bold;">${waveInfo.wave}</div>
+
+            <div style="color: #888;">Final Score:</div>
+            <div style="color: #ffcc00; text-align: right; font-weight: bold;">${waveInfo.score}</div>
+
+            <div style="color: #888;">High Score:</div>
+            <div style="color: #ff88ff; text-align: right;">${waveInfo.highScore}</div>
+
+            <div style="color: #888;">Bonus SP Earned:</div>
+            <div style="color: #00ff88; text-align: right;">${this.game.waveSystem?.bonusSPAwarded || 0}</div>
+            ` : ''}
           </div>
         </div>
 
