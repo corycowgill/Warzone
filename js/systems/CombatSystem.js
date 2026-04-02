@@ -428,6 +428,7 @@ export class CombatSystem {
       case 'flare': return this.executeFlare(unit, targetPos);
       case 'deploy': return this.executeDeploy(unit);
       case 'sonar_ping': return this.executeSonarPing(unit);
+      case 'plant_mine': return this.executePlantMine(unit);
       default: return false;
     }
   }
@@ -684,6 +685,23 @@ export class CombatSystem {
     if (this.game.soundManager) this.game.soundManager.play('select');
     this.game.eventBus.emit('ability:used', { unit, ability: 'sonar_ping' });
     return true;
+  }
+
+  executePlantMine(unit) {
+    if (!unit.plantMine) return false;
+    const ab = UNIT_ABILITIES.engineer;
+    if (!ab) return false;
+
+    unit.abilityCooldown = ab.cooldown;
+    const success = unit.plantMine();
+    if (success) {
+      if (this.game.soundManager) this.game.soundManager.play('build');
+      if (this.game.uiManager?.hud && unit.team === 'player') {
+        this.game.uiManager.hud.showNotification('Mine planted!', '#ffcc00');
+      }
+      this.game.eventBus.emit('ability:used', { unit, ability: 'plant_mine' });
+    }
+    return success;
   }
 
   autoAcquireTarget(unit) {

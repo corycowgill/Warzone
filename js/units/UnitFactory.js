@@ -13,6 +13,7 @@ import { HeavyTank } from './HeavyTank.js';
 import { SPG } from './SPG.js';
 import { Bomber } from './Bomber.js';
 import { PatrolBoat } from './PatrolBoat.js';
+import { Engineer } from './Engineer.js';
 
 const UNIT_MAP = {
     infantry: Infantry,
@@ -29,7 +30,8 @@ const UNIT_MAP = {
     heavytank: HeavyTank,
     spg: SPG,
     bomber: Bomber,
-    patrolboat: PatrolBoat
+    patrolboat: PatrolBoat,
+    engineer: Engineer
 };
 
 export class UnitFactory {

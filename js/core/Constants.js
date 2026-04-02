@@ -17,12 +17,14 @@ export const UNIT_STATS = {
   spg: { hp: 120, speed: 3, damage: 70, range: 22, cost: 350, domain: 'land', buildTime: 9, attackRate: 0.3, armor: 1, vision: 14, minRange: 8, aoeRadius: 4 },
   bomber: { hp: 250, speed: 6, damage: 100, range: 6, cost: 500, domain: 'air', buildTime: 12, attackRate: 0.2, armor: 2, vision: 16, aoeRadius: 8 },
   // Cycle 10 - Naval
-  patrolboat: { hp: 80, speed: 4, damage: 12, range: 8, cost: 100, domain: 'naval', buildTime: 4, attackRate: 1.0, armor: 1, vision: 12 }
+  patrolboat: { hp: 80, speed: 4, damage: 12, range: 8, cost: 100, domain: 'naval', buildTime: 4, attackRate: 1.0, armor: 1, vision: 12 },
+  // GD-089: Engineer unit
+  engineer: { hp: 80, speed: 4, damage: 0, range: 2, cost: 200, domain: 'land', buildTime: 5, attackRate: 0, armor: 0, vision: 10 }
 };
 
 export const BUILDING_STATS = {
   headquarters: { hp: 1000, cost: 0, produces: ['infantry'], size: 4, requires: [] },
-  barracks: { hp: 400, cost: 200, produces: ['infantry', 'mortar'], size: 2, requires: [] },
+  barracks: { hp: 400, cost: 200, produces: ['infantry', 'mortar', 'engineer'], size: 2, requires: [] },
   warfactory: { hp: 600, cost: 400, produces: ['tank', 'scoutcar', 'aahalftrack', 'apc', 'heavytank', 'spg'], size: 3, requires: ['barracks'] },
   airfield: { hp: 500, cost: 500, produces: ['drone', 'plane', 'bomber'], size: 3, requires: ['warfactory'] },
   shipyard: { hp: 500, cost: 450, produces: ['battleship', 'carrier', 'submarine', 'patrolboat'], size: 3, requires: ['barracks'] },
@@ -87,7 +89,8 @@ export const TECH_TREE = {
   battleship: { building: 'shipyard', requires: ['barracks'] },
   carrier: { building: 'shipyard', requires: ['warfactory'] },
   submarine: { building: 'shipyard', requires: ['barracks'] },
-  patrolboat: { building: 'shipyard', requires: [] }
+  patrolboat: { building: 'shipyard', requires: [] },
+  engineer: { building: 'barracks', requires: [] }
 };
 
 // ============================================================
@@ -206,25 +209,26 @@ export const NATIONS = {
 
 export const DAMAGE_MODIFIERS = {
   // Ground triangle: Tank > Infantry (2.0x), Infantry > Drone (1.8x), Drone > Tank (1.5x)
-  infantry: { infantry: 1.0, tank: 0.4, drone: 1.8, plane: 0.3, battleship: 0.1, carrier: 0.1, submarine: 0.1, building: 0.5, mortar: 1.0, scoutcar: 0.8, aahalftrack: 0.6, apc: 0.5, heavytank: 0.2, spg: 1.2, bomber: 0.2, patrolboat: 0.1 },
-  tank: { infantry: 2.0, tank: 1.0, drone: 0.5, plane: 0.3, battleship: 0.3, carrier: 0.3, submarine: 0.1, building: 1.5, mortar: 1.5, scoutcar: 1.5, aahalftrack: 1.2, apc: 1.2, heavytank: 0.7, spg: 1.5, bomber: 0.2, patrolboat: 0.3 },
-  drone: { infantry: 0.8, tank: 1.5, drone: 1.0, plane: 0.5, battleship: 0.4, carrier: 0.4, submarine: 0.7, building: 0.7, mortar: 1.0, scoutcar: 1.0, aahalftrack: 0.5, apc: 0.8, heavytank: 1.2, spg: 1.2, bomber: 0.5, patrolboat: 0.4 },
-  plane: { infantry: 1.5, tank: 1.8, drone: 0.7, plane: 1.0, battleship: 1.2, carrier: 1.2, submarine: 1.0, building: 1.5, mortar: 1.5, scoutcar: 1.5, aahalftrack: 0.5, apc: 1.2, heavytank: 1.0, spg: 1.5, bomber: 0.8, patrolboat: 1.0 },
-  battleship: { infantry: 1.5, tank: 1.2, drone: 0.3, plane: 0.2, battleship: 1.0, carrier: 0.6, submarine: 1.5, building: 2.0, mortar: 1.5, scoutcar: 1.5, aahalftrack: 1.2, apc: 1.2, heavytank: 1.0, spg: 1.5, bomber: 0.2, patrolboat: 1.5 },
-  carrier: { infantry: 0.5, tank: 0.3, drone: 0.8, plane: 0.8, battleship: 1.5, carrier: 1.0, submarine: 0.5, building: 0.3, mortar: 0.5, scoutcar: 0.5, aahalftrack: 0.5, apc: 0.3, heavytank: 0.3, spg: 0.3, bomber: 0.8, patrolboat: 1.2 },
-  submarine: { infantry: 0.1, tank: 0.1, drone: 0.3, plane: 0.1, battleship: 0.6, carrier: 2.0, submarine: 1.0, building: 0.5, mortar: 0.1, scoutcar: 0.1, aahalftrack: 0.1, apc: 0.1, heavytank: 0.1, spg: 0.1, bomber: 0.1, patrolboat: 0.5 },
-  turret: { infantry: 1.5, tank: 1.0, drone: 0.3, plane: 0.2, battleship: 0.5, carrier: 0.5, submarine: 0.3, building: 0.5, mortar: 1.5, scoutcar: 1.2, aahalftrack: 1.0, apc: 1.0, heavytank: 0.5, spg: 1.5, bomber: 0.2, patrolboat: 0.5 },
-  aaturret: { infantry: 0.3, tank: 0.2, drone: 2.0, plane: 2.0, battleship: 0.1, carrier: 0.1, submarine: 0.1, building: 0.2, mortar: 0.3, scoutcar: 0.3, aahalftrack: 0.3, apc: 0.2, heavytank: 0.1, spg: 0.3, bomber: 2.0, patrolboat: 0.1 },
-  bunker: { infantry: 1.2, tank: 0.6, drone: 0.4, plane: 0.3, battleship: 0.3, carrier: 0.3, submarine: 0.2, building: 0.3, mortar: 1.2, scoutcar: 1.0, aahalftrack: 0.6, apc: 0.5, heavytank: 0.3, spg: 1.2, bomber: 0.3, patrolboat: 0.3 },
+  infantry: { infantry: 1.0, tank: 0.4, drone: 1.8, plane: 0.3, battleship: 0.1, carrier: 0.1, submarine: 0.1, building: 0.5, mortar: 1.0, scoutcar: 0.8, aahalftrack: 0.6, apc: 0.5, heavytank: 0.2, spg: 1.2, bomber: 0.2, patrolboat: 0.1, engineer: 1.5 },
+  tank: { infantry: 2.0, tank: 1.0, drone: 0.5, plane: 0.3, battleship: 0.3, carrier: 0.3, submarine: 0.1, building: 1.5, mortar: 1.5, scoutcar: 1.5, aahalftrack: 1.2, apc: 1.2, heavytank: 0.7, spg: 1.5, bomber: 0.2, patrolboat: 0.3, engineer: 2.0 },
+  drone: { infantry: 0.8, tank: 1.5, drone: 1.0, plane: 0.5, battleship: 0.4, carrier: 0.4, submarine: 0.7, building: 0.7, mortar: 1.0, scoutcar: 1.0, aahalftrack: 0.5, apc: 0.8, heavytank: 1.2, spg: 1.2, bomber: 0.5, patrolboat: 0.4, engineer: 1.0 },
+  plane: { infantry: 1.5, tank: 1.8, drone: 0.7, plane: 1.0, battleship: 1.2, carrier: 1.2, submarine: 1.0, building: 1.5, mortar: 1.5, scoutcar: 1.5, aahalftrack: 0.5, apc: 1.2, heavytank: 1.0, spg: 1.5, bomber: 0.8, patrolboat: 1.0, engineer: 1.5 },
+  battleship: { infantry: 1.5, tank: 1.2, drone: 0.3, plane: 0.2, battleship: 1.0, carrier: 0.6, submarine: 1.5, building: 2.0, mortar: 1.5, scoutcar: 1.5, aahalftrack: 1.2, apc: 1.2, heavytank: 1.0, spg: 1.5, bomber: 0.2, patrolboat: 1.5, engineer: 1.5 },
+  carrier: { infantry: 0.5, tank: 0.3, drone: 0.8, plane: 0.8, battleship: 1.5, carrier: 1.0, submarine: 0.5, building: 0.3, mortar: 0.5, scoutcar: 0.5, aahalftrack: 0.5, apc: 0.3, heavytank: 0.3, spg: 0.3, bomber: 0.8, patrolboat: 1.2, engineer: 0.5 },
+  submarine: { infantry: 0.1, tank: 0.1, drone: 0.3, plane: 0.1, battleship: 0.6, carrier: 2.0, submarine: 1.0, building: 0.5, mortar: 0.1, scoutcar: 0.1, aahalftrack: 0.1, apc: 0.1, heavytank: 0.1, spg: 0.1, bomber: 0.1, patrolboat: 0.5, engineer: 0.1 },
+  turret: { infantry: 1.5, tank: 1.0, drone: 0.3, plane: 0.2, battleship: 0.5, carrier: 0.5, submarine: 0.3, building: 0.5, mortar: 1.5, scoutcar: 1.2, aahalftrack: 1.0, apc: 1.0, heavytank: 0.5, spg: 1.5, bomber: 0.2, patrolboat: 0.5, engineer: 1.5 },
+  aaturret: { infantry: 0.3, tank: 0.2, drone: 2.0, plane: 2.0, battleship: 0.1, carrier: 0.1, submarine: 0.1, building: 0.2, mortar: 0.3, scoutcar: 0.3, aahalftrack: 0.3, apc: 0.2, heavytank: 0.1, spg: 0.3, bomber: 2.0, patrolboat: 0.1, engineer: 0.3 },
+  bunker: { infantry: 1.2, tank: 0.6, drone: 0.4, plane: 0.3, battleship: 0.3, carrier: 0.3, submarine: 0.2, building: 0.3, mortar: 1.2, scoutcar: 1.0, aahalftrack: 0.6, apc: 0.5, heavytank: 0.3, spg: 1.2, bomber: 0.3, patrolboat: 0.3, engineer: 1.2 },
   // Cycle 10 new units
-  mortar: { infantry: 0.8, tank: 0.3, drone: 0.3, plane: 0.2, battleship: 0.2, carrier: 0.2, submarine: 0.1, building: 1.5, mortar: 1.0, scoutcar: 0.5, aahalftrack: 0.4, apc: 0.6, heavytank: 0.2, spg: 0.8, bomber: 0.1, patrolboat: 0.2 },
-  scoutcar: { infantry: 0.8, tank: 0.3, drone: 0.5, plane: 0.0, battleship: 0.1, carrier: 0.1, submarine: 0.1, building: 0.3, mortar: 0.8, scoutcar: 1.0, aahalftrack: 0.3, apc: 0.3, heavytank: 0.1, spg: 0.8, bomber: 0.0, patrolboat: 0.1 },
-  aahalftrack: { infantry: 0.3, tank: 0.3, drone: 2.0, plane: 2.0, battleship: 0.1, carrier: 0.1, submarine: 0.1, building: 0.2, mortar: 0.3, scoutcar: 0.5, aahalftrack: 0.5, apc: 0.3, heavytank: 0.2, spg: 0.3, bomber: 2.0, patrolboat: 0.1 },
-  apc: { infantry: 0.8, tank: 0.3, drone: 0.3, plane: 0.2, battleship: 0.1, carrier: 0.1, submarine: 0.1, building: 0.4, mortar: 0.8, scoutcar: 0.8, aahalftrack: 0.4, apc: 0.5, heavytank: 0.2, spg: 0.8, bomber: 0.1, patrolboat: 0.1 },
-  heavytank: { infantry: 2.0, tank: 1.3, drone: 0.5, plane: 0.3, battleship: 0.3, carrier: 0.3, submarine: 0.1, building: 2.0, mortar: 2.0, scoutcar: 2.0, aahalftrack: 1.5, apc: 1.5, heavytank: 1.0, spg: 1.5, bomber: 0.2, patrolboat: 0.3 },
-  spg: { infantry: 1.5, tank: 1.0, drone: 0.3, plane: 0.2, battleship: 0.5, carrier: 0.5, submarine: 0.1, building: 2.5, mortar: 1.5, scoutcar: 1.5, aahalftrack: 1.0, apc: 1.2, heavytank: 0.8, spg: 1.0, bomber: 0.1, patrolboat: 0.5 },
-  bomber: { infantry: 1.5, tank: 1.5, drone: 0.3, plane: 0.3, battleship: 1.5, carrier: 1.2, submarine: 0.5, building: 2.0, mortar: 1.5, scoutcar: 1.5, aahalftrack: 0.3, apc: 1.5, heavytank: 1.2, spg: 1.5, bomber: 0.5, patrolboat: 1.5 },
-  patrolboat: { infantry: 0.5, tank: 0.3, drone: 0.3, plane: 0.2, battleship: 0.3, carrier: 0.5, submarine: 2.0, building: 0.5, mortar: 0.5, scoutcar: 0.3, aahalftrack: 0.3, apc: 0.3, heavytank: 0.2, spg: 0.3, bomber: 0.2, patrolboat: 1.0 }
+  mortar: { infantry: 0.8, tank: 0.3, drone: 0.3, plane: 0.2, battleship: 0.2, carrier: 0.2, submarine: 0.1, building: 1.5, mortar: 1.0, scoutcar: 0.5, aahalftrack: 0.4, apc: 0.6, heavytank: 0.2, spg: 0.8, bomber: 0.1, patrolboat: 0.2, engineer: 0.8 },
+  scoutcar: { infantry: 0.8, tank: 0.3, drone: 0.5, plane: 0.0, battleship: 0.1, carrier: 0.1, submarine: 0.1, building: 0.3, mortar: 0.8, scoutcar: 1.0, aahalftrack: 0.3, apc: 0.3, heavytank: 0.1, spg: 0.8, bomber: 0.0, patrolboat: 0.1, engineer: 0.8 },
+  aahalftrack: { infantry: 0.3, tank: 0.3, drone: 2.0, plane: 2.0, battleship: 0.1, carrier: 0.1, submarine: 0.1, building: 0.2, mortar: 0.3, scoutcar: 0.5, aahalftrack: 0.5, apc: 0.3, heavytank: 0.2, spg: 0.3, bomber: 2.0, patrolboat: 0.1, engineer: 0.3 },
+  apc: { infantry: 0.8, tank: 0.3, drone: 0.3, plane: 0.2, battleship: 0.1, carrier: 0.1, submarine: 0.1, building: 0.4, mortar: 0.8, scoutcar: 0.8, aahalftrack: 0.4, apc: 0.5, heavytank: 0.2, spg: 0.8, bomber: 0.1, patrolboat: 0.1, engineer: 0.8 },
+  heavytank: { infantry: 2.0, tank: 1.3, drone: 0.5, plane: 0.3, battleship: 0.3, carrier: 0.3, submarine: 0.1, building: 2.0, mortar: 2.0, scoutcar: 2.0, aahalftrack: 1.5, apc: 1.5, heavytank: 1.0, spg: 1.5, bomber: 0.2, patrolboat: 0.3, engineer: 2.0 },
+  spg: { infantry: 1.5, tank: 1.0, drone: 0.3, plane: 0.2, battleship: 0.5, carrier: 0.5, submarine: 0.1, building: 2.5, mortar: 1.5, scoutcar: 1.5, aahalftrack: 1.0, apc: 1.2, heavytank: 0.8, spg: 1.0, bomber: 0.1, patrolboat: 0.5, engineer: 1.5 },
+  bomber: { infantry: 1.5, tank: 1.5, drone: 0.3, plane: 0.3, battleship: 1.5, carrier: 1.2, submarine: 0.5, building: 2.0, mortar: 1.5, scoutcar: 1.5, aahalftrack: 0.3, apc: 1.5, heavytank: 1.2, spg: 1.5, bomber: 0.5, patrolboat: 1.5, engineer: 1.5 },
+  patrolboat: { infantry: 0.5, tank: 0.3, drone: 0.3, plane: 0.2, battleship: 0.3, carrier: 0.5, submarine: 2.0, building: 0.5, mortar: 0.5, scoutcar: 0.3, aahalftrack: 0.3, apc: 0.3, heavytank: 0.2, spg: 0.3, bomber: 0.2, patrolboat: 1.0, engineer: 0.5 },
+  engineer: { infantry: 0.0, tank: 0.0, drone: 0.0, plane: 0.0, battleship: 0.0, carrier: 0.0, submarine: 0.0, building: 0.0, mortar: 0.0, scoutcar: 0.0, aahalftrack: 0.0, apc: 0.0, heavytank: 0.0, spg: 0.0, bomber: 0.0, patrolboat: 0.0, engineer: 0.0 }
 };
 
 // Rock-Paper-Scissors counter lookup for UI tooltips
@@ -243,7 +247,8 @@ export const UNIT_COUNTERS = {
   heavytank: { strong: ['tank', 'building', 'infantry'], weak: ['plane', 'drone', 'spg'] },
   spg: { strong: ['building', 'infantry'], weak: ['scoutcar', 'plane', 'tank'] },
   bomber: { strong: ['building', 'infantry', 'tank'], weak: ['aahalftrack', 'plane', 'aaturret'] },
-  patrolboat: { strong: ['submarine'], weak: ['battleship'] }
+  patrolboat: { strong: ['submarine'], weak: ['battleship'] },
+  engineer: { strong: ['building'], weak: ['infantry', 'tank'] }
 };
 
 // ============================================================
@@ -363,6 +368,16 @@ export const UNIT_ABILITIES = {
     radius: 15,
     duration: 5,
     description: 'Reveal submarines in radius 15 for 5s (20s cooldown)'
+  },
+  engineer: {
+    id: 'plant_mine',
+    name: 'Plant Mine',
+    key: 'g',
+    cooldown: 15,
+    damage: 150,
+    radius: 6,
+    muCost: 50,
+    description: 'Plant a stealth mine dealing 150 AOE damage (50 MU, one-time use)'
   }
 };
 

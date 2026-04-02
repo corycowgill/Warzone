@@ -791,6 +791,40 @@ export class Game {
       }
     }
 
+    // GD-089: Check mines triggering
+    if (this._mines) {
+      for (let i = this._mines.length - 1; i >= 0; i--) {
+        const mine = this._mines[i];
+        if (!mine.alive) continue;
+        const enemyTeam = mine.team === 'player' ? 'enemy' : 'player';
+        const nearbyUnits = this.getUnits(enemyTeam).filter(u =>
+          u.alive && u.domain === 'land' && u.getPosition().distanceTo(mine.position) < mine.triggerRadius * 3
+        );
+        if (nearbyUnits.length > 0) {
+          // Trigger mine!
+          mine.alive = false;
+          const allEnemies = this.getEntitiesByTeam(enemyTeam);
+          for (const enemy of allEnemies) {
+            if (!enemy.alive) continue;
+            const dist = enemy.getPosition().distanceTo(mine.position);
+            if (dist <= mine.radius * 3) {
+              const dmg = mine.damage * (1 - (dist / (mine.radius * 3)) * 0.5);
+              enemy.takeDamage(dmg);
+              if (!enemy.alive) {
+                this.eventBus.emit('combat:kill', { attacker: null, defender: enemy });
+              }
+            }
+          }
+          if (this.effectsManager) this.effectsManager.createExplosion(mine.position);
+          if (this.soundManager) this.soundManager.play('explosion');
+          if (this.cameraController) this.cameraController.shake(1.5);
+          // Remove mine mesh
+          if (mine.mesh) this.sceneManager.scene.remove(mine.mesh);
+          this._mines.splice(i, 1);
+        }
+      }
+    }
+
     // Dynamic map events
     this._mapEventTimer += delta;
     if (this._mapEventTimer >= this._mapEventInterval) {

@@ -638,6 +638,10 @@ export class AIController {
   chooseBarracksUnit(myUnits) {
     const infantry = myUnits.filter(u => u.type === 'infantry').length;
     const mortars = myUnits.filter(u => u.type === 'mortar').length;
+    const engineers = myUnits.filter(u => u.type === 'engineer').length;
+    // GD-089: Build 1-2 engineers for repair and capture
+    if (engineers < 1 && infantry > 2 && Math.random() < 0.3) return 'engineer';
+    if (engineers < 2 && infantry > 6 && Math.random() < 0.15) return 'engineer';
     // Mix in mortars occasionally for building damage
     if (mortars < 2 && infantry > 3 && Math.random() < 0.3) return 'mortar';
     return 'infantry';
@@ -974,6 +978,12 @@ export class AIController {
         this.checkFocusFire(unit);
       }
 
+      // GD-089: Engineer AI - repair damaged buildings or attempt captures
+      if (unit.type === 'engineer' && !unit.moveTarget && !unit._captureTarget && !unit._repairTarget) {
+        this.handleEngineerAI(unit);
+        continue;
+      }
+
       // If unit is idle, look for nearby enemies
       if (!unit.attackTarget && !unit.moveTarget) {
         const nearbyEnemy = this.findNearestEnemy(unit, unit.range * 5);
@@ -990,6 +1000,51 @@ export class AIController {
           unit.health = Math.min(unit.maxHealth, unit.health + 1);
         }
       }
+    }
+  }
+
+  handleEngineerAI(unit) {
+    // Priority 1: Repair damaged friendly buildings
+    const myBuildings = this.game.getBuildings(this.team);
+    const damagedBuilding = myBuildings.find(b =>
+      b.alive && b.health < b.maxHealth * 0.8
+    );
+    if (damagedBuilding) {
+      const dist = unit.distanceTo(damagedBuilding);
+      if (dist <= 8) {
+        unit.startRepair(damagedBuilding);
+      } else {
+        const pos = damagedBuilding.getPosition().clone();
+        unit.moveTo(pos);
+      }
+      return;
+    }
+
+    // Priority 2: Attempt capture of enemy buildings below 50% HP
+    if (Math.random() < 0.3) {
+      const enemyBuildings = this.game.getBuildings(this.enemyTeam);
+      const capturable = enemyBuildings.find(b =>
+        b.alive && b.health < b.maxHealth * 0.5
+      );
+      if (capturable) {
+        const dist = unit.distanceTo(capturable);
+        if (dist <= 8) {
+          unit.startCapture(capturable);
+        } else {
+          const pos = capturable.getPosition().clone();
+          unit.moveTo(pos);
+        }
+        return;
+      }
+    }
+
+    // Priority 3: Stay near base if nothing to do
+    const hq = this.game.getHQ(this.team);
+    if (hq && unit.distanceTo(hq) > 40) {
+      const hqPos = hq.getPosition().clone();
+      hqPos.x += (Math.random() - 0.5) * 20;
+      hqPos.z += (Math.random() - 0.5) * 20;
+      unit.moveTo(hqPos);
     }
   }
 
