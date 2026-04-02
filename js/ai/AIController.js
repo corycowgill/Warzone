@@ -253,6 +253,7 @@ export class AIController {
     this.ensureBarracks();
     this.buildNextStructure();
     this.buildDefenses();
+    this.buildMunitionsCaches();
     this.produceUnits();
     this.considerSuperweapon();
     this.considerBuildNearNode();
@@ -292,6 +293,7 @@ export class AIController {
     const state = this.game.research[this.team];
     if (!state || state.inProgress) return;
     const sp = this.game.teams[this.team].sp;
+    const mu = this.game.teams[this.team].mu || 0;
     if (sp < 250) return; // need resources for units first
 
     // Prioritize research based on strategy
@@ -302,6 +304,7 @@ export class AIController {
       if (state.completed.includes(id)) continue;
       const upgrade = RESEARCH_UPGRADES[id];
       if (!upgrade || upgrade.cost > sp) continue;
+      if (upgrade.muCost && upgrade.muCost > mu) continue;
       const hasBuilding = this.game.getBuildings(this.team).some(b => b.type === upgrade.building);
       if (!hasBuilding) continue;
       this.game.startResearch(this.team, id);
@@ -311,13 +314,16 @@ export class AIController {
 
   considerBuildingUpgrades() {
     const sp = this.game.teams[this.team].sp;
+    const mu = this.game.teams[this.team].mu || 0;
     if (sp < 300) return; // save resources for units
     const buildings = this.game.getBuildings(this.team);
     for (const b of buildings) {
       if (!b.canUpgrade || !b.canUpgrade()) continue;
       const cost = b.getUpgradeCost();
-      if (cost > 0 && sp >= cost && this.game.resourceSystem.canAfford(this.team, cost)) {
-        this.game.resourceSystem.spend(this.team, cost);
+      const muCost = b.getUpgradeMUCost ? b.getUpgradeMUCost() : 0;
+      if (cost > 0 && sp >= cost && (!muCost || mu >= muCost) &&
+          this.game.resourceSystem.canAffordBoth(this.team, cost, muCost)) {
+        this.game.resourceSystem.spendBoth(this.team, cost, muCost);
         b.upgrade();
         break; // one upgrade per tactical tick
       }
@@ -328,6 +334,20 @@ export class AIController {
     const barracks = this.game.getBuildings(this.team).filter(b => b.type === 'barracks');
     if (barracks.length === 0) {
       this.tryBuildBuilding('barracks');
+    }
+  }
+
+  buildMunitionsCaches() {
+    const myBuildings = this.game.getBuildings(this.team);
+    const caches = myBuildings.filter(b => b.type === 'munitionscache');
+    const hasBarracks = myBuildings.some(b => b.type === 'barracks' && b.alive);
+    if (!hasBarracks) return;
+
+    // Build up to 2 munitions caches when we can afford them
+    const mySP = this.game.teams[this.team].sp;
+    const myMU = this.game.teams[this.team].mu || 0;
+    if (caches.length < 2 && mySP > 400 && myMU < 50) {
+      this.tryBuildBuilding('munitionscache');
     }
   }
 

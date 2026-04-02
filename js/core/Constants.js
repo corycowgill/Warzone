@@ -34,13 +34,15 @@ export const BUILDING_STATS = {
   turret: { hp: 350, cost: 250, produces: [], size: 1, requires: ['barracks'], damage: 25, range: 12, attackRate: 1.2, armor: 2, targetDomain: 'ground' },
   aaturret: { hp: 300, cost: 300, produces: [], size: 1, requires: ['warfactory'], damage: 30, range: 14, attackRate: 1.5, armor: 1, targetDomain: 'air' },
   wall: { hp: 500, cost: 50, produces: [], size: 1, requires: [], armor: 5, blocksMovement: true },
-  superweapon: { hp: 800, cost: 800, produces: [], size: 4, requires: ['warfactory'], isSuperweapon: true }
+  superweapon: { hp: 800, cost: 800, produces: [], size: 4, requires: ['warfactory'], isSuperweapon: true },
+  munitionscache: { hp: 250, cost: 250, produces: [], size: 2, muIncome: 4, requires: ['barracks'] }
 };
 
 export const BUILDING_UPGRADES = {
   barracks: {
     maxTier: 3,
     costs: [0, 300, 600],
+    muCosts: [0, 50, 100],
     bonuses: {
       1: { productionSpeed: 1.0, label: 'Base' },
       2: { productionSpeed: 1.25, label: 'Veteran Training (+25% speed)' },
@@ -50,6 +52,7 @@ export const BUILDING_UPGRADES = {
   warfactory: {
     maxTier: 3,
     costs: [0, 400, 800],
+    muCosts: [0, 60, 120],
     bonuses: {
       1: { productionSpeed: 1.0, label: 'Base' },
       2: { productionSpeed: 1.2, label: 'Advanced Assembly (+20% speed)' },
@@ -59,6 +62,7 @@ export const BUILDING_UPGRADES = {
   airfield: {
     maxTier: 3,
     costs: [0, 500, 900],
+    muCosts: [0, 80, 150],
     bonuses: {
       1: { productionSpeed: 1.0, label: 'Base' },
       2: { productionSpeed: 1.3, label: 'Flight School (+30% speed)' },
@@ -254,7 +258,8 @@ export const UNIT_ABILITIES = {
     range: 10,
     radius: 6,
     damage: 25,
-    description: 'Throw a grenade dealing 25 AOE damage (8s cooldown)'
+    muCost: 10,
+    description: 'Throw a grenade dealing 25 AOE damage (8s cooldown, 10 MU)'
   },
   tank: {
     id: 'siege_mode',
@@ -265,7 +270,8 @@ export const UNIT_ABILITIES = {
     rangeBonus: 1.5,
     damageBonus: 1.4,
     speedPenalty: 0,
-    description: 'Toggle: +50% range, +40% damage, but cannot move'
+    muCost: 15,
+    description: 'Toggle: +50% range, +40% damage, but cannot move (15 MU)'
   },
   drone: {
     id: 'emp',
@@ -275,7 +281,8 @@ export const UNIT_ABILITIES = {
     range: 12,
     disableDuration: 3,
     damage: 10,
-    description: 'Disable target for 3s and deal 10 damage (12s cooldown)'
+    muCost: 12,
+    description: 'Disable target for 3s and deal 10 damage (12s cooldown, 12 MU)'
   },
   plane: {
     id: 'bombing_run',
@@ -285,7 +292,8 @@ export const UNIT_ABILITIES = {
     range: 20,
     radius: 8,
     damage: 60,
-    description: 'Strafe a line dealing 60 AOE damage (15s cooldown)'
+    muCost: 20,
+    description: 'Strafe a line dealing 60 AOE damage (15s cooldown, 20 MU)'
   },
   battleship: {
     id: 'barrage',
@@ -296,7 +304,8 @@ export const UNIT_ABILITIES = {
     radius: 10,
     damage: 40,
     salvos: 3,
-    description: 'Fire 3 salvos at target area dealing 40 damage each (20s cooldown)'
+    muCost: 25,
+    description: 'Fire 3 salvos at target area dealing 40 damage each (20s cooldown, 25 MU)'
   },
   carrier: {
     id: 'launch_squadron',
@@ -316,7 +325,8 @@ export const UNIT_ABILITIES = {
     cooldown: 15,
     range: 14,
     damage: 120,
-    description: 'Fire a devastating torpedo salvo dealing 120 damage (15s cooldown)'
+    muCost: 20,
+    description: 'Fire a devastating torpedo salvo dealing 120 damage (15s cooldown, 20 MU)'
   },
   mortar: {
     id: 'smoke_screen',
@@ -390,6 +400,7 @@ export const RESEARCH_UPGRADES = {
     name: 'Improved Armor',
     description: '+2 armor to all land units',
     cost: 300,
+    muCost: 50,
     researchTime: 15,
     building: 'warfactory',
     applies: (unit) => unit.domain === 'land',
@@ -399,6 +410,7 @@ export const RESEARCH_UPGRADES = {
     name: 'Advanced Optics',
     description: '+20% air unit vision and range',
     cost: 350,
+    muCost: 60,
     researchTime: 12,
     building: 'airfield',
     applies: (unit) => unit.domain === 'air',
@@ -408,6 +420,7 @@ export const RESEARCH_UPGRADES = {
     name: 'Fortified Bunkers',
     description: '+25% building HP',
     cost: 250,
+    muCost: 40,
     researchTime: 10,
     building: 'barracks',
     applies: (entity) => entity.isBuilding,
@@ -417,6 +430,7 @@ export const RESEARCH_UPGRADES = {
     name: 'Rapid Fire',
     description: '+15% attack rate for infantry',
     cost: 200,
+    muCost: 30,
     researchTime: 10,
     building: 'barracks',
     applies: (unit) => unit.type === 'infantry',
@@ -426,6 +440,7 @@ export const RESEARCH_UPGRADES = {
     name: 'Heavy Shells',
     description: '+20% tank and battleship damage',
     cost: 400,
+    muCost: 70,
     researchTime: 15,
     building: 'warfactory',
     applies: (unit) => unit.type === 'tank' || unit.type === 'battleship',
@@ -435,6 +450,7 @@ export const RESEARCH_UPGRADES = {
     name: 'Field Medics',
     description: 'Infantry slowly regenerate HP',
     cost: 250,
+    muCost: 40,
     researchTime: 12,
     building: 'barracks',
     applies: (unit) => unit.type === 'infantry',
@@ -444,6 +460,7 @@ export const RESEARCH_UPGRADES = {
     name: 'Jet Engines',
     description: '+25% air unit speed',
     cost: 300,
+    muCost: 50,
     researchTime: 12,
     building: 'airfield',
     applies: (unit) => unit.domain === 'air',
@@ -453,6 +470,7 @@ export const RESEARCH_UPGRADES = {
     name: 'Naval Plating',
     description: '+3 armor to all naval units',
     cost: 350,
+    muCost: 60,
     researchTime: 15,
     building: 'shipyard',
     applies: (unit) => unit.domain === 'naval',
@@ -462,6 +480,7 @@ export const RESEARCH_UPGRADES = {
     name: 'Supply Lines',
     description: '+25% income from all sources',
     cost: 400,
+    muCost: 80,
     researchTime: 20,
     building: 'resourcedepot',
     applies: null,
@@ -471,6 +490,7 @@ export const RESEARCH_UPGRADES = {
     name: 'Blitz Training',
     description: '+15% production speed globally',
     cost: 350,
+    muCost: 60,
     researchTime: 18,
     building: 'headquarters',
     applies: null,
@@ -482,7 +502,9 @@ export const GAME_CONFIG = {
   mapSize: 128,
   worldScale: 2,
   startingSP: 600,
+  startingMU: 100,
   baseIncome: 12,
+  baseMUIncome: 5,
   tickRate: 1,
   unitSpeedMultiplier: 5,
   maxUnitsPerTeam: 50
@@ -639,7 +661,8 @@ export const BUILDING_LIMITS = {
   wall: 20,
   ditch: 20,
   techlab: 1,
-  superweapon: 1
+  superweapon: 1,
+  munitionscache: 4
 };
 
 // ============================================================

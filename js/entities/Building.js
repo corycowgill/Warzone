@@ -189,6 +189,12 @@ export class Building extends Entity {
     return upgradeConfig.costs[this.tier];
   }
 
+  getUpgradeMUCost() {
+    const upgradeConfig = BUILDING_UPGRADES[this.type];
+    if (!upgradeConfig || this.tier >= upgradeConfig.maxTier) return 0;
+    return (upgradeConfig.muCosts && upgradeConfig.muCosts[this.tier]) || 0;
+  }
+
   getTierBonus() {
     const upgradeConfig = BUILDING_UPGRADES[this.type];
     if (!upgradeConfig) return null;

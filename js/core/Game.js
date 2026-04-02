@@ -30,8 +30,8 @@ export class Game {
     this.entities = [];
     this.projectiles = [];
     this.teams = {
-      player: { nation: null, sp: GAME_CONFIG.startingSP },
-      enemy: { nation: null, sp: GAME_CONFIG.startingSP }
+      player: { nation: null, sp: GAME_CONFIG.startingSP, mu: GAME_CONFIG.startingMU },
+      enemy: { nation: null, sp: GAME_CONFIG.startingSP, mu: GAME_CONFIG.startingMU }
     };
     this.mode = '1P';
     this.activeTeam = 'player'; // For 2P hot-seat
@@ -113,7 +113,9 @@ export class Game {
       this.teams.player.nation = config.playerNation;
       this.teams.enemy.nation = config.enemyNation;
       this.teams.player.sp = GAME_CONFIG.startingSP;
+      this.teams.player.mu = GAME_CONFIG.startingMU;
       this.teams.enemy.sp = GAME_CONFIG.startingSP;
+      this.teams.enemy.mu = GAME_CONFIG.startingMU;
       this.aiDifficulty = config.difficulty || 'normal';
       this.entities = [];
       this.projectiles = [];
@@ -1029,12 +1031,14 @@ export class Game {
     if (state.completed.includes(upgradeId)) return false;
     if (state.inProgress) return false;
     if (this.teams[team].sp < upgrade.cost) return false;
+    if (upgrade.muCost && this.teams[team].mu < upgrade.muCost) return false;
 
     // Check if the team has the required building
     const hasBuilding = this.getBuildings(team).some(b => b.type === upgrade.building);
     if (!hasBuilding) return false;
 
     this.teams[team].sp -= upgrade.cost;
+    if (upgrade.muCost) this.teams[team].mu -= upgrade.muCost;
     state.inProgress = upgradeId;
     state.timer = upgrade.researchTime;
 

@@ -20,8 +20,11 @@ export class ResourceSystem {
     const teams = ['player', 'enemy'];
 
     for (const team of teams) {
-      // Base income
+      // Base SP income
       let income = GAME_CONFIG.baseIncome;
+
+      // Base MU income (from HQ)
+      let muIncome = GAME_CONFIG.baseMUIncome;
 
       // Nation income bonus
       const nationKey = this.game.teams[team]?.nation;
@@ -32,7 +35,7 @@ export class ResourceSystem {
         }
       }
 
-      // Bonus income from resource/supply depots
+      // Bonus income from resource/supply depots and munitions caches
       const buildings = this.game.getBuildings(team);
       for (const building of buildings) {
         // Skip buildings still under construction
@@ -40,6 +43,10 @@ export class ResourceSystem {
         const stats = BUILDING_STATS[building.type];
         if (stats && stats.income && building.alive) {
           income += stats.income;
+        }
+        // Munitions cache MU income
+        if (stats && stats.muIncome && building.alive) {
+          muIncome += stats.muIncome;
         }
         // Resource node proximity bonus (GD-060)
         if (this.game.getBuildingNodeBonus) {
@@ -52,26 +59,39 @@ export class ResourceSystem {
         const diffConfig = AI_DIFFICULTY[this.game.aiDifficulty];
         if (diffConfig && diffConfig.resourceBonus > 0) {
           income = Math.floor(income * (1 + diffConfig.resourceBonus));
+          muIncome = Math.floor(muIncome * (1 + diffConfig.resourceBonus));
         }
       }
 
       // Supply Lines research bonus (+25% income)
       if (this.game.hasResearch && this.game.hasResearch(team, 'supply_lines')) {
         income = Math.floor(income * 1.25);
+        muIncome = Math.floor(muIncome * 1.25);
       }
 
       // Apply income
       this.addIncome(team, income);
+      this.addMUIncome(team, muIncome);
     }
 
     this.game.eventBus.emit('resource:changed', {
       player: this.game.teams.player.sp,
-      enemy: this.game.teams.enemy.sp
+      enemy: this.game.teams.enemy.sp,
+      playerMU: this.game.teams.player.mu,
+      enemyMU: this.game.teams.enemy.mu
     });
   }
 
   canAfford(team, cost) {
     return this.game.teams[team].sp >= cost;
+  }
+
+  canAffordMU(team, muCost) {
+    return (this.game.teams[team].mu || 0) >= muCost;
+  }
+
+  canAffordBoth(team, spCost, muCost) {
+    return this.canAfford(team, spCost) && (!muCost || this.canAffordMU(team, muCost));
   }
 
   spend(team, cost) {
@@ -80,7 +100,38 @@ export class ResourceSystem {
 
     this.game.eventBus.emit('resource:changed', {
       player: this.game.teams.player.sp,
-      enemy: this.game.teams.enemy.sp
+      enemy: this.game.teams.enemy.sp,
+      playerMU: this.game.teams.player.mu,
+      enemyMU: this.game.teams.enemy.mu
+    });
+
+    return true;
+  }
+
+  spendMU(team, muCost) {
+    if (!this.canAffordMU(team, muCost)) return false;
+    this.game.teams[team].mu -= muCost;
+
+    this.game.eventBus.emit('resource:changed', {
+      player: this.game.teams.player.sp,
+      enemy: this.game.teams.enemy.sp,
+      playerMU: this.game.teams.player.mu,
+      enemyMU: this.game.teams.enemy.mu
+    });
+
+    return true;
+  }
+
+  spendBoth(team, spCost, muCost) {
+    if (!this.canAffordBoth(team, spCost, muCost)) return false;
+    this.game.teams[team].sp -= spCost;
+    if (muCost) this.game.teams[team].mu -= muCost;
+
+    this.game.eventBus.emit('resource:changed', {
+      player: this.game.teams.player.sp,
+      enemy: this.game.teams.enemy.sp,
+      playerMU: this.game.teams.player.mu,
+      enemyMU: this.game.teams.enemy.mu
     });
 
     return true;
@@ -90,8 +141,17 @@ export class ResourceSystem {
     this.game.teams[team].sp += amount;
   }
 
+  addMUIncome(team, amount) {
+    if (!this.game.teams[team].mu) this.game.teams[team].mu = 0;
+    this.game.teams[team].mu += amount;
+  }
+
   getBalance(team) {
     return this.game.teams[team].sp;
+  }
+
+  getMUBalance(team) {
+    return this.game.teams[team].mu || 0;
   }
 
   // Calculate the income rate for a team (SP per second)
@@ -125,5 +185,26 @@ export class ResourceSystem {
     }
 
     return income;
+  }
+
+  // Calculate the MU income rate for a team (MU per second)
+  getMUIncomeRate(team) {
+    let muIncome = GAME_CONFIG.baseMUIncome;
+
+    const buildings = this.game.getBuildings(team);
+    for (const building of buildings) {
+      if (building._constructing) continue;
+      const stats = BUILDING_STATS[building.type];
+      if (stats && stats.muIncome && building.alive) {
+        muIncome += stats.muIncome;
+      }
+    }
+
+    // Supply Lines research bonus
+    if (this.game.hasResearch && this.game.hasResearch(team, 'supply_lines')) {
+      muIncome = Math.floor(muIncome * 1.25);
+    }
+
+    return muIncome;
   }
 }

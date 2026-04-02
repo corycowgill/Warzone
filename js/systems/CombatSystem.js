@@ -400,6 +400,22 @@ export class CombatSystem {
     const abilityDef = UNIT_ABILITIES[unit.type];
     if (!abilityDef) return false;
 
+    // Check MU cost
+    if (abilityDef.muCost && abilityDef.muCost > 0) {
+      const team = unit.team;
+      if (this.game.resourceSystem && !this.game.resourceSystem.canAffordMU(team, abilityDef.muCost)) {
+        if (this.game.uiManager?.hud && team === 'player') {
+          this.game.uiManager.hud.showNotification(`Not enough MU (need ${abilityDef.muCost})`, '#ff4444');
+        }
+        if (this.game.soundManager && team === 'player') this.game.soundManager.play('error');
+        return false;
+      }
+      // Spend MU
+      if (this.game.resourceSystem) {
+        this.game.resourceSystem.spendMU(team, abilityDef.muCost);
+      }
+    }
+
     switch (abilityDef.id) {
       case 'grenade': return this.executeGrenade(unit, targetPos);
       case 'siege_mode': return this.executeSiegeMode(unit);

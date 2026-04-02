@@ -8,6 +8,7 @@ export class HUD {
 
     // Reference existing HTML elements
     this.spDisplay = document.getElementById('sp-display');
+    this.muDisplay = document.getElementById('mu-display');
     this.incomeDisplay = document.getElementById('income-display');
     this.unitCountDisplay = document.getElementById('unit-count-display');
     this.selectionInfo = document.getElementById('selection-info');
@@ -213,7 +214,7 @@ export class HUD {
     if (!this.buildOptions) return;
     this.buildOptions.innerHTML = '';
 
-    const buildableTypes = ['barracks', 'warfactory', 'airfield', 'shipyard', 'techlab', 'resourcedepot', 'supplydepot', 'turret', 'aaturret', 'bunker', 'wall', 'superweapon'];
+    const buildableTypes = ['barracks', 'warfactory', 'airfield', 'shipyard', 'techlab', 'resourcedepot', 'supplydepot', 'munitionscache', 'turret', 'aaturret', 'bunker', 'wall', 'superweapon'];
     for (const type of buildableTypes) {
       const stats = BUILDING_STATS[type];
       if (!stats) continue;
@@ -246,6 +247,8 @@ export class HUD {
         descStr = 'Produces: ' + stats.produces.map(u => this.formatName(u)).join(', ');
       } else if (stats.income) {
         descStr = `<span style="color:#44dd88;">Income: +${stats.income} SP/s</span>`;
+      } else if (stats.muIncome) {
+        descStr = `<span style="color:#dd8844;">MU Income: +${stats.muIncome} MU/s</span>`;
       } else if (stats.damage) {
         descStr = `DMG: ${stats.damage} | RNG: ${stats.range}`;
         if (stats.garrisonSlots) descStr += ` | <span style="color:#66aaff;">Garrison: ${stats.garrisonSlots}</span>`;
@@ -491,11 +494,18 @@ export class HUD {
   updateResourceDisplay() {
     const activeTeam = this.game.mode === '2P' ? this.game.activeTeam : 'player';
     const sp = Math.floor(this.game.teams[activeTeam].sp);
+    const mu = Math.floor(this.game.teams[activeTeam].mu || 0);
     const income = this.game.resourceSystem ? this.game.resourceSystem.getIncomeRate(activeTeam) : 0;
+    const muIncome = this.game.resourceSystem ? this.game.resourceSystem.getMUIncomeRate(activeTeam) : 0;
     const unitCount = this.game.getUnits(activeTeam).length;
     const maxUnits = GAME_CONFIG.maxUnitsPerTeam;
 
     if (this.spDisplay) this.spDisplay.textContent = sp;
+    if (this.muDisplay) {
+      this.muDisplay.textContent = `${mu} (+${muIncome}/s)`;
+      // Flash warning when MU is low
+      this.muDisplay.style.color = mu < 20 ? '#ff4444' : '';
+    }
     if (this.incomeDisplay) this.incomeDisplay.textContent = `+${income}/s`;
     if (this.unitCountDisplay) {
       this.unitCountDisplay.textContent = `${unitCount}/${maxUnits}`;
@@ -578,9 +588,13 @@ export class HUD {
     // Spectator mode: show enemy resources too
     if (this.game.mode === 'SPECTATE') {
       const enemySP = Math.floor(this.game.teams.enemy.sp);
+      const enemyMU = Math.floor(this.game.teams.enemy.mu || 0);
       const enemyUnits = this.game.getUnits('enemy').length;
       if (this.spDisplay) {
         this.spDisplay.textContent = `${sp} vs ${enemySP}`;
+      }
+      if (this.muDisplay) {
+        this.muDisplay.textContent = `${mu} vs ${enemyMU}`;
       }
       if (this.unitCountDisplay) {
         this.unitCountDisplay.textContent = `${unitCount} vs ${enemyUnits}`;
@@ -720,10 +734,12 @@ export class HUD {
       // Show tier and upgrade option
       if (entity.canUpgrade && entity.canUpgrade()) {
         const cost = entity.getUpgradeCost();
+        const muCost = entity.getUpgradeMUCost ? entity.getUpgradeMUCost() : 0;
         const tierBonusNext = BUILDING_UPGRADES[entity.type]?.bonuses[entity.tier + 1];
         const label = tierBonusNext ? tierBonusNext.label : `Tier ${entity.tier + 1}`;
         const activeTeam = this.game.mode === '2P' ? this.game.activeTeam : 'player';
-        const canAfford = this.game.resourceSystem ? this.game.resourceSystem.canAfford(activeTeam, cost) : false;
+        const canAfford = this.game.resourceSystem ? this.game.resourceSystem.canAffordBoth(activeTeam, cost, muCost) : false;
+        const costStr = muCost > 0 ? `${cost} SP + ${muCost} MU` : `${cost} SP`;
 
         statsHtml += `
           <div style="margin-top:8px;">
@@ -737,7 +753,7 @@ export class HUD {
               font-family:sans-serif;
               font-size:12px;
               width:100%;
-            ">Upgrade to Tier ${entity.tier + 1} - ${cost} SP<br><small style="color:#888;">${label}</small></button>
+            ">Upgrade to Tier ${entity.tier + 1} - ${costStr}<br><small style="color:#888;">${label}</small></button>
           </div>
         `;
       }
@@ -822,15 +838,21 @@ export class HUD {
     if (upgradeBtn && entity.canUpgrade && entity.canUpgrade()) {
       upgradeBtn.addEventListener('click', () => {
         const cost = entity.getUpgradeCost();
+        const muCost = entity.getUpgradeMUCost ? entity.getUpgradeMUCost() : 0;
         const activeTeam = this.game.mode === '2P' ? this.game.activeTeam : 'player';
-        if (this.game.resourceSystem && this.game.resourceSystem.canAfford(activeTeam, cost)) {
-          this.game.resourceSystem.spend(activeTeam, cost);
+        if (this.game.resourceSystem && this.game.resourceSystem.canAffordBoth(activeTeam, cost, muCost)) {
+          this.game.resourceSystem.spendBoth(activeTeam, cost, muCost);
           entity.upgrade();
           this.showNotification(`Upgraded to Tier ${entity.tier}!`, '#ffcc00');
           if (this.game.soundManager) this.game.soundManager.play('build');
           this.showSingleEntityInfo(entity);
         } else {
-          this.showNotification('Not enough SP!', '#ff4444');
+          const mu = this.game.teams[activeTeam].mu || 0;
+          if (this.game.teams[activeTeam].sp < cost) {
+            this.showNotification('Not enough SP!', '#ff4444');
+          } else {
+            this.showNotification(`Not enough MU! (need ${muCost})`, '#ff4444');
+          }
         }
       });
     }
@@ -1644,17 +1666,20 @@ export class HUD {
     for (const [id, upg] of available) {
       const completed = state?.completed.includes(id);
       const inProgress = state?.inProgress === id;
-      const canAfford = this.game.teams.player.sp >= upg.cost;
+      const canAffordSP = this.game.teams.player.sp >= upg.cost;
+      const canAffordMU = !upg.muCost || (this.game.teams.player.mu || 0) >= upg.muCost;
+      const canAfford = canAffordSP && canAffordMU;
       const alreadyResearching = !!state?.inProgress;
+      const costStr = upg.muCost ? `${upg.cost} SP + ${upg.muCost} MU` : `${upg.cost} SP`;
 
       let status = '';
       let color = '#ccc';
       let bg = '#333';
       if (completed) { status = 'DONE'; color = '#00ff44'; bg = '#1a331a'; }
       else if (inProgress) { status = `${Math.ceil(state.timer)}s`; color = '#ffcc00'; bg = '#332a00'; }
-      else if (alreadyResearching) { status = `${upg.cost} SP`; color = '#666'; }
-      else if (!canAfford) { status = `${upg.cost} SP`; color = '#ff4444'; }
-      else { status = `${upg.cost} SP`; color = '#88ff88'; }
+      else if (alreadyResearching) { status = costStr; color = '#666'; }
+      else if (!canAfford) { status = costStr; color = '#ff4444'; }
+      else { status = costStr; color = '#88ff88'; }
 
       html += `<div class="research-item" data-research="${id}" style="
         padding:6px 8px;margin-bottom:4px;background:${bg};border:1px solid #444;

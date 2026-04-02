@@ -114,8 +114,17 @@ export class SuperweaponFacility extends Building {
     // Don't charge during construction
     if (this._constructing) return;
 
-    // Charge the weapon
+    // Charge the weapon (requires MU - consumes 1 MU/s while charging)
     if (!this.isCharged && !this.isFiring) {
+      const muAvailable = this.game?.teams?.[this.team]?.mu || 0;
+      if (muAvailable < 1) {
+        // Not enough MU - stall charging
+        return;
+      }
+      // Consume MU while charging
+      if (this.game?.teams?.[this.team]) {
+        this.game.teams[this.team].mu -= deltaTime;
+      }
       this.chargeProgress += deltaTime;
       if (this.chargeProgress >= this.chargeTime) {
         this.chargeProgress = this.chargeTime;
