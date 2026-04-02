@@ -18,12 +18,20 @@ GD-036: AI vs AI Spectator Mode | GD-037: Supply Caches | GD-038: Dynamic Map Ev
 ## Cycle 6 - Completed (5 features)
 GD-041: Three Game Modes (Annihilation/Timed/King of the Hill) | GD-042: Enhanced Spectator HUD | GD-043: Minimap Combat Pings | GD-044: King of the Hill Control Point | GD-045: Game Mode Selection UI
 
+## Cycle 7 - Completed (5 features)
+GD-046: Global Research System (10 upgrades) | GD-047: Terrain Elevation Damage Bonuses | GD-048: Smarter AI Retreat & Raids | GD-049: Production Hotkeys | GD-050: Military Score HUD
+
+## Cycle 8 - Completed (4 features)
+GD-051: Wall Pathfinding Blocking | GD-052: Ditch Cover Damage Reduction | GD-053: AI Naval/Water Awareness | GD-054: AI Building Upgrades
+
 ## QA Fixes Applied
 - Cycle 1: 6 fixes (GAME_CONFIG import, minimap Vector3, ability mode reset, double-click state, entity flash null check, production panel alive check)
 - Cycle 2: 4 fixes (aura position, event listener leak, fog ghost position, ace attack balance)
 - Cycle 3: 3 fixes (productionProgress property, getTotalQueueTime tier bonus, getRemainingTime simplification)
 - Cycle 4: 3 fixes (defensive stance freeze, patrol mode exit, listener reference)
 - Cycle 5: 4 fixes (map event timer reset, spectate input guard, aiController2 leak, supply cache targeting)
+- Cycle 6: 9 fixes (minimap delta, unused variable, minimap listener leak, GameOverScreen listener leak, button visual reset, spectate panel, gameMode reset/history, annihilation fallback, dead stats code)
+- Cycle 7: 5 fixes (research building destroyed, blitz_training effect, income display, research DOM leak, AI retreat timer)
 
 ## Pending / Deferred
 | ID | Priority | Status | Description |
@@ -37,6 +45,6 @@ GD-041: Three Game Modes (Annihilation/Timed/King of the Hill) | GD-042: Enhance
 | GD-028 | MEDIUM | DONE (as GD-035) | Smart Control Group Auto-Refill |
 | GD-029 | MEDIUM | PENDING | Last Seen Ghost Overlay (partially done via GD-017) |
 
-## Total Features Implemented: 34
-## Total QA Fixes: 20
-## Git Commits: 15
+## Total Features Implemented: 43
+## Total QA Fixes: 34
+## Git Commits: 20
