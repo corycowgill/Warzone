@@ -198,7 +198,18 @@ export class CombatSystem {
       else if (heightDiff < -1.5) terrainMod = 0.85;
     }
 
-    const finalDmg = Math.max(1, baseDmg * modifier * armorReduction * terrainMod);
+    // Ditch damage reduction for turret attacks
+    let ditchMod = 1.0;
+    if (defender.isUnit && defender.domain === 'land') {
+      const dPos = defender.getPosition();
+      for (const entity of this.game.entities) {
+        if (!entity.alive || entity.type !== 'ditch' || entity.team !== defender.team) continue;
+        const dist = entity.getPosition().distanceTo(dPos);
+        if (dist < 6) { ditchMod = 0.5; break; }
+      }
+    }
+
+    const finalDmg = Math.max(1, baseDmg * modifier * armorReduction * terrainMod * ditchMod);
 
     defender.takeDamage(finalDmg);
     turret.attackCooldown = 1 / turret.attackRate;

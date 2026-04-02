@@ -87,6 +87,10 @@ export class AIController {
         this.strategy = this.personality.preferredStrategy;
         this.chosenBuildOrder = [...BUILD_ORDERS[this.strategy]];
       }
+      // Re-filter shipyard after personality override
+      if (!this.hasSignificantWater()) {
+        this.chosenBuildOrder = this.chosenBuildOrder.filter(b => b !== 'shipyard');
+      }
       // Reduce grace period for aggressive nations
       this.gracePeriod = Math.max(30, this.gracePeriod - (this.personality.gracePeriodReduction || 0));
     }
@@ -97,6 +101,9 @@ export class AIController {
       // Easy AI always uses balanced
       this.strategy = 'balanced';
       this.chosenBuildOrder = [...BUILD_ORDERS.balanced];
+      if (!this.hasSignificantWater()) {
+        this.chosenBuildOrder = this.chosenBuildOrder.filter(b => b !== 'shipyard');
+      }
       return;
     }
 
@@ -167,6 +174,14 @@ export class AIController {
       if (this.scoutTimer >= this.scoutInterval) {
         this.scoutTimer = 0;
         this.executeScouting();
+      }
+    }
+
+    // Scout reset timer (game-time based, not wall-clock)
+    if (this.scoutSent && this._scoutResetTimer > 0) {
+      this._scoutResetTimer -= delta;
+      if (this._scoutResetTimer <= 0) {
+        this.scoutSent = false;
       }
     }
   }
@@ -523,9 +538,15 @@ export class AIController {
   chooseNavalUnit(myUnits) {
     const battleships = myUnits.filter(u => u.type === 'battleship').length;
     const subs = myUnits.filter(u => u.type === 'submarine').length;
+    const carriers = myUnits.filter(u => u.type === 'carrier').length;
     if (battleships < 2) return 'battleship';
     if (subs < 2) return 'submarine';
-    return 'battleship';
+    if (carriers < 1) return 'carrier';
+    // Rotate through fleet composition
+    const total = battleships + subs + carriers;
+    if (battleships <= subs) return 'battleship';
+    if (subs <= carriers) return 'submarine';
+    return 'carrier';
   }
 
   adjustForCounter(unitType, building, myUnits) {
@@ -736,8 +757,7 @@ export class AIController {
     }
 
     this.scoutSent = true;
-    // Reset scout flag after a while so we scout again
-    setTimeout(() => { this.scoutSent = false; }, 60000);
+    this._scoutResetTimer = 60; // Reset after 60 game seconds
   }
 
   // =============================================

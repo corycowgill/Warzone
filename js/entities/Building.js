@@ -67,13 +67,13 @@ export class Building extends Entity {
       }
 
       this.productionTimer = buildTime;
+      this._productionTotalTime = buildTime;
     }
   }
 
   getProductionProgress() {
     if (!this.currentProduction) return 0;
-    const stats = UNIT_STATS[this.currentProduction];
-    const totalTime = stats ? stats.buildTime : 3;
+    const totalTime = this._productionTotalTime || (UNIT_STATS[this.currentProduction]?.buildTime ?? 3);
     return 1 - (this.productionTimer / totalTime);
   }
 
@@ -142,6 +142,10 @@ export class Building extends Entity {
         const tierBonus = this.getTierBonus();
         if (tierBonus && tierBonus.productionSpeed > 1) {
           buildTime /= tierBonus.productionSpeed;
+        }
+        // Apply blitz_training research bonus
+        if (this.game && this.game.hasResearch && this.game.hasResearch(this.team, 'blitz_training')) {
+          buildTime /= 1.15;
         }
         total += buildTime;
       }

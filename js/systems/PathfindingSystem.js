@@ -6,6 +6,29 @@ export class PathfindingSystem {
     this.game = game;
     this.gridSize = GAME_CONFIG.mapSize;
     this.worldScale = GAME_CONFIG.worldScale;
+    this._wallBlockedCells = new Set();
+    this._wallCacheDirty = true;
+  }
+
+  invalidateWallCache() {
+    this._wallCacheDirty = true;
+  }
+
+  _rebuildWallGrid() {
+    this._wallBlockedCells = new Set();
+    for (const entity of this.game.entities) {
+      if (!entity.alive || !entity.isBuilding || entity.type !== 'wall') continue;
+      const pos = entity.getPosition();
+      const gx = Math.round(pos.x / this.worldScale);
+      const gz = Math.round(pos.z / this.worldScale);
+      const r = Math.ceil(3 / this.worldScale);
+      for (let dx = -r; dx <= r; dx++) {
+        for (let dz = -r; dz <= r; dz++) {
+          this._wallBlockedCells.add((gx + dx) + ',' + (gz + dz));
+        }
+      }
+    }
+    this._wallCacheDirty = false;
   }
 
   findPath(startWorld, endWorld) {
@@ -91,17 +114,9 @@ export class PathfindingSystem {
                      terrain.walkableGrid[gy]?.[gx] === 1;
     if (!walkable) return false;
 
-    // Check for wall buildings that block movement
-    const wx = gx * this.worldScale;
-    const wz = gy * this.worldScale;
-    for (const entity of this.game.entities) {
-      if (!entity.alive || !entity.isBuilding) continue;
-      if (entity.type !== 'wall') continue;
-      const pos = entity.getPosition();
-      const dx = pos.x - wx;
-      const dz = pos.z - wz;
-      if (dx * dx + dz * dz < 9) return false; // within 3 units
-    }
+    // Check pre-computed wall grid (O(1) lookup instead of iterating all entities)
+    if (this._wallCacheDirty) this._rebuildWallGrid();
+    if (this._wallBlockedCells.has(gx + ',' + gy)) return false;
     return true;
   }
 

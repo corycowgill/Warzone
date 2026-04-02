@@ -266,6 +266,37 @@ export class Game {
     }
   }
 
+  createSupplyCache(x, z, reward, color = 0xccaa44, markerColor = 0xffcc00) {
+    const y = this.terrain ? this.terrain.getHeightAt(x, z) : 0;
+    const group = new THREE.Group();
+    const boxGeo = new THREE.BoxGeometry(2, 1.5, 2);
+    const boxMat = new THREE.MeshPhongMaterial({ color });
+    const box = new THREE.Mesh(boxGeo, boxMat);
+    box.position.y = 0.75;
+    group.add(box);
+    const markerGeo = new THREE.OctahedronGeometry(0.5, 0);
+    const markerMat = new THREE.MeshBasicMaterial({ color: markerColor });
+    const marker = new THREE.Mesh(markerGeo, markerMat);
+    marker.position.y = 2;
+    group.add(marker);
+    group.position.set(x, y, z);
+
+    const cache = {
+      id: Date.now() + Math.floor(Math.random() * 10000),
+      type: 'supply_cache', team: 'neutral', alive: true,
+      health: 60, maxHealth: 60, isBuilding: true, isUnit: false,
+      mesh: group, selected: false, size: 1, produces: [],
+      selectionRing: null, healthBar: null,
+      _isCache: true, _cacheReward: reward,
+      getPosition() { return this.mesh.position; },
+      distanceTo(other) { return this.getPosition().distanceTo(other.getPosition()); },
+      takeDamage(amount) { this.health -= amount; if (this.health <= 0) { this.health = 0; this.alive = false; } },
+      update() {}, updateHealthBar() {}, setSelected(sel) { this.selected = sel; }
+    };
+    this.addEntity(cache);
+    return cache;
+  }
+
   placeSupplyCaches() {
     const mapSize = GAME_CONFIG.mapSize * GAME_CONFIG.worldScale;
     const cacheCount = 6;
@@ -280,57 +311,7 @@ export class Game {
       } while (attempts < 20 && this.terrain && (this.terrain.isWater(x, z) || !this.terrain.isWalkable(x, z)));
 
       if (attempts >= 20) continue;
-
-      const pos = new THREE.Vector3(x, 0, z);
-      const y = this.terrain ? this.terrain.getHeightAt(x, z) : 0;
-
-      // Create supply cache mesh
-      const group = new THREE.Group();
-      const boxGeo = new THREE.BoxGeometry(2, 1.5, 2);
-      const boxMat = new THREE.MeshPhongMaterial({ color: 0xccaa44 });
-      const box = new THREE.Mesh(boxGeo, boxMat);
-      box.position.y = 0.75;
-      group.add(box);
-
-      // Star marker on top
-      const markerGeo = new THREE.OctahedronGeometry(0.5, 0);
-      const markerMat = new THREE.MeshBasicMaterial({ color: 0xffcc00 });
-      const marker = new THREE.Mesh(markerGeo, markerMat);
-      marker.position.y = 2;
-      group.add(marker);
-
-      group.position.set(x, y, z);
-
-      // Create as a simple entity
-      const cache = {
-        id: Date.now() + Math.floor(Math.random() * 10000),
-        type: 'supply_cache',
-        team: 'neutral',
-        alive: true,
-        health: 60,
-        maxHealth: 60,
-        isBuilding: true,
-        isUnit: false,
-        mesh: group,
-        selected: false,
-        size: 1,
-        produces: [],
-        selectionRing: null,
-        healthBar: null,
-        _isCache: true,
-        _cacheReward: 100 + Math.floor(Math.random() * 100),
-        getPosition() { return this.mesh.position; },
-        distanceTo(other) { return this.getPosition().distanceTo(other.getPosition()); },
-        takeDamage(amount) {
-          this.health -= amount;
-          if (this.health <= 0) { this.health = 0; this.alive = false; }
-        },
-        update() {},
-        updateHealthBar() {},
-        setSelected(sel) { this.selected = sel; }
-      };
-
-      this.addEntity(cache);
+      this.createSupplyCache(x, z, 100 + Math.floor(Math.random() * 100));
     }
 
     // Listen for cache destruction to award resources
@@ -409,6 +390,9 @@ export class Game {
     this.entities.push(entity);
     if (entity.mesh) {
       this.sceneManager.scene.add(entity.mesh);
+    }
+    if (entity.isBuilding && entity.type === 'wall' && this.pathfinding) {
+      this.pathfinding.invalidateWallCache();
     }
   }
 
@@ -651,40 +635,11 @@ export class Game {
 
     switch (event) {
       case 'supply_drop': {
-        // Drop a supply cache at a random location
         const x = 60 + Math.random() * (mapSize - 120);
         const z = 60 + Math.random() * (mapSize - 120);
         if (this.terrain && this.terrain.isWalkable(x, z)) {
-          const pos = new THREE.Vector3(x, 0, z);
-          const y = this.terrain.getHeightAt(x, z);
-          const group = new THREE.Group();
-          const boxGeo = new THREE.BoxGeometry(2.5, 1.5, 2.5);
-          const boxMat = new THREE.MeshPhongMaterial({ color: 0x44ccff });
-          const box = new THREE.Mesh(boxGeo, boxMat);
-          box.position.y = 0.75;
-          group.add(box);
-          const markerGeo = new THREE.OctahedronGeometry(0.6, 0);
-          const markerMat = new THREE.MeshBasicMaterial({ color: 0x00ffcc });
-          const marker = new THREE.Mesh(markerGeo, markerMat);
-          marker.position.y = 2.2;
-          group.add(marker);
-          group.position.set(x, y, z);
-
           const reward = 150 + Math.floor(Math.random() * 100);
-          const cache = {
-            id: Date.now() + Math.floor(Math.random() * 10000),
-            type: 'supply_cache', team: 'neutral', alive: true,
-            health: 40, maxHealth: 40, isBuilding: true, isUnit: false,
-            mesh: group, selected: false, size: 1, produces: [],
-            selectionRing: null, healthBar: null,
-            _isCache: true, _cacheReward: reward,
-            getPosition() { return this.mesh.position; },
-            distanceTo(other) { return this.getPosition().distanceTo(other.getPosition()); },
-            takeDamage(amount) { this.health -= amount; if (this.health <= 0) { this.health = 0; this.alive = false; } },
-            update() {}, updateHealthBar() {}, setSelected(sel) { this.selected = sel; }
-          };
-          this.addEntity(cache);
-
+          this.createSupplyCache(x, z, reward, 0x44ccff, 0x00ffcc);
           if (this.uiManager && this.uiManager.hud) {
             this.uiManager.hud.showNotification(`Supply drop detected! (${reward} SP)`, '#00ffcc');
           }
@@ -818,13 +773,17 @@ export class Game {
       const state = this.research[team];
       if (!state.inProgress) continue;
 
-      // Cancel research if building was destroyed
+      // Cancel research if building was destroyed — refund SP
       if (state.building && !state.building.alive) {
+        const upgrade = RESEARCH_UPGRADES[state.inProgress];
+        if (upgrade) {
+          this.teams[team].sp += upgrade.cost;
+        }
         state.inProgress = null;
         state.timer = 0;
         state.building = null;
         if (team === 'player' && this.uiManager && this.uiManager.hud) {
-          this.uiManager.hud.showNotification('Research cancelled: building destroyed!', '#ff4444');
+          this.uiManager.hud.showNotification(`Research cancelled: building destroyed! (${upgrade?.cost || 0} SP refunded)`, '#ff4444');
         }
         continue;
       }
