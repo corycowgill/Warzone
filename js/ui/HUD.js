@@ -558,6 +558,11 @@ export class HUD {
   _updateTooltip() {
     if (!this._tooltipEl || this.game.state !== 'PLAYING') return;
 
+    // Clear tooltip if hovered entity died
+    if (this._hoveredEntity && !this._hoveredEntity.alive) {
+      this._hideTooltip();
+    }
+
     const now = performance.now();
     if (now - this._lastTooltipRaycast < this._tooltipThrottleMs) {
       // Just reposition if still hovering
@@ -578,11 +583,22 @@ export class HUD {
     );
     this._tooltipRaycaster.setFromCamera(mouse, camera);
 
-    // Gather all visible entity meshes
+    // Gather all visible entity meshes (respect fog of war for enemies)
     const entityMeshes = [];
     const meshToEntity = new Map();
+    const ownTeam = this.game.mode === '2P' ? this.game.activeTeam : 'player';
+    const fog = this.game.fogOfWar;
     for (const entity of this.game.entities) {
       if (!entity.alive || !entity.mesh || entity.mesh.visible === false) continue;
+      // Skip fog-hidden enemies so player can't peek at stats through fog
+      if (fog && entity.team !== ownTeam && entity.team !== 'neutral') {
+        const pos = entity.getPosition();
+        const gx = Math.floor(pos.x / GAME_CONFIG.worldScale);
+        const gz = Math.floor(pos.z / GAME_CONFIG.worldScale);
+        const state = fog.getStateAtGrid(gx, gz);
+        const combatRevealed = entity._combatRevealTimer && entity._combatRevealTimer > 0;
+        if (state < 2 && !combatRevealed) continue;
+      }
       entity.mesh.traverse((child) => {
         if (child.isMesh) {
           entityMeshes.push(child);
@@ -2007,6 +2023,11 @@ export class HUD {
     if (this.ghostMesh) {
       const scene = this.game.sceneManager?.scene;
       if (scene) scene.remove(this.ghostMesh);
+      // Dispose geometry and materials to prevent memory leak
+      this.ghostMesh.traverse(child => {
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) child.material.dispose();
+      });
       this.ghostMesh = null;
     }
   }

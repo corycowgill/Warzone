@@ -2064,6 +2064,10 @@ export class Game {
       }
       // Cycle 15: Hide tooltip
       this.uiManager.hud._hideTooltip();
+      // Cycle 15: Cancel build placement and remove ghost mesh on restart
+      this.uiManager.hud.cancelBuildPlacement();
+      // Clean up rally visuals
+      this.uiManager.hud.removeRallyVisuals();
     }
 
     // GD-139: Remove any lingering victory overlay

@@ -266,7 +266,7 @@ export class CommandSystem {
     return Math.atan2(dx, dz);
   }
 
-  moveUnits(units, position) {
+  moveUnits(units, position, skipMarker) {
     const groupSpeed = Math.min(...units.map(u => u.speed));
     const offsets = this.getFormationOffsets(units.length, this.formationType);
     const heading = this.getFormationHeading(units, position);
@@ -311,8 +311,8 @@ export class CommandSystem {
 
     this.game.eventBus.emit('command:move', { units, position });
 
-    // Cycle 15: Show move marker on ground
-    if (this.game.effectsManager) {
+    // Cycle 15: Show move marker on ground (skip if attack-move will add its own)
+    if (this.game.effectsManager && !skipMarker) {
       this.game.effectsManager.createMoveMarker(position, 'move');
     }
 
@@ -335,12 +335,13 @@ export class CommandSystem {
   }
 
   attackMoveUnits(units, position) {
-    this.moveUnits(units, position);
+    // Pass skipMarker to avoid double-marker (moveUnits creates green, we want red)
+    this.moveUnits(units, position, true);
     // Mark units as attack-moving (they will engage any enemy in range while moving)
     for (const unit of units) {
       unit._attackMove = true;
     }
-    // Cycle 15: Show attack-move marker (red) - override the green one from moveUnits
+    // Cycle 15: Show attack-move marker (red) instead of the green one
     if (this.game.effectsManager) {
       this.game.effectsManager.createMoveMarker(position, 'attackmove');
     }
