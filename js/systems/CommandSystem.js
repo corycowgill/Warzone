@@ -42,10 +42,13 @@ export class CommandSystem {
     );
     this.raycaster.setFromCamera(mouse, camera);
 
-    // Check for enemy entity under cursor
+    // Check for enemy or neutral entity under cursor
     const ownTeam = this.game.mode === '2P' ? this.game.activeTeam : 'player';
     const enemyTeam = ownTeam === 'player' ? 'enemy' : 'player';
-    const enemyEntities = this.game.getEntitiesByTeam(enemyTeam);
+    const enemyEntities = [
+      ...this.game.getEntitiesByTeam(enemyTeam),
+      ...this.game.entities.filter(e => e.team === 'neutral' && e.alive)
+    ];
 
     const entityMeshes = [];
     const meshToEntity = new Map();

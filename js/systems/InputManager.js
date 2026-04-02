@@ -53,16 +53,17 @@ export class InputManager {
 
     canvas.addEventListener('mouseup', (e) => {
       if (e.button === 0) {
-        if (!this.isDragging) {
-          this.game.selectionManager.handleClick(e);
-          // Play selection sound with unit type from newly selected entity
-          if (this.game.soundManager) {
-            const selected = this.game.selectionManager.getSelected();
-            const unitType = selected.length > 0 && selected[0].isUnit ? selected[0].type : null;
-            this.game.soundManager.play('select', { unitType });
+        if (this.game.mode !== 'SPECTATE') {
+          if (!this.isDragging) {
+            this.game.selectionManager.handleClick(e);
+            if (this.game.soundManager) {
+              const selected = this.game.selectionManager.getSelected();
+              const unitType = selected.length > 0 && selected[0].isUnit ? selected[0].type : null;
+              this.game.soundManager.play('select', { unitType });
+            }
+          } else {
+            this.game.selectionManager.handleBoxSelectEnd(e);
           }
-        } else {
-          this.game.selectionManager.handleBoxSelectEnd(e);
         }
         this.mouseDown = false;
         this.isDragging = false;
@@ -70,7 +71,9 @@ export class InputManager {
       }
       if (e.button === 2) {
         this.rightMouseDown = false;
-        this.game.commandSystem.handleRightClick(e);
+        if (this.game.mode !== 'SPECTATE') {
+          this.game.commandSystem.handleRightClick(e);
+        }
       }
     });
 
@@ -78,8 +81,10 @@ export class InputManager {
 
     window.addEventListener('keydown', (e) => {
       this.keys[e.key.toLowerCase()] = true;
-      // Forward to command system for game commands
-      this.game.commandSystem.handleKeyPress(e);
+      // Forward to command system for game commands (not in spectate mode)
+      if (this.game.mode !== 'SPECTATE') {
+        this.game.commandSystem.handleKeyPress(e);
+      }
     });
     window.addEventListener('keyup', (e) => {
       this.keys[e.key.toLowerCase()] = false;

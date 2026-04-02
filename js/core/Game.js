@@ -105,6 +105,8 @@ export class Game {
       this.aiDifficulty = config.difficulty || 'normal';
       this.entities = [];
       this.projectiles = [];
+      this.aiController = null;
+      this.aiController2 = null;
 
       this.setState('LOADING');
 
@@ -719,6 +721,10 @@ export class Game {
     this.aiController2 = null;
     this.paused = false;
     this.gameElapsed = 0;
+    this._mapEventTimer = 0;
+    this._tutorialTimer = 0;
+    this._tutorialStep = 0;
+    this._tutorialShown = false;
     this.stats = {
       player: { unitsProduced: 0, unitsLost: 0, buildingsDestroyed: 0, damageDealt: 0 },
       enemy: { unitsProduced: 0, unitsLost: 0, buildingsDestroyed: 0, damageDealt: 0 }
