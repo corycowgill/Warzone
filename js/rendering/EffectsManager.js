@@ -193,6 +193,32 @@ export class EffectsManager {
     });
   }
 
+  createDamageVignette() {
+    // Create a full-screen red border flash using CSS overlay
+    if (this._vignetteEl) return; // already active
+
+    const el = document.createElement('div');
+    el.style.cssText = `
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      pointer-events: none;
+      z-index: 500;
+      border: 4px solid rgba(255, 0, 0, 0.6);
+      box-shadow: inset 0 0 60px rgba(255, 0, 0, 0.3);
+      transition: opacity 0.5s;
+    `;
+    document.body.appendChild(el);
+    this._vignetteEl = el;
+
+    setTimeout(() => {
+      el.style.opacity = '0';
+      setTimeout(() => {
+        if (el.parentElement) el.parentElement.removeChild(el);
+        this._vignetteEl = null;
+      }, 500);
+    }, 200);
+  }
+
   update(delta) {
     for (let i = this.activeEffects.length - 1; i >= 0; i--) {
       const effect = this.activeEffects[i];

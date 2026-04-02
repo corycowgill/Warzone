@@ -183,6 +183,39 @@ export class Minimap {
     // Draw entities
     if (this.game.entities) {
       const entities = this.game.entities;
+
+      // First pass: draw last-seen ghost positions for non-visible enemies
+      for (let i = 0; i < entities.length; i++) {
+        const entity = entities[i];
+        if (!entity.alive) continue;
+        if (entity.team === 'player') continue;
+        if (!entity._lastSeenPosition) continue;
+
+        // Skip if entity is currently visible (will be drawn in full below)
+        const pos = entity.getPosition();
+        if (fog) {
+          const gx = Math.floor(pos.x / GAME_CONFIG.worldScale);
+          const gz = Math.floor(pos.z / GAME_CONFIG.worldScale);
+          const state = fog.getStateAtGrid(gx, gz);
+          const combatRevealed = entity._combatRevealTimer && entity._combatRevealTimer > 0;
+          if (state === 2 || combatRevealed) continue; // currently visible, skip ghost
+          if (entity.isBuilding && state === 1) continue; // building shown normally
+        }
+
+        // Draw faded last-known position
+        const lp = this.worldToMinimap(entity._lastSeenPosition.x, entity._lastSeenPosition.z);
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = '#ff4444';
+        if (entity.isBuilding) {
+          const bSize = Math.max(3, entity.size || 3);
+          ctx.fillRect(lp.x - bSize / 2, lp.y - bSize / 2, bSize, bSize);
+        } else {
+          ctx.fillRect(lp.x - 1, lp.y - 1, 2, 2);
+        }
+        ctx.globalAlpha = 1.0;
+      }
+
+      // Second pass: draw all currently visible entities
       for (let i = 0; i < entities.length; i++) {
         const entity = entities[i];
         if (!entity.alive) continue;
@@ -191,10 +224,11 @@ export class Minimap {
 
         // Respect fog of war for enemy entities on minimap
         if (fog && entity.team !== 'player') {
-          const gx = Math.floor(pos.x / (GAME_CONFIG.worldScale));
-          const gz = Math.floor(pos.z / (GAME_CONFIG.worldScale));
+          const gx = Math.floor(pos.x / GAME_CONFIG.worldScale);
+          const gz = Math.floor(pos.z / GAME_CONFIG.worldScale);
           const state = fog.getStateAtGrid(gx, gz);
-          if (state < 2) {
+          const combatRevealed = entity._combatRevealTimer && entity._combatRevealTimer > 0;
+          if (state < 2 && !combatRevealed) {
             // Not visible: only show enemy buildings in explored territory
             if (!(entity.isBuilding && state === 1)) {
               continue;

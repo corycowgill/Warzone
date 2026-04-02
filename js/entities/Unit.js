@@ -157,6 +157,11 @@ export class Unit extends Entity {
     this.damage = this.baseDamage;
     this.maxHealth = Math.round(this.baseMaxHP);
     this.health = Math.min(this.health + Math.round(this.baseMaxHP * bp.maxHP * rankDiff), this.maxHealth); // heal a bit on promote
+
+    // Ace rank: full heal on promotion
+    if (newRank >= 3) {
+      this.health = this.maxHealth;
+    }
     this.armor = this.baseArmor;
     this.speed = this.baseSpeed;
 
@@ -216,6 +221,22 @@ export class Unit extends Entity {
       star.position.x = startX + i * spacing;
       star.scale.y = 0.5; // flatten to diamond
       group.add(star);
+    }
+
+    // Add glow aura for Elite+ ranks
+    if (this.veterancyRank >= 2) {
+      const auraGeo = new THREE.RingGeometry(1.5, 2.0, 24);
+      const auraMat = new THREE.MeshBasicMaterial({
+        color: colorHex,
+        transparent: true,
+        opacity: 0.3,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      });
+      const aura = new THREE.Mesh(auraGeo, auraMat);
+      aura.rotation.x = -Math.PI / 2;
+      aura.position.y = -group.position.y + 0.3; // Ground level relative to group
+      group.add(aura);
     }
 
     group.position.y = 6.5; // above health bar
@@ -349,6 +370,11 @@ export class Unit extends Entity {
     // Tick attack cooldown (CombatSystem sets cooldown, we just count down)
     if (this.attackCooldown > 0) {
       this.attackCooldown -= deltaTime;
+    }
+
+    // Ace passive: faster attack rate (20% extra cooldown reduction)
+    if (this.veterancyRank >= 3 && this.attackCooldown > 0) {
+      this.attackCooldown -= deltaTime * 0.2;
     }
 
     // Rotate rank indicator to face camera (billboard)

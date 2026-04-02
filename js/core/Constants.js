@@ -149,16 +149,30 @@ export const NATIONS = {
 };
 
 export const DAMAGE_MODIFIERS = {
-  infantry: { infantry: 1.0, tank: 0.3, drone: 0.5, plane: 0.3, battleship: 0.1, carrier: 0.1, submarine: 0.1, building: 0.5 },
-  tank: { infantry: 1.5, tank: 1.0, drone: 0.3, plane: 0.2, battleship: 0.3, carrier: 0.3, submarine: 0.1, building: 1.5 },
-  drone: { infantry: 1.2, tank: 0.8, drone: 1.0, plane: 0.7, battleship: 0.5, carrier: 0.5, submarine: 0.8, building: 0.8 },
-  plane: { infantry: 1.5, tank: 1.5, drone: 1.3, plane: 1.0, battleship: 1.2, carrier: 1.2, submarine: 1.0, building: 1.5 },
-  battleship: { infantry: 1.5, tank: 1.2, drone: 0.5, plane: 0.3, battleship: 1.0, carrier: 1.0, submarine: 0.5, building: 2.0 },
-  carrier: { infantry: 0.5, tank: 0.3, drone: 0.8, plane: 0.8, battleship: 0.3, carrier: 0.3, submarine: 0.3, building: 0.3 },
-  submarine: { infantry: 0.1, tank: 0.1, drone: 0.3, plane: 0.1, battleship: 2.0, carrier: 2.0, submarine: 1.0, building: 0.5 },
+  // Ground triangle: Tank > Infantry (2.0x), Infantry > Drone (1.8x), Drone > Tank (1.5x)
+  infantry: { infantry: 1.0, tank: 0.4, drone: 1.8, plane: 0.3, battleship: 0.1, carrier: 0.1, submarine: 0.1, building: 0.5 },
+  tank: { infantry: 2.0, tank: 1.0, drone: 0.5, plane: 0.3, battleship: 0.3, carrier: 0.3, submarine: 0.1, building: 1.5 },
+  drone: { infantry: 0.8, tank: 1.5, drone: 1.0, plane: 0.5, battleship: 0.4, carrier: 0.4, submarine: 0.7, building: 0.7 },
+  // Air: Plane beats everything ground but weak to AA/drones
+  plane: { infantry: 1.5, tank: 1.8, drone: 0.7, plane: 1.0, battleship: 1.2, carrier: 1.2, submarine: 1.0, building: 1.5 },
+  // Naval triangle: Battleship > Submarine (1.5x), Submarine > Carrier (2.0x), Carrier > Battleship (1.5x)
+  battleship: { infantry: 1.5, tank: 1.2, drone: 0.3, plane: 0.2, battleship: 1.0, carrier: 0.6, submarine: 1.5, building: 2.0 },
+  carrier: { infantry: 0.5, tank: 0.3, drone: 0.8, plane: 0.8, battleship: 1.5, carrier: 1.0, submarine: 0.5, building: 0.3 },
+  submarine: { infantry: 0.1, tank: 0.1, drone: 0.3, plane: 0.1, battleship: 0.6, carrier: 2.0, submarine: 1.0, building: 0.5 },
   turret: { infantry: 1.5, tank: 1.0, drone: 0.3, plane: 0.2, battleship: 0.5, carrier: 0.5, submarine: 0.3, building: 0.5 },
   aaturret: { infantry: 0.3, tank: 0.2, drone: 2.0, plane: 2.0, battleship: 0.1, carrier: 0.1, submarine: 0.1, building: 0.2 },
   bunker: { infantry: 1.2, tank: 0.6, drone: 0.4, plane: 0.3, battleship: 0.3, carrier: 0.3, submarine: 0.2, building: 0.3 }
+};
+
+// Rock-Paper-Scissors counter lookup for UI tooltips
+export const UNIT_COUNTERS = {
+  infantry: { strong: ['drone'], weak: ['tank', 'plane'] },
+  tank: { strong: ['infantry', 'building'], weak: ['drone', 'plane'] },
+  drone: { strong: ['tank'], weak: ['infantry', 'aaturret'] },
+  plane: { strong: ['tank', 'infantry'], weak: ['drone', 'aaturret'] },
+  battleship: { strong: ['submarine', 'building'], weak: ['carrier', 'plane'] },
+  carrier: { strong: ['battleship'], weak: ['submarine'] },
+  submarine: { strong: ['carrier'], weak: ['battleship'] }
 };
 
 // ============================================================

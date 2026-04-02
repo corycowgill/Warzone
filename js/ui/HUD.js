@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { UNIT_STATS, BUILDING_STATS, TECH_TREE, NATIONS, GAME_CONFIG } from '../core/Constants.js';
+import { UNIT_STATS, BUILDING_STATS, TECH_TREE, NATIONS, GAME_CONFIG, UNIT_COUNTERS, VETERANCY } from '../core/Constants.js';
 
 export class HUD {
   constructor(game) {
@@ -411,6 +411,19 @@ export class HUD {
           </div>
         `;
       }
+
+      // Add counter matchup info for units
+      if (UNIT_COUNTERS[entity.type]) {
+        const counters = UNIT_COUNTERS[entity.type];
+        const strongList = counters.strong.map(t => this.formatName(t)).join(', ');
+        const weakList = counters.weak.map(t => this.formatName(t)).join(', ');
+        statsHtml += `
+          <div style="margin-top:6px;font-size:11px;display:flex;gap:12px;">
+            <span><span style="color:#00ff44;">Strong vs:</span> <span style="color:#88ff88;">${strongList}</span></span>
+            <span><span style="color:#ff4444;">Weak vs:</span> <span style="color:#ff8888;">${weakList}</span></span>
+          </div>
+        `;
+      }
     }
 
     if (entity.isBuilding) {
@@ -440,7 +453,7 @@ export class HUD {
 
     this.selectionInfo.innerHTML = `
       <div style="display:flex;align-items:center;gap:10px;">
-        <div style="font-weight:bold;font-size:14px;color:#fff;">${this.formatName(entity.type)}</div>
+        <div style="font-weight:bold;font-size:14px;color:#fff;">${this.formatName(entity.type)}${entity.isUnit && entity.veterancyRank > 0 ? ` <span style="color:${VETERANCY.ranks[entity.veterancyRank].color};font-size:12px;">${VETERANCY.ranks[entity.veterancyRank].symbol} ${VETERANCY.ranks[entity.veterancyRank].name}</span>` : ''}</div>
         <div style="font-size:11px;color:#888;">${entity.domain || ''}</div>
       </div>
       <div style="margin-top:4px;">

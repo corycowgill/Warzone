@@ -5,6 +5,8 @@ import { Projectile } from '../entities/Projectile.js';
 export class CombatSystem {
   constructor(game) {
     this.game = game;
+    this.combatIntensity = 0;
+    this._intensityDecay = 2;
   }
 
   update(delta) {
@@ -55,6 +57,9 @@ export class CombatSystem {
         entity.updateHealthBar(camera);
       }
     }
+
+    // Decay combat intensity
+    this.combatIntensity = Math.max(0, this.combatIntensity - this._intensityDecay * delta);
   }
 
   performAttack(attacker, defender) {
@@ -109,6 +114,20 @@ export class CombatSystem {
     if (this.game.soundManager) {
       this.game.soundManager.play('attack', { unitType: attacker.type });
       this.game.soundManager.notifyCombat();
+    }
+
+    // Track combat intensity
+    this.combatIntensity = Math.min(10, this.combatIntensity + 0.5);
+
+    // Camera shake on heavy attacks
+    if (this.game.cameraController) {
+      const shakeAmount = finalDmg > 30 ? 0.5 : finalDmg > 15 ? 0.2 : 0.05;
+      this.game.cameraController.shake(shakeAmount);
+    }
+
+    // Red vignette when player units take heavy hits
+    if (defender.team === 'player' && finalDmg > 20 && this.game.effectsManager) {
+      this.game.effectsManager.createDamageVignette();
     }
 
     // Emit combat event
@@ -174,6 +193,17 @@ export class CombatSystem {
       this.game.soundManager.play('attack');
     }
 
+    // Camera shake on turret attacks
+    if (this.game.cameraController) {
+      const shakeAmount = finalDmg > 30 ? 0.5 : finalDmg > 15 ? 0.2 : 0.05;
+      this.game.cameraController.shake(shakeAmount);
+    }
+
+    // Red vignette when player units take heavy turret hits
+    if (defender.team === 'player' && finalDmg > 20 && this.game.effectsManager) {
+      this.game.effectsManager.createDamageVignette();
+    }
+
     this.game.eventBus.emit('combat:attack', {
       attacker: turret,
       defender,
@@ -230,6 +260,7 @@ export class CombatSystem {
     }
     if (this.game.effectsManager) this.game.effectsManager.createExplosion(targetPos);
     if (this.game.soundManager) this.game.soundManager.play('explosion');
+    if (this.game.cameraController) this.game.cameraController.shake(1.0);
     this.game.eventBus.emit('ability:used', { unit, ability: 'grenade', target: targetPos });
     return true;
   }
@@ -287,6 +318,7 @@ export class CombatSystem {
       }
     }
     if (this.game.soundManager) this.game.soundManager.play('explosion');
+    if (this.game.cameraController) this.game.cameraController.shake(1.0);
     this.game.eventBus.emit('ability:used', { unit, ability: 'bombing_run', target: targetPos });
     return true;
   }
@@ -314,6 +346,7 @@ export class CombatSystem {
         }
         if (this.game.effectsManager) this.game.effectsManager.createExplosion(impactPos);
         if (this.game.soundManager) this.game.soundManager.play('explosion');
+        if (this.game.cameraController) this.game.cameraController.shake(1.0);
       }, salvo * 800);
     }
     this.game.eventBus.emit('ability:used', { unit, ability: 'barrage', target: targetPos });

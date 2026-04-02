@@ -82,8 +82,11 @@ export class FogOfWar {
 
   /**
    * Called each frame during PLAYING state.
+   * @param {number} [dt] - delta time in seconds (optional, defaults to 0.016)
    */
-  update() {
+  update(dt) {
+    const delta = dt || 0.016;
+
     // Step 1: Demote all currently visible (2) cells to explored (1)
     const grid = this.grid;
     const len = grid.length;
@@ -132,11 +135,34 @@ export class FogOfWar {
       }
     }
 
+    // Step 2b: Firing position reveal - enemies that recently attacked become briefly visible
+    this.updateCombatReveals(delta);
+
     // Step 3: Update the fog texture
     this.updateTexture();
 
     // Step 4: Show/hide enemy entities based on visibility
     this.updateEntityVisibility();
+  }
+
+  /**
+   * Reveal enemies that are currently attacking (muzzle flash / firing visibility).
+   * Gives a 2-second reveal window so players can react to being shot at from fog.
+   */
+  updateCombatReveals(delta) {
+    for (const entity of this.game.entities) {
+      if (entity.team === this.team || !entity.alive) continue;
+
+      // Detect that the entity just fired (attackCooldown was just reset)
+      if (entity.attackCooldown > 0 && entity.attackCooldown < 0.5) {
+        entity._combatRevealTimer = 2.0;
+      }
+
+      // Tick down reveal timer
+      if (entity._combatRevealTimer && entity._combatRevealTimer > 0) {
+        entity._combatRevealTimer -= delta;
+      }
+    }
   }
 
   updateTexture() {
@@ -180,6 +206,8 @@ export class FogOfWar {
    * Hide enemy entities that are not in visible cells.
    * Show enemy entities that ARE in visible cells.
    * Buildings in explored (but not visible) cells remain visible (RTS convention).
+   * Units in explored-but-not-visible cells show as semi-transparent ghosts at last-known position.
+   * Units with active combat reveal timers are shown regardless of fog state.
    */
   updateEntityVisibility() {
     const enemyTeam = this.team === 'player' ? 'enemy' : 'player';
@@ -195,20 +223,77 @@ export class FogOfWar {
       const cz = Math.max(0, Math.min(this.mapSize - 1, gz));
       const state = this.grid[cz * this.mapSize + cx];
 
-      if (state === 2) {
-        // Visible - show
-        if (entity.mesh) entity.mesh.visible = true;
+      // Check for combat reveal (firing from fog)
+      const combatRevealed = entity._combatRevealTimer && entity._combatRevealTimer > 0;
+
+      if (state === 2 || combatRevealed) {
+        // Currently visible or combat-revealed - show at full opacity
+        if (entity.mesh) {
+          entity.mesh.visible = true;
+          this._restoreEntityOpacity(entity);
+        }
+        // Record last-seen position while visible
+        entity._lastSeenPosition = pos.clone();
+        entity._lastSeenTime = Date.now();
         this._hiddenEnemies.delete(entity);
       } else if (state === 1 && entity.isBuilding) {
         // Explored, building - show (buildings are remembered)
-        if (entity.mesh) entity.mesh.visible = true;
+        if (entity.mesh) {
+          entity.mesh.visible = true;
+          // Dim buildings in explored-but-not-visible areas
+          this._setEntityOpacity(entity, 0.5);
+        }
+        entity._lastSeenPosition = pos.clone();
+        entity._lastSeenTime = Date.now();
+        this._hiddenEnemies.delete(entity);
+      } else if (state === 1 && entity._lastSeenPosition && entity.isUnit) {
+        // Explored but not visible - show ghost at last-known position
+        if (entity.mesh) {
+          entity.mesh.visible = true;
+          this._setEntityOpacity(entity, 0.3);
+        }
         this._hiddenEnemies.delete(entity);
       } else {
-        // Hidden
+        // Unexplored or no last-seen data - fully hidden
         if (entity.mesh) entity.mesh.visible = false;
         this._hiddenEnemies.add(entity);
       }
     }
+  }
+
+  /**
+   * Set opacity on all mesh materials of an entity.
+   */
+  _setEntityOpacity(entity, opacity) {
+    if (!entity.mesh) return;
+    entity.mesh.traverse(child => {
+      if (child.isMesh && child.material) {
+        // Store original opacity if not yet stored
+        if (child.material._fogOriginalOpacity === undefined) {
+          child.material._fogOriginalOpacity = child.material.opacity;
+          child.material._fogOriginalTransparent = child.material.transparent;
+        }
+        child.material.opacity = opacity;
+        child.material.transparent = true;
+      }
+    });
+  }
+
+  /**
+   * Restore original opacity on all mesh materials of an entity.
+   */
+  _restoreEntityOpacity(entity) {
+    if (!entity.mesh) return;
+    entity.mesh.traverse(child => {
+      if (child.isMesh && child.material) {
+        if (child.material._fogOriginalOpacity !== undefined) {
+          child.material.opacity = child.material._fogOriginalOpacity;
+          child.material.transparent = child.material._fogOriginalTransparent;
+          delete child.material._fogOriginalOpacity;
+          delete child.material._fogOriginalTransparent;
+        }
+      }
+    });
   }
 
   /**
@@ -251,10 +336,18 @@ export class FogOfWar {
     if (this.fogTexture) {
       this.fogTexture.dispose();
     }
-    // Restore visibility of all hidden enemies
+    // Restore visibility and opacity of all hidden enemies
     for (const entity of this._hiddenEnemies) {
       if (entity.mesh) entity.mesh.visible = true;
+      this._restoreEntityOpacity(entity);
     }
     this._hiddenEnemies.clear();
+    // Also restore opacity for any entity that may have ghost rendering
+    if (this.game.entities) {
+      for (const entity of this.game.entities) {
+        this._restoreEntityOpacity(entity);
+        if (entity.mesh) entity.mesh.visible = true;
+      }
+    }
   }
 }

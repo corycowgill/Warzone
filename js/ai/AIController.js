@@ -10,6 +10,30 @@ const BUILD_ORDERS = {
   balanced: ['barracks', 'resourcedepot', 'warfactory', 'airfield', 'resourcedepot', 'shipyard']
 };
 
+const NATION_PERSONALITIES = {
+  japan: {
+    preferredStrategy: 'air',
+    unitBias: { drone: 2.0, plane: 1.5, infantry: 0.8 },
+    aggressionMultiplier: 1.3,
+    earlyHarass: true,
+    gracePeriodReduction: 20
+  },
+  germany: {
+    preferredStrategy: 'rush',
+    unitBias: { tank: 2.0, infantry: 1.0 },
+    aggressionMultiplier: 1.2,
+    earlyHarass: false,
+    gracePeriodReduction: 10
+  },
+  austria: {
+    preferredStrategy: 'boom',
+    unitBias: { infantry: 2.0, tank: 0.8 },
+    aggressionMultiplier: 1.0,
+    earlyHarass: false,
+    gracePeriodReduction: 0
+  }
+};
+
 export class AIController {
   constructor(game, team = 'enemy', difficulty = 'normal') {
     this.game = game;
@@ -53,6 +77,19 @@ export class AIController {
 
     // Choose initial strategy
     this.chooseStrategy();
+
+    // Apply nation personality
+    const nationKey = this.game.teams[this.team]?.nation;
+    this.personality = NATION_PERSONALITIES[nationKey] || null;
+    if (this.personality) {
+      // Override strategy with nation preference
+      if (this.personality.preferredStrategy && !this.config.buildOrderVariety) {
+        this.strategy = this.personality.preferredStrategy;
+        this.chosenBuildOrder = [...BUILD_ORDERS[this.strategy]];
+      }
+      // Reduce grace period for aggressive nations
+      this.gracePeriod = Math.max(30, this.gracePeriod - (this.personality.gracePeriodReduction || 0));
+    }
   }
 
   chooseStrategy() {
@@ -184,6 +221,23 @@ export class AIController {
     this.buildNextStructure();
     this.buildDefenses();
     this.produceUnits();
+
+    // Early harassment for aggressive nations
+    if (this.personality && this.personality.earlyHarass && this.gameTime > 60 && this.gameTime < this.gracePeriod) {
+      const harassUnits = this.game.getUnits(this.team).filter(u =>
+        u.type === 'drone' && !u.attackTarget && !u.moveTarget
+      );
+      if (harassUnits.length >= 2) {
+        const enemyBuildings = this.game.getBuildings(this.enemyTeam);
+        if (enemyBuildings.length > 0) {
+          const target = enemyBuildings.find(b => b.type === 'resourcedepot') || enemyBuildings[0];
+          if (target) {
+            this.sendUnitsToTarget(harassUnits.slice(0, 2), target.getPosition().clone());
+          }
+        }
+      }
+    }
+
     this.considerAttack();
   }
 
@@ -363,6 +417,18 @@ export class AIController {
         unitType = this.chooseNavalUnit(myUnits);
       }
 
+      // Apply nation personality unit bias
+      if (this.personality && this.personality.unitBias && unitType) {
+        const bias = this.personality.unitBias;
+        // If the building can produce a biased unit, consider switching
+        for (const [biasType, weight] of Object.entries(bias)) {
+          if (weight > 1.0 && building.produces.includes(biasType) && Math.random() < (weight - 1.0)) {
+            unitType = biasType;
+            break;
+          }
+        }
+      }
+
       // Counter-play: if we know enemy has lots of air, prioritize AA-friendly units
       if (this.config.countersPlayer && unitType) {
         unitType = this.adjustForCounter(unitType, building, myUnits);
@@ -422,6 +488,11 @@ export class AIController {
       case 'turtle': attackThreshold = Math.floor(14 * threshold); break;
       case 'air': attackThreshold = Math.floor(8 * threshold); break;
       default: attackThreshold = Math.floor(10 * threshold); break;
+    }
+
+    // Apply personality aggression
+    if (this.personality && this.personality.aggressionMultiplier) {
+      attackThreshold = Math.floor(attackThreshold / this.personality.aggressionMultiplier);
     }
 
     // Minimum units required scales with wave count (first wave needs more)

@@ -22,6 +22,10 @@ export class CameraController {
     this.isPanning = false;
     this.lastMouse = { x: 0, y: 0 };
 
+    // Camera shake
+    this._shakeIntensity = 0;
+    this._shakeDecay = 5;
+
     // Map bounds (256x256 world)
     this.bounds = { minX: 0, maxX: 256, minZ: 0, maxZ: 256 };
 
@@ -95,6 +99,19 @@ export class CameraController {
     this.target.z = Math.max(this.bounds.minZ, Math.min(this.bounds.maxZ, this.target.z));
 
     this.updateCamera();
+
+    // Apply camera shake
+    if (this._shakeIntensity > 0.01) {
+      const sx = (Math.random() - 0.5) * this._shakeIntensity;
+      const sy = (Math.random() - 0.5) * this._shakeIntensity * 0.5;
+      this.camera.position.x += sx;
+      this.camera.position.y += sy;
+      this._shakeIntensity *= Math.max(0, 1 - this._shakeDecay * delta);
+    }
+  }
+
+  shake(intensity) {
+    this._shakeIntensity = Math.max(this._shakeIntensity, intensity);
   }
 
   updateCamera() {

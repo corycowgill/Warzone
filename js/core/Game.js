@@ -137,6 +137,26 @@ export class Game {
       // Initialize Fog of War for the player team
       this.fogOfWar = new FogOfWar(this, 'player');
 
+      // Listen for unit promotions
+      this.eventBus.on('unit:promoted', (data) => {
+        if (data.unit.team === 'player') {
+          const rank = data.rank;
+          if (this.uiManager && this.uiManager.hud) {
+            this.uiManager.hud.showNotification(
+              `${this.capitalize(data.unit.type)} promoted to ${rank.name}! ${rank.symbol}`,
+              rank.color
+            );
+          }
+          if (this.soundManager) {
+            this.soundManager.play('produce'); // rank-up sound
+          }
+          // Camera shake for Ace promotion
+          if (data.rankIndex >= 3 && this.cameraController) {
+            this.cameraController.shake && this.cameraController.shake(0.3);
+          }
+        }
+      });
+
       this.setState('PLAYING');
     } catch (err) {
       console.error('Failed to start game:', err);
@@ -285,7 +305,7 @@ export class Game {
     }
 
     if (this.fogOfWar) {
-      this.fogOfWar.update();
+      this.fogOfWar.update(delta);
     }
 
     if (this.aiController) {
@@ -376,6 +396,10 @@ export class Game {
     }
     this.selectionManager.clearSelection();
     this.eventBus.emit('turn:switched', { team: this.activeTeam });
+  }
+
+  capitalize(str) {
+    return str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
   }
 
   restart() {
