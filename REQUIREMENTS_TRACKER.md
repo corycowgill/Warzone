@@ -1,45 +1,33 @@
 # Warzone RTS - Requirements Tracker
 
-## Cycle 1 - Completed
+## Cycle 1 - Completed (10 features)
+GD-001 through GD-010: Formations, rally points, damage numbers, pop cap, minimap, abilities UI, game timer, AI abilities, audio variation, double-click select.
 
-| ID | Source | Priority | Status | Description |
-|----|--------|----------|--------|-------------|
-| GD-001 | Game Designer | 1 | DONE | Unit Formation Movement and Smart Grouping |
-| GD-002 | Game Designer | 2 | DONE | Rally Point Visualization and Building Placement Ghost Preview |
-| GD-003 | Game Designer | 3 | DONE | Damage Numbers and Hit Feedback |
-| GD-004 | Game Designer | 4 | DONE | Unit Pop Cap Display and Supply System Feedback |
-| GD-005 | Game Designer | 5 | DONE | Minimap Interaction |
-| GD-006 | Game Designer | 6 | DONE | Ability Hotkey UI and Cooldown Visualization |
-| GD-007 | Game Designer | 7 | DONE | Victory/Defeat Conditions Expansion and Game Timer |
-| GD-008 | Game Designer | 8 | DONE | AI Use of Abilities and Retreat/Heal Behavior |
-| GD-009 | Game Designer | 9 | DONE | Audio Variation and Spatial Awareness Cues |
-| GD-010 | Game Designer | 10 | DONE | Double-Click to Select All Units of Same Type |
+## Cycle 2 - Completed (5 features)
+GD-012: Combat drama layer | GD-013: Veterancy visuals | GD-014: Unit counter system | GD-017: Fog of war improvements | GD-020: AI nation personalities
 
-## Cycle 2 - Completed
-
-| ID | Source | Priority | Status | Description |
-|----|--------|----------|--------|-------------|
-| GD-012 | Game Designer | HIGH | DONE | Combat Drama Layer - camera shake, vignette effects |
-| GD-013 | Game Designer | HIGH | DONE | Veterancy Visual Prominence + Ace Abilities |
-| GD-014 | Game Designer | CRITICAL | DONE | Rock-Paper-Scissors Unit Counter System |
-| GD-017 | Game Designer | MEDIUM | DONE | Fog of War Visual Improvements |
-| GD-020 | Game Designer | LOW-MED | DONE | AI Nation Personalities |
-
-## Cycle 2 - Deferred to Cycle 3
-
-| ID | Source | Priority | Status | Description |
-|----|--------|----------|--------|-------------|
-| GD-011 | Game Designer | HIGH | PENDING | Production Queue Cost/Time Preview |
-| GD-015 | Game Designer | MEDIUM | PENDING | Destructible Environment and Supply Caches |
-| GD-016 | Game Designer | MEDIUM | PENDING | Formation Presets (wedge, circle) |
-| GD-018 | Game Designer | MEDIUM | PENDING | Building Specialization and Upgrades |
-| GD-019 | Game Designer | LOW-MED | PENDING | Dynamic Map Events System |
+## Cycle 3 - Completed (4 features)
+GD-021: Production queue preview | GD-023: Formation presets (5 types) | GD-024: Building tier upgrades | GD-030: Tech tree visualization
 
 ## QA Fixes Applied
+- Cycle 1: 6 fixes (GAME_CONFIG import, minimap Vector3, ability mode reset, double-click state, entity flash null check, production panel alive check)
+- Cycle 2: 4 fixes (aura position, event listener leak, fog ghost position, ace attack balance)
 
-- QA-001: Missing GAME_CONFIG import in HUD.js (CRITICAL)
-- QA-002: Minimap right-click type mismatch (CRITICAL)
-- QA-003: Ability target mode not reset on null click (HIGH)
-- QA-004: Double-click selection state issues (HIGH)
-- QA-005: Entity hit flash null check (MEDIUM)
-- QA-006: Production panel alive check (MEDIUM)
+## Pending / Deferred
+| ID | Priority | Status | Description |
+|----|----------|--------|-------------|
+| GD-011 | HIGH | DEFERRED | Production Queue Cost/Time Preview (partially done via GD-021) |
+| GD-015 | MEDIUM | PENDING | Destructible Environment and Supply Caches |
+| GD-016 | MEDIUM | DONE (as GD-023) | Formation Presets |
+| GD-018 | MEDIUM | DONE (as GD-024) | Building Specialization |
+| GD-019 | LOW-MED | PENDING | Dynamic Map Events System |
+| GD-022 | HIGH | PENDING | Destructible Environment & Supply Caches |
+| GD-025 | MEDIUM | PENDING | Dynamic Map Events |
+| GD-026 | MEDIUM | PENDING | Spectator/Observer Mode |
+| GD-027 | MEDIUM | PENDING | Unit Status Badges |
+| GD-028 | MEDIUM | PENDING | Smart Control Group Auto-Refill |
+| GD-029 | MEDIUM | PENDING | Last Seen Ghost Overlay (partially done via GD-017) |
+
+## Total Features Implemented: 19
+## Total QA Fixes: 10
+## Git Commits: 6
