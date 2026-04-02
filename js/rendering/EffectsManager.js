@@ -40,13 +40,19 @@ export class EffectsManager {
     return texture;
   }
 
-  // GD-129: Get a sprite from pool (or create one)
+  // GD-129: Get a sprite from pool (or create one, up to max 500)
   _getPooledSprite(texture, color, size) {
     let sprite = this._spritePool.find(s => !s.visible);
     if (!sprite) {
-      const mat = new THREE.SpriteMaterial({ transparent: true, opacity: 1, depthWrite: false });
-      sprite = new THREE.Sprite(mat);
-      this._spritePool.push(sprite);
+      if (this._spritePool.length >= 500) {
+        // Pool at max capacity - reuse oldest visible sprite
+        sprite = this._spritePool[0];
+        if (sprite.parent) sprite.parent.remove(sprite);
+      } else {
+        const mat = new THREE.SpriteMaterial({ transparent: true, opacity: 1, depthWrite: false });
+        sprite = new THREE.Sprite(mat);
+        this._spritePool.push(sprite);
+      }
     }
     sprite.material.map = texture;
     sprite.material.color.set(color || 0xffffff);

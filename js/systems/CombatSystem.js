@@ -568,7 +568,7 @@ export class CombatSystem {
     unit.abilityCooldown = ab.cooldown;
     const enemyTeam = unit.team === 'player' ? 'enemy' : 'player';
     for (let salvo = 0; salvo < ab.salvos; salvo++) {
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         if (!unit.alive || this.game.state !== 'PLAYING') return;
         const offset = new THREE.Vector3((Math.random() - 0.5) * 4, 0, (Math.random() - 0.5) * 4);
         const impactPos = targetPos.clone().add(offset);
@@ -587,6 +587,7 @@ export class CombatSystem {
         if (this.game.soundManager) this.game.soundManager.play('explosion');
         if (this.game.cameraController) this.game.cameraController.shake(1.0);
       }, salvo * 800);
+      if (this.game._pendingTimeouts) this.game._pendingTimeouts.push(timeoutId);
     }
     this.game.eventBus.emit('ability:used', { unit, ability: 'barrage', target: targetPos });
     return true;

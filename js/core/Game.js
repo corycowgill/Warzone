@@ -1106,6 +1106,14 @@ export class Game {
           this._commanderState[entity.team] = { respawnTimer: COMMANDER_CONFIG.respawnCooldown };
         }
 
+        // GD-133: Clean up shadow sprite before removing entity
+        if (entity._shadow) {
+          this.sceneManager.scene.remove(entity._shadow);
+          entity._shadow.geometry.dispose();
+          entity._shadow.material.dispose();
+          entity._shadow = null;
+        }
+
         // GD-076: Unit corpses for land units (lay flat and fade out)
         if (entity.isUnit && entity.domain === 'land' && entity.mesh) {
           this._createCorpse(entity);
@@ -1823,6 +1831,13 @@ export class Game {
     // Clean up
     this.entities.forEach(e => {
       if (e.mesh) this.sceneManager.scene.remove(e.mesh);
+      // GD-133: Clean up shadow sprites on restart
+      if (e._shadow) {
+        this.sceneManager.scene.remove(e._shadow);
+        e._shadow.geometry.dispose();
+        e._shadow.material.dispose();
+        e._shadow = null;
+      }
     });
     this.projectiles.forEach(p => {
       if (p.mesh) this.sceneManager.scene.remove(p.mesh);
@@ -1983,6 +1998,27 @@ export class Game {
       }
       this.resourceNodes = [];
     }
+    // Clean up EffectsManager active effects and pooled sprites
+    if (this.effectsManager) {
+      for (const effect of this.effectsManager.activeEffects) {
+        if (effect.particles) {
+          for (const p of effect.particles) {
+            if (p.userData && p.userData.isPooled) {
+              this.effectsManager._returnToPool(p);
+            }
+          }
+        }
+        if (effect.group) this.sceneManager.scene.remove(effect.group);
+      }
+      this.effectsManager.activeEffects = [];
+      // Return all pooled sprites
+      for (const sprite of this.effectsManager._spritePool) {
+        if (sprite.parent) sprite.parent.remove(sprite);
+        sprite.visible = false;
+      }
+      this.effectsManager = null;
+    }
+
     // Clean up weather system
     if (this.weatherSystem && this.weatherSystem.dispose) {
       this.weatherSystem.dispose();
@@ -2007,6 +2043,20 @@ export class Game {
     // Clean up nation ability button
     const abilityBtn = document.getElementById('nation-ability-btn');
     if (abilityBtn) abilityBtn.style.display = 'none';
+
+    // GD-139: Clean up auto-resolve button on restart
+    if (this.uiManager && this.uiManager.hud && this.uiManager.hud._autoResolveBtn) {
+      this.uiManager.hud._autoResolveBtn.style.display = 'none';
+    }
+
+    // GD-128: Reset exchange cooldown in HUD on restart
+    if (this.uiManager && this.uiManager.hud) {
+      this.uiManager.hud._exchangeCooldown = 0;
+    }
+
+    // GD-139: Remove any lingering victory overlay
+    const victoryOverlays = document.querySelectorAll('.victory-overlay');
+    victoryOverlays.forEach(el => el.parentElement?.removeChild(el));
 
     this.setState('MENU');
     this.uiManager.showMainMenu();

@@ -471,9 +471,13 @@ export class HUD {
         this.handleProductionHotkey(e);
       }
 
-      // R key to open research panel for selected building
+      // R key to open research panel for selected building (only when no units selected to avoid conflict with Retreat)
       if ((e.key === 'r' || e.key === 'R') && this.game.state === 'PLAYING') {
-        this.toggleResearchPanel();
+        const selected = this.game.selectionManager?.getSelected() || [];
+        const hasUnits = selected.some(e => e.isUnit);
+        if (!hasUnits) {
+          this.toggleResearchPanel();
+        }
       }
     });
   }

@@ -590,6 +590,7 @@ export class UIManager {
   // GD-139: Dramatic text overlay before game over screen
   _showVictoryOverlay(won, callback) {
     const overlay = document.createElement('div');
+    overlay.className = 'victory-overlay';
     overlay.style.cssText = `
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
@@ -654,10 +655,11 @@ export class UIManager {
     // Remove overlay and show game over after delay
     this.game._pendingTimeouts.push(setTimeout(() => {
       overlay.style.opacity = '0';
-      setTimeout(() => {
+      const innerId = setTimeout(() => {
         if (overlay.parentElement) overlay.parentElement.removeChild(overlay);
         callback();
       }, 500);
+      if (this.game && this.game._pendingTimeouts) this.game._pendingTimeouts.push(innerId);
     }, 2500));
   }
 }
