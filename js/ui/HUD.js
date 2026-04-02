@@ -375,7 +375,36 @@ export class HUD {
       const totalSeconds = Math.floor(this.game.gameElapsed);
       const minutes = Math.floor(totalSeconds / 60);
       const seconds = totalSeconds % 60;
-      this.gameTimerDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      let timerText = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+      // Timed mode: show countdown
+      if (this.game.gameMode === 'timed') {
+        const remaining = Math.max(0, 600 - totalSeconds);
+        const rm = Math.floor(remaining / 60);
+        const rs = remaining % 60;
+        timerText = `${rm}:${rs.toString().padStart(2, '0')} left`;
+      }
+
+      // King of the Hill: show control progress
+      if (this.game.gameMode === 'king_of_hill' && this.game._hillControl) {
+        const pc = Math.floor(this.game._hillControl.player);
+        const ec = Math.floor(this.game._hillControl.enemy);
+        timerText += ` | Hill: P${pc}s E${ec}s`;
+      }
+
+      this.gameTimerDisplay.textContent = timerText;
+    }
+
+    // Spectator mode: show enemy resources too
+    if (this.game.mode === 'SPECTATE') {
+      const enemySP = Math.floor(this.game.teams.enemy.sp);
+      const enemyUnits = this.game.getUnits('enemy').length;
+      if (this.spDisplay) {
+        this.spDisplay.textContent = `${sp} vs ${enemySP}`;
+      }
+      if (this.unitCountDisplay) {
+        this.unitCountDisplay.textContent = `${unitCount} vs ${enemyUnits}`;
+      }
     }
   }
 

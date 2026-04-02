@@ -19,6 +19,7 @@ export class UIManager {
     this.selectedEnemyNation = null;
     this.selectedDifficulty = 'normal';
     this.selectedMap = 'continental';
+    this.selectedGameMode = 'annihilation';
 
     this.setupEventListeners();
   }
@@ -178,6 +179,32 @@ export class UIManager {
       });
     });
 
+    // Game mode selection
+    const gamemodeDescs = {
+      annihilation: 'Destroy all enemy buildings and units to win.',
+      timed: '10-minute match. Most units + buildings remaining wins.',
+      king_of_hill: 'Control the center of the map for 120 seconds to win.'
+    };
+    document.querySelectorAll('.gamemode-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const mode = btn.dataset.gamemode;
+        if (!mode) return;
+        this.selectedGameMode = mode;
+        document.querySelectorAll('.gamemode-btn').forEach(b => {
+          b.classList.remove('selected');
+          b.style.background = 'rgba(22,33,62,0.6)';
+          b.style.borderColor = 'rgba(255,255,255,0.08)';
+          b.style.boxShadow = 'none';
+        });
+        btn.classList.add('selected');
+        btn.style.background = 'rgba(0,255,65,0.1)';
+        btn.style.borderColor = '#00ff41';
+        btn.style.boxShadow = '0 0 10px rgba(0,255,65,0.2)';
+        const descEl = document.getElementById('gamemode-desc');
+        if (descEl) descEl.textContent = gamemodeDescs[mode] || '';
+      });
+    });
+
     // Game over buttons
     document.getElementById('btn-play-again')?.addEventListener('click', () => {
       this.game.restart();
@@ -289,7 +316,8 @@ export class UIManager {
       playerNation: this.selectedPlayerNation,
       enemyNation: enemyNation,
       difficulty: this.selectedDifficulty,
-      mapTemplate: this.selectedMap
+      mapTemplate: this.selectedMap,
+      gameMode: this.selectedGameMode
     });
   }
 
@@ -362,6 +390,7 @@ export class UIManager {
     this.selectedEnemyNation = null;
     this.selectedDifficulty = 'normal';
     this.selectedMap = 'continental';
+    this.selectedGameMode = 'annihilation';
     document.querySelectorAll('.nation-card').forEach(c => c.classList.remove('selected'));
     const startBtn = document.getElementById('btn-start-game');
     if (startBtn) startBtn.disabled = true;

@@ -20,7 +20,11 @@ export class Minimap {
     this.terrainImage = null;
     this.terrainRendered = false;
 
+    // Combat ping markers
+    this._pings = [];
+
     this.setupListeners();
+    this.setupCombatPings();
   }
 
   setupListeners() {
@@ -35,6 +39,21 @@ export class Minimap {
     });
     // Prevent browser context menu on minimap
     this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+  }
+
+  setupCombatPings() {
+    // Listen for combat to create minimap pings
+    this.game.eventBus.on('combat:kill', (data) => {
+      if (data.defender) {
+        const pos = data.defender.getPosition();
+        this._pings.push({
+          x: pos.x,
+          z: pos.z,
+          time: 2.0, // seconds to display
+          color: data.defender.team === 'player' ? '#ff4444' : '#44ff44'
+        });
+      }
+    });
   }
 
   minimapToWorld(e) {
@@ -281,6 +300,26 @@ export class Minimap {
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 1.5;
       ctx.strokeRect(topLeft.x, topLeft.y, rectW, rectH);
+    }
+
+    // Draw combat pings
+    for (let i = this._pings.length - 1; i >= 0; i--) {
+      const ping = this._pings[i];
+      ping.time -= 0.016; // approximate frame time
+      if (ping.time <= 0) {
+        this._pings.splice(i, 1);
+        continue;
+      }
+      const mp = this.worldToMinimap(ping.x, ping.z);
+      const alpha = Math.min(1, ping.time);
+      const radius = 3 + (2 - ping.time) * 3; // expanding ring
+      ctx.strokeStyle = ping.color;
+      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      ctx.arc(mp.x, mp.y, radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1.0;
     }
 
     // Border

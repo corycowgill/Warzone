@@ -96,8 +96,9 @@ export class Game {
 
   async startGame(config) {
     try {
-      // config = { mode, playerNation, enemyNation, difficulty, mapTemplate, mapSeed }
+      // config = { mode, playerNation, enemyNation, difficulty, mapTemplate, mapSeed, gameMode }
       this.mode = config.mode;
+      this.gameMode = config.gameMode || 'annihilation'; // annihilation, timed, king_of_hill
       this.teams.player.nation = config.playerNation;
       this.teams.enemy.nation = config.enemyNation;
       this.teams.player.sp = GAME_CONFIG.startingSP;
@@ -242,6 +243,21 @@ export class Game {
 
     // Place supply caches (neutral resource pickups)
     this.placeSupplyCaches();
+
+    // King of the Hill: place control point marker at map center
+    if (this.gameMode === 'king_of_hill') {
+      this._hillControl = { player: 0, enemy: 0 };
+      const center = mapSize / 2;
+      const ringGeo = new THREE.RingGeometry(28, 30, 48);
+      const ringMat = new THREE.MeshBasicMaterial({
+        color: 0xffcc00, side: THREE.DoubleSide, transparent: true, opacity: 0.4
+      });
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.set(center, 0.3, center);
+      this.sceneManager.scene.add(ring);
+      this._hillRing = ring;
+    }
   }
 
   placeSupplyCaches() {
@@ -424,6 +440,7 @@ export class Game {
   }
 
   update(delta) {
+    this._lastDelta = delta;
     // Update entities
     for (let i = this.entities.length - 1; i >= 0; i--) {
       const entity = this.entities[i];
@@ -503,31 +520,72 @@ export class Game {
   }
 
   checkGameOver() {
-    const playerHQ = this.getHQ('player');
-    const enemyHQ = this.getHQ('enemy');
     let won = null;
 
-    if (!playerHQ) {
-      won = false;
-    } else if (!enemyHQ) {
-      won = true;
-    } else {
-      // Total annihilation check: if enemy has no units AND no production buildings
-      const enemyUnits = this.getUnits('enemy');
-      const enemyBuildings = this.getBuildings('enemy').filter(b =>
-        b.produces && b.produces.length > 0
-      );
-      if (enemyUnits.length === 0 && enemyBuildings.length === 0) {
-        won = true;
+    if (this.gameMode === 'timed') {
+      // Timed mode: 10 minutes, most military power wins
+      if (this.gameElapsed >= 600) {
+        const playerScore = this.getUnits('player').length + this.getBuildings('player').length * 2;
+        const enemyScore = this.getUnits('enemy').length + this.getBuildings('enemy').length * 2;
+        won = playerScore >= enemyScore; // tie goes to player
+      }
+    } else if (this.gameMode === 'king_of_hill') {
+      // King of the Hill: control center for 120s
+      const mapCenter = (GAME_CONFIG.mapSize * GAME_CONFIG.worldScale) / 2;
+      const controlRadius = 30;
+      const playerNearCenter = this.getUnits('player').filter(u => {
+        const p = u.getPosition();
+        const dx = p.x - mapCenter;
+        const dz = p.z - mapCenter;
+        return dx * dx + dz * dz < controlRadius * controlRadius;
+      }).length;
+      const enemyNearCenter = this.getUnits('enemy').filter(u => {
+        const p = u.getPosition();
+        const dx = p.x - mapCenter;
+        const dz = p.z - mapCenter;
+        return dx * dx + dz * dz < controlRadius * controlRadius;
+      }).length;
+
+      if (!this._hillControl) this._hillControl = { player: 0, enemy: 0 };
+      const delta = this.clock.elapsedTime > 0 ? 0.016 : 0; // approximate
+
+      if (playerNearCenter > enemyNearCenter) {
+        this._hillControl.player += this._lastDelta || 0.016;
+        this._hillControl.enemy = Math.max(0, this._hillControl.enemy - (this._lastDelta || 0.016) * 0.5);
+      } else if (enemyNearCenter > playerNearCenter) {
+        this._hillControl.enemy += this._lastDelta || 0.016;
+        this._hillControl.player = Math.max(0, this._hillControl.player - (this._lastDelta || 0.016) * 0.5);
       }
 
-      // Same for player
-      const playerUnits = this.getUnits('player');
-      const playerBuildings = this.getBuildings('player').filter(b =>
-        b.produces && b.produces.length > 0
-      );
-      if (playerUnits.length === 0 && playerBuildings.length === 0) {
+      if (this._hillControl.player >= 120) won = true;
+      else if (this._hillControl.enemy >= 120) won = false;
+    }
+
+    // Annihilation checks (always active as fallback)
+    if (won === null) {
+      const playerHQ = this.getHQ('player');
+      const enemyHQ = this.getHQ('enemy');
+
+      if (!playerHQ) {
         won = false;
+      } else if (!enemyHQ) {
+        won = true;
+      } else {
+        const enemyUnits = this.getUnits('enemy');
+        const enemyBuildings = this.getBuildings('enemy').filter(b =>
+          b.produces && b.produces.length > 0
+        );
+        if (enemyUnits.length === 0 && enemyBuildings.length === 0) {
+          won = true;
+        }
+
+        const playerUnits = this.getUnits('player');
+        const playerBuildings = this.getBuildings('player').filter(b =>
+          b.produces && b.produces.length > 0
+        );
+        if (playerUnits.length === 0 && playerBuildings.length === 0) {
+          won = false;
+        }
       }
     }
 
@@ -733,6 +791,13 @@ export class Game {
       this.fogOfWar.dispose();
       this.fogOfWar = null;
     }
+    if (this._hillRing) {
+      this.sceneManager.scene.remove(this._hillRing);
+      this._hillRing.geometry.dispose();
+      this._hillRing.material.dispose();
+      this._hillRing = null;
+    }
+    this._hillControl = null;
     // Clean up event listeners to prevent leaks across game sessions
     if (this._onUnitPromoted) {
       this.eventBus.off('unit:promoted', this._onUnitPromoted);
