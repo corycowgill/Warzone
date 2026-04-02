@@ -69,6 +69,11 @@ export class ResourceSystem {
         muIncome = Math.floor(muIncome * 1.25);
       }
 
+      // GD-091: Neutral supply depot income bonus
+      if (this.game.neutralStructures) {
+        income += this.game.neutralStructures.getIncomeBonus(team);
+      }
+
       // Apply income
       this.addIncome(team, income);
       this.addMUIncome(team, muIncome);

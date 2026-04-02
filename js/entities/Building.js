@@ -75,6 +75,14 @@ export class Building extends Entity {
         buildTime /= 1.15;
       }
 
+      // GD-091: Neutral abandoned factory production bonus
+      if (this.game && this.game.neutralStructures) {
+        const factoryBonus = this.game.neutralStructures.getProductionBonus(this.team);
+        if (factoryBonus > 0) {
+          buildTime /= (1 + factoryBonus);
+        }
+      }
+
       this.productionTimer = buildTime;
       this._productionTotalTime = buildTime;
     }

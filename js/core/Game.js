@@ -22,6 +22,7 @@ import { FogOfWar } from '../systems/FogOfWar.js';
 import { NationAbilitySystem } from '../systems/NationAbilitySystem.js';
 import { AlertSystem } from '../systems/AlertSystem.js';
 import { WaveSystem } from '../systems/WaveSystem.js';
+import { NeutralStructureSystem } from '../systems/NeutralStructureSystem.js';
 import { PostProcessing } from '../rendering/PostProcessing.js';
 import { assetManager } from '../rendering/AssetManager.js';
 
@@ -74,6 +75,7 @@ export class Game {
     this.nationAbilitySystem = null;
     this.alertSystem = null;
     this.waveSystem = null;
+    this.neutralStructures = null;
     this.postProcessing = null;
     this.resourceNodes = [];
     this.aiController2 = null;
@@ -199,6 +201,9 @@ export class Game {
       if (this.gameMode === 'survival') {
         this.waveSystem = new WaveSystem(this);
       }
+
+      // GD-091: Place neutral capturable structures
+      this.neutralStructures = new NeutralStructureSystem(this);
 
       // Place resource nodes on the map
       this.placeResourceNodes();
@@ -748,6 +753,11 @@ export class Game {
       this.waveSystem.update(delta);
     }
 
+    // GD-091: Update neutral structures (capture logic, repair bay healing)
+    if (this.neutralStructures) {
+      this.neutralStructures.update(delta);
+    }
+
     if (this.aiController) {
       this.aiController.update(delta);
     }
@@ -1276,6 +1286,11 @@ export class Game {
     if (this.waveSystem) {
       this.waveSystem.destroy();
       this.waveSystem = null;
+    }
+    // Clean up neutral structures (GD-091)
+    if (this.neutralStructures) {
+      this.neutralStructures.destroy();
+      this.neutralStructures = null;
     }
     // Clean up orphaned UI elements
     const resPanel = document.getElementById('research-panel');

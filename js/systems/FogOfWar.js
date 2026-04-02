@@ -116,6 +116,11 @@ export class FogOfWar {
         visionRange = 8;
       }
 
+      // GD-091: Watchtower vision bonus
+      if (entity.isUnit && entity._watchtowerVision) {
+        visionRange += entity._watchtowerVision;
+      }
+
       // Day/night vision reduction (GD-071)
       if (entity.isUnit && this.game.sceneManager && this.game.sceneManager.getVisionMultiplier) {
         visionRange = Math.floor(visionRange * this.game.sceneManager.getVisionMultiplier(entity.type));
@@ -419,6 +424,8 @@ export class FogOfWar {
   isVisible(worldX, worldZ) {
     // GD-058: Resistance Network reveals all
     if (this._resistanceReveal) return true;
+    // GD-091: Comm Relay reveals all enemy positions
+    if (this.game && this.game.neutralStructures && this.game.neutralStructures.hasCommRelay(this.team)) return true;
     const gx = Math.floor(worldX / this.cellSize);
     const gz = Math.floor(worldZ / this.cellSize);
     if (gx < 0 || gx >= this.mapSize || gz < 0 || gz >= this.mapSize) return false;

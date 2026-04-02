@@ -40,6 +40,15 @@ export const BUILDING_STATS = {
   munitionscache: { hp: 250, cost: 250, produces: [], size: 2, muIncome: 4, requires: ['barracks'] }
 };
 
+// GD-091: Neutral Map Structures (capturable)
+export const NEUTRAL_STRUCTURES = {
+  watchtower: { hp: 200, visionBonus: 25, label: 'Watch Tower', description: '+25 vision radius for nearby units' },
+  abandoned_factory: { hp: 300, productionBonus: 0.2, label: 'Abandoned Factory', description: '+20% production speed' },
+  supply_depot: { hp: 250, incomeBonus: 5, label: 'Supply Depot', description: '+5 SP/s income' },
+  comm_relay: { hp: 200, minimapReveal: true, label: 'Comm Relay', description: 'Reveals enemy positions on minimap' },
+  repair_bay: { hp: 250, healRate: 3, healRadius: 20, label: 'Repair Bay', description: 'Heals nearby units +3 HP/s' }
+};
+
 export const BUILDING_UPGRADES = {
   barracks: {
     maxTier: 3,
