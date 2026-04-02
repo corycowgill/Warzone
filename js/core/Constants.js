@@ -631,7 +631,6 @@ export const BUILDING_LIMITS = {
   warfactory: 2,
   airfield: 2,
   shipyard: 2,
-  supply_depot: 4,
   supplydepot: 4,
   resourcedepot: 4,
   turret: 10,

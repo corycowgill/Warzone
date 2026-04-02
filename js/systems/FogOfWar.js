@@ -314,6 +314,13 @@ export class FogOfWar {
     const enemyTeam = this.team === 'player' ? 'enemy' : 'player';
     const enemies = this.game.entities.filter(e => e.team === enemyTeam && e.alive);
 
+    // Clean up references to dead entities from the hidden set
+    for (const entity of this._hiddenEnemies) {
+      if (!entity.alive) {
+        this._hiddenEnemies.delete(entity);
+      }
+    }
+
     for (const entity of enemies) {
       const pos = entity.getPosition();
       const gx = Math.floor(pos.x / this.cellSize);

@@ -35,6 +35,9 @@ export class CombatSystem {
   }
 
   update(delta) {
+    // GD-075: Clear committed damage from previous frame - it only matters within a single update pass
+    this._committedDamage.clear();
+
     const allUnits = this.game.entities.filter(e => e.isUnit && e.alive);
     const camera = this.game.sceneManager.camera;
 
@@ -197,9 +200,6 @@ export class CombatSystem {
 
     // Apply damage
     defender.takeDamage(finalDmg);
-
-    // GD-075: Reduce committed damage now that hit has landed
-    this.reduceCommittedDamage(defender, finalDmg);
 
     // AOE splash damage for mortar, SPG, bomber
     if (stats && stats.aoeRadius) {
