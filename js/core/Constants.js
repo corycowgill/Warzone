@@ -20,7 +20,8 @@ export const BUILDING_STATS = {
   ditch: { hp: 100, cost: 0, buildTime: 5, size: 1, damageReduction: 0.5, rangeBonus: 0.25, requires: [] },
   turret: { hp: 350, cost: 250, produces: [], size: 1, requires: ['barracks'], damage: 25, range: 12, attackRate: 1.2, armor: 2, targetDomain: 'ground' },
   aaturret: { hp: 300, cost: 300, produces: [], size: 1, requires: ['warfactory'], damage: 30, range: 14, attackRate: 1.5, armor: 1, targetDomain: 'air' },
-  wall: { hp: 500, cost: 50, produces: [], size: 1, requires: [], armor: 5, blocksMovement: true }
+  wall: { hp: 500, cost: 50, produces: [], size: 1, requires: [], armor: 5, blocksMovement: true },
+  superweapon: { hp: 800, cost: 800, produces: [], size: 4, requires: ['warfactory'], isSuperweapon: true }
 };
 
 export const BUILDING_UPGRADES = {
@@ -455,6 +456,108 @@ export const AI_DIFFICULTY = {
     countersPlayer: true,
     targetPriority: true
   }
+};
+
+// ============================================================
+// NATION ACTIVE ABILITIES - Faction-specific cooldown abilities
+// ============================================================
+export const NATION_ABILITIES = {
+  america: {
+    id: 'lend_lease',
+    name: 'Lend-Lease',
+    description: 'Instantly grant +200 SP',
+    cooldown: 120,
+    effect: { grantSP: 200 }
+  },
+  britain: {
+    id: 'naval_supremacy',
+    name: 'Naval Supremacy',
+    description: 'All naval units +30% speed, +20% damage for 20s',
+    cooldown: 90,
+    duration: 20,
+    effect: { navalSpeedMult: 1.3, navalDamageMult: 1.2 }
+  },
+  france: {
+    id: 'resistance_network',
+    name: 'Resistance Network',
+    description: 'Reveal all enemy units for 10s',
+    cooldown: 100,
+    duration: 10,
+    effect: { revealAll: true }
+  },
+  japan: {
+    id: 'banzai_charge',
+    name: 'Banzai Charge',
+    description: 'Selected infantry +50% speed, +30% damage for 8s, take 20% more damage',
+    cooldown: 80,
+    duration: 8,
+    effect: { infantrySpeedMult: 1.5, infantryDamageMult: 1.3, infantryVulnerability: 1.2 }
+  },
+  germany: {
+    id: 'blitzkrieg',
+    name: 'Blitzkrieg',
+    description: 'All land units +40% speed for 12s',
+    cooldown: 100,
+    duration: 12,
+    effect: { landSpeedMult: 1.4 }
+  },
+  austria: {
+    id: 'war_economy',
+    name: 'War Economy',
+    description: 'All unit costs -25% for 30s',
+    cooldown: 110,
+    duration: 30,
+    effect: { costReductionMult: 0.75 }
+  }
+};
+
+// ============================================================
+// SUPERWEAPON SYSTEM
+// ============================================================
+export const SUPERWEAPON_CONFIG = {
+  building: {
+    type: 'superweapon',
+    hp: 800,
+    cost: 800,
+    size: 4,
+    requires: ['warfactory']
+  },
+  weapons: {
+    america: { name: 'Atomic Bomb', chargeTime: 300, radius: 25, damage: 500, type: 'nuke' },
+    germany: { name: 'V-2 Rocket', chargeTime: 200, radius: 8, damage: 800, type: 'rocket' },
+    britain: { name: 'Carpet Bombing', chargeTime: 240, radius: 15, damage: 300, type: 'carpet', width: 10, length: 30 },
+    france: { name: 'Artillery Barrage', chargeTime: 220, radius: 18, damage: 350, type: 'carpet', width: 12, length: 25 },
+    japan: { name: 'Divine Wind', chargeTime: 250, radius: 20, damage: 450, type: 'nuke' },
+    austria: { name: 'Siege Bombardment', chargeTime: 210, radius: 10, damage: 600, type: 'rocket' }
+  }
+};
+
+// ============================================================
+// RESOURCE NODE CONFIG
+// ============================================================
+export const RESOURCE_NODE_CONFIG = {
+  count: 7,
+  bonusIncome: 4,
+  captureRadius: 15,
+  glowColor: 0xffdd44,
+  minimapColor: '#ffdd44'
+};
+
+// ============================================================
+// SALVAGE CONFIG
+// ============================================================
+export const SALVAGE_CONFIG = {
+  percentage: 0.15,
+  excludeTypes: ['wall', 'ditch']
+};
+
+// ============================================================
+// CONSTRUCTION CONFIG
+// ============================================================
+export const CONSTRUCTION_CONFIG = {
+  startHPPercent: 0.10,
+  cancelRefundPercent: 0.75,
+  preBuiltTypes: ['headquarters']
 };
 
 export const MAP_TEMPLATES = {

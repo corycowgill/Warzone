@@ -38,6 +38,9 @@ export class Building extends Entity {
   update(deltaTime) {
     if (!this.alive) return;
 
+    // Skip production during construction phase (GD-063)
+    if (this._constructing) return;
+
     // Handle production
     if (this.currentProduction) {
       this.productionTimer -= deltaTime;

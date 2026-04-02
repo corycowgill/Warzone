@@ -297,6 +297,8 @@ export class FogOfWar {
    * Check if a grid cell is currently visible to this team.
    */
   isVisible(worldX, worldZ) {
+    // GD-058: Resistance Network reveals all
+    if (this._resistanceReveal) return true;
     const gx = Math.floor(worldX / this.cellSize);
     const gz = Math.floor(worldZ / this.cellSize);
     if (gx < 0 || gx >= this.mapSize || gz < 0 || gz >= this.mapSize) return false;

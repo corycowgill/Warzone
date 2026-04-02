@@ -27,6 +27,16 @@ GD-051: Wall Pathfinding Blocking | GD-052: Ditch Cover Damage Reduction | GD-05
 ## Final Polish - Completed (3 items)
 GD-055: Supply Cache Code Deduplication | GD-056: AI Scout Game-Time Timer | GD-057: AI Carrier Production
 
+## Cycle 9 - Completed (8 features)
+GD-058: Nation Active Abilities (6 faction-specific cooldown abilities with HUD button, F hotkey, AI usage)
+GD-059: Superweapon System (Superweapon Facility building, 6 faction superweapons, charge bar, click-to-target, AI builds/fires)
+GD-060: Map Resource Nodes (7 glowing nodes, +4 SP/s bonus for nearby depots, minimap markers, AI builds near nodes)
+GD-061: Visual Post-Processing & Environment (EffectComposer with UnrealBloomPass + vignette, instanced trees, camera shake)
+GD-062: Carrier Rework (3 AI-controlled drone fighters orbiting, auto-engage, regen on death, Launch Squadron ability)
+GD-063: Building Construction Phase (start at 10% HP, scale up, semi-transparent, cancel for 75% refund, HQ pre-built)
+GD-064: Salvage Income (15% SP on kill, gold floating text, tracked in end-game stats, excludes walls/ditches)
+GD-065: Enhanced Combat Effects (smoke particles, debris, projectile trails, tank dust, all new effect types in EffectsManager)
+
 ## QA Fixes Applied
 - Cycle 1: 6 fixes (GAME_CONFIG import, minimap Vector3, ability mode reset, double-click state, entity flash null check, production panel alive check)
 - Cycle 2: 4 fixes (aura position, event listener leak, fog ghost position, ace attack balance)
@@ -49,7 +59,7 @@ GD-055: Supply Cache Code Deduplication | GD-056: AI Scout Game-Time Timer | GD-
 | GD-028 | MEDIUM | DONE (as GD-035) | Smart Control Group Auto-Refill |
 | GD-029 | MEDIUM | PENDING | Last Seen Ghost Overlay (partially done via GD-017) |
 
-## Total Features Implemented: 46
+## Total Features Implemented: 54
 ## Total QA Fixes: 41
-## Git Commits: 23
+## Git Commits: 24
 ## Game Designer Rating: 9/10 - "Exceptionally well-architected single-player military RTS"

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { UNIT_STATS, BUILDING_STATS, TECH_TREE, NATIONS, GAME_CONFIG, UNIT_COUNTERS, VETERANCY, BUILDING_UPGRADES, RESEARCH_UPGRADES } from '../core/Constants.js';
+import { UNIT_STATS, BUILDING_STATS, TECH_TREE, NATIONS, GAME_CONFIG, UNIT_COUNTERS, VETERANCY, BUILDING_UPGRADES, RESEARCH_UPGRADES, NATION_ABILITIES } from '../core/Constants.js';
 
 export class HUD {
   constructor(game) {
@@ -53,6 +53,9 @@ export class HUD {
     // Create tech tree overlay
     this.createTechTreeOverlay();
 
+    // Create nation ability button (GD-058)
+    this.createNationAbilityButton();
+
     this.populateBuildMenu();
     this.setupEventListeners();
   }
@@ -90,7 +93,7 @@ export class HUD {
       <div>P: Patrol</div>
       <div>G: Use ability</div>
       <div>B: Build menu</div>
-      <div>F: Cycle formation</div>
+      <div>F: Nation ability</div>
       <div>Tab: Cycle buildings</div>
       <div>T: Tech tree</div>
       <div>Shift+RClick: Queue waypoint</div>
@@ -109,11 +112,102 @@ export class HUD {
     document.body.appendChild(this.helpEl);
   }
 
+  createNationAbilityButton() {
+    this._abilityBtn = document.createElement('button');
+    this._abilityBtn.id = 'nation-ability-btn';
+    this._abilityBtn.style.cssText = `
+      position: fixed;
+      bottom: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 8px 20px;
+      background: rgba(20, 30, 50, 0.9);
+      color: #ffcc00;
+      border: 2px solid #ffcc00;
+      border-radius: 6px;
+      font-family: sans-serif;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      z-index: 150;
+      letter-spacing: 1px;
+      transition: all 0.2s;
+      display: none;
+    `;
+    this._abilityBtn.addEventListener('click', () => {
+      this._activateNationAbility();
+    });
+    this._abilityBtn.addEventListener('mouseenter', () => {
+      this._abilityBtn.style.background = 'rgba(40, 60, 100, 0.9)';
+      this._abilityBtn.style.borderColor = '#ffdd44';
+    });
+    this._abilityBtn.addEventListener('mouseleave', () => {
+      this._abilityBtn.style.background = 'rgba(20, 30, 50, 0.9)';
+      this._abilityBtn.style.borderColor = '#ffcc00';
+    });
+    document.body.appendChild(this._abilityBtn);
+
+    // F key hotkey for nation ability
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'f' && this.game.state === 'PLAYING' && !this.buildPlacementMode) {
+        // Don't use F if formation cycling (Shift+F or with selection) - only bare F
+        if (!e.shiftKey && !e.ctrlKey && !e.altKey) {
+          this._activateNationAbility();
+        }
+      }
+    });
+  }
+
+  _activateNationAbility() {
+    if (!this.game.nationAbilitySystem) return;
+    const nas = this.game.nationAbilitySystem;
+    const team = this.game.mode === '2P' ? this.game.activeTeam : 'player';
+    if (nas.canUse(team)) {
+      nas.activate(team);
+    }
+  }
+
+  updateNationAbilityButton() {
+    if (!this._abilityBtn || !this.game.nationAbilitySystem) return;
+    const nas = this.game.nationAbilitySystem;
+    const team = this.game.mode === '2P' ? this.game.activeTeam : 'player';
+    const ability = nas.getAbility(team);
+    if (!ability) {
+      this._abilityBtn.style.display = 'none';
+      return;
+    }
+
+    this._abilityBtn.style.display = 'block';
+    const cd = nas.getCooldownRemaining(team);
+    const isActive = nas.isActive(team);
+    const activeTimer = nas.getActiveTimer(team);
+
+    if (isActive) {
+      this._abilityBtn.textContent = `${ability.name} (${Math.ceil(activeTimer)}s) [F]`;
+      this._abilityBtn.style.borderColor = '#00ff44';
+      this._abilityBtn.style.color = '#00ff44';
+      this._abilityBtn.style.cursor = 'default';
+    } else if (cd > 0) {
+      this._abilityBtn.textContent = `${ability.name} (${Math.ceil(cd)}s) [F]`;
+      this._abilityBtn.style.borderColor = '#666';
+      this._abilityBtn.style.color = '#666';
+      this._abilityBtn.style.cursor = 'not-allowed';
+    } else {
+      this._abilityBtn.textContent = `${ability.name} READY [F]`;
+      this._abilityBtn.style.borderColor = '#ffcc00';
+      this._abilityBtn.style.color = '#ffcc00';
+      this._abilityBtn.style.cursor = 'pointer';
+    }
+
+    // Tooltip
+    this._abilityBtn.title = ability.description;
+  }
+
   populateBuildMenu() {
     if (!this.buildOptions) return;
     this.buildOptions.innerHTML = '';
 
-    const buildableTypes = ['barracks', 'warfactory', 'airfield', 'shipyard', 'resourcedepot', 'supplydepot', 'turret', 'aaturret', 'bunker', 'wall'];
+    const buildableTypes = ['barracks', 'warfactory', 'airfield', 'shipyard', 'resourcedepot', 'supplydepot', 'turret', 'aaturret', 'bunker', 'wall', 'superweapon'];
     for (const type of buildableTypes) {
       const stats = BUILDING_STATS[type];
       if (!stats) continue;
@@ -140,7 +234,9 @@ export class HUD {
       const reqStr = requires.length > 0 ? `<br><small style="color:#ff8844;">Requires: ${requires.map(r => this.formatName(r)).join(', ')}</small>` : '';
 
       let descStr = '';
-      if (stats.produces && stats.produces.length > 0) {
+      if (stats.isSuperweapon) {
+        descStr = '<span style="color:#ff8800;">Charges faction superweapon</span>';
+      } else if (stats.produces && stats.produces.length > 0) {
         descStr = 'Produces: ' + stats.produces.map(u => this.formatName(u)).join(', ');
       } else if (stats.income) {
         descStr = `<span style="color:#44dd88;">Income: +${stats.income} SP/s</span>`;
@@ -299,6 +395,10 @@ export class HUD {
     // Handle build placement click
     const canvas = this.game.sceneManager.renderer.domElement;
     canvas.addEventListener('click', (e) => {
+      if (this._superweaponTargetMode) {
+        this.handleSuperweaponTarget(e);
+        return;
+      }
       if (this.game.commandSystem.abilityTargetMode) {
         this.handleAbilityClick(e);
         return;
@@ -360,6 +460,7 @@ export class HUD {
     this.updateResourceDisplay();
     this.updateProductionPanel();
     this.updateRallyPointVisuals();
+    this.updateNationAbilityButton();
   }
 
   // ============================
@@ -606,6 +707,34 @@ export class HUD {
           statsHtml += `<div style="margin-top:4px;font-size:11px;color:#ffcc00;">Tier ${entity.tier}: ${currentTierBonus.label}</div>`;
         }
       }
+
+      // GD-059: Superweapon info and fire button
+      if (entity.type === 'superweapon' && entity.weaponConfig) {
+        const chargePercent = Math.round((entity.chargeProgress / entity.chargeTime) * 100);
+        const chargeColor = entity.isCharged ? '#00ff44' : '#ff8800';
+        statsHtml += `
+          <div style="margin-top:8px;padding:6px 8px;background:#2a1a0a;border:1px solid ${chargeColor};border-radius:4px;">
+            <div style="color:#ff8800;font-weight:bold;font-size:13px;">${entity.weaponConfig.name}</div>
+            <div style="background:#333;height:6px;border-radius:3px;margin-top:4px;overflow:hidden;">
+              <div style="background:${chargeColor};height:100%;width:${chargePercent}%;transition:width 0.3s;"></div>
+            </div>
+            <div style="color:${chargeColor};font-size:11px;margin-top:3px;">${entity.isCharged ? 'CHARGED - Click to target' : `Charging: ${chargePercent}%`}</div>
+            ${entity._constructing ? '<div style="color:#888;font-size:10px;">Under construction...</div>' : ''}
+          </div>
+        `;
+        if (entity.isCharged && entity.team === 'player') {
+          statsHtml += `<div style="margin-top:4px;"><button id="btn-fire-superweapon" style="padding:6px 14px;background:#ff4400;color:#fff;border:2px solid #ff8800;border-radius:4px;cursor:pointer;font-family:sans-serif;font-size:13px;font-weight:bold;width:100%;letter-spacing:1px;">FIRE ${entity.weaponConfig.name.toUpperCase()}</button></div>`;
+        }
+      }
+
+      // GD-063: Cancel construction button
+      if (entity._constructing && entity.team === 'player') {
+        const progress = Math.round((entity._constructionElapsed / entity._constructionTime) * 100);
+        statsHtml += `
+          <div style="margin-top:6px;font-size:11px;color:#888;">Construction: ${progress}%</div>
+          <div style="margin-top:4px;"><button id="btn-cancel-construction" style="padding:4px 10px;background:#553333;color:#eee;border:1px solid #774444;border-radius:3px;cursor:pointer;font-size:11px;font-family:sans-serif;">Cancel (75% refund)</button></div>
+        `;
+      }
     }
 
     this.selectionInfo.innerHTML = `
@@ -660,8 +789,29 @@ export class HUD {
       }
     }
 
+    // Wire up superweapon fire button (GD-059)
+    const fireBtn = document.getElementById('btn-fire-superweapon');
+    if (fireBtn && entity.type === 'superweapon' && entity.isCharged) {
+      fireBtn.addEventListener('click', () => {
+        this.showNotification('Click on the map to target superweapon!', '#ff8800');
+        this._superweaponTargetMode = true;
+        this._superweaponBuilding = entity;
+        document.body.style.cursor = 'crosshair';
+      });
+    }
+
+    // Wire up cancel construction button (GD-063)
+    const cancelBtn = document.getElementById('btn-cancel-construction');
+    if (cancelBtn && entity._constructing) {
+      cancelBtn.addEventListener('click', () => {
+        if (this.game.productionSystem) {
+          this.game.productionSystem.cancelConstruction(entity);
+        }
+      });
+    }
+
     // Show production buttons if it's a production building
-    if (entity.isBuilding && entity.produces && entity.produces.length > 0) {
+    if (entity.isBuilding && entity.produces && entity.produces.length > 0 && !entity._constructing) {
       this.showProductionButtons(entity);
     } else {
       this.hideProductionOptions();
@@ -963,6 +1113,17 @@ export class HUD {
     this.buildPlacementType = null;
     document.body.style.cursor = 'default';
     this.removeGhostMesh();
+  }
+
+  handleSuperweaponTarget(event) {
+    const worldPos = this.game.inputManager.getWorldPosition(event.clientX, event.clientY);
+    if (worldPos && this._superweaponBuilding && this._superweaponBuilding.alive && this._superweaponBuilding.isCharged) {
+      this._superweaponBuilding.fire(worldPos);
+      this.showNotification('Superweapon launched!', '#ff4400');
+    }
+    this._superweaponTargetMode = false;
+    this._superweaponBuilding = null;
+    document.body.style.cursor = 'default';
   }
 
   handleAbilityClick(event) {

@@ -443,7 +443,10 @@ export class CommandSystem {
       }
 
       case 'f':
-        this.cycleFormation();
+        // Shift+F cycles formations; bare F is nation ability (handled in HUD)
+        if (event.shiftKey) {
+          this.cycleFormation();
+        }
         break;
 
       case 'tab':

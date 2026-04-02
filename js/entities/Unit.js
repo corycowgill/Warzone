@@ -76,6 +76,7 @@ export class Unit extends Entity {
     // Status badge (stance/order indicator)
     this._statusBadge = null;
     this._lastBadgeState = '';
+  }
 
   // Apply nation-specific bonuses to this unit's stats
   applyNationBonuses(nationKey) {
@@ -534,6 +535,15 @@ export class Unit extends Entity {
         // Update Y position from terrain for land units
         if (this.domain === 'land' && this.game && this.game.terrain) {
           pos.y = this.game.terrain.getHeightAt(pos.x, pos.z);
+        }
+
+        // GD-065: Tank dust while moving
+        if (this.type === 'tank' && this.game && this.game.effectsManager) {
+          this._dustTimer = (this._dustTimer || 0) + deltaTime;
+          if (this._dustTimer > 0.3) {
+            this._dustTimer = 0;
+            this.game.effectsManager.createDustPuff(pos.clone());
+          }
         }
 
         // Tank crush: run over enemy infantry

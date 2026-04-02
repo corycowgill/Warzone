@@ -287,6 +287,17 @@ export class Minimap {
       }
     }
 
+    // GD-060: Draw resource nodes on minimap
+    if (this.game.resourceNodes) {
+      ctx.fillStyle = '#ffdd44';
+      for (const node of this.game.resourceNodes) {
+        const mp = this.worldToMinimap(node.position.x, node.position.z);
+        ctx.beginPath();
+        ctx.arc(mp.x, mp.y, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
     // Draw camera view frustum as white rectangle
     if (this.game.cameraController) {
       const camCtrl = this.game.cameraController;

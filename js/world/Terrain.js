@@ -432,29 +432,38 @@ export class Terrain {
         group.add(model);
       }
     } else {
-      // Fallback: procedural trees
+      // GD-061: Instanced procedural trees (cone+cylinder) for performance
       const trunkGeo = new THREE.CylinderGeometry(0.15, 0.25, 2, 5);
       const trunkMat = new THREE.MeshPhongMaterial({ color: 0x5a3a1a });
       const foliageGeo = new THREE.ConeGeometry(1.2, 2.5, 6);
       const foliageMat = new THREE.MeshPhongMaterial({ color: 0x2a6a1a });
 
-      for (const tree of this.treePositions) {
+      const count = this.treePositions.length;
+      const trunkMesh = new THREE.InstancedMesh(trunkGeo, trunkMat, count);
+      const foliageMesh = new THREE.InstancedMesh(foliageGeo, foliageMat, count);
+      trunkMesh.castShadow = true;
+      foliageMesh.castShadow = true;
+
+      const dummy = new THREE.Object3D();
+      for (let i = 0; i < count; i++) {
+        const tree = this.treePositions[i];
         const worldPos = this.gridToWorld(tree.x, tree.z);
         const h = this.getHeightAt(worldPos.x, worldPos.z);
         const scale = tree.scale;
 
-        const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-        trunk.position.set(worldPos.x, h + 1 * scale, worldPos.z);
-        trunk.scale.set(scale, scale, scale);
-        trunk.castShadow = true;
-        group.add(trunk);
+        dummy.position.set(worldPos.x, h + 1 * scale, worldPos.z);
+        dummy.scale.set(scale, scale, scale);
+        dummy.updateMatrix();
+        trunkMesh.setMatrixAt(i, dummy.matrix);
 
-        const foliage = new THREE.Mesh(foliageGeo, foliageMat);
-        foliage.position.set(worldPos.x, h + 2.5 * scale, worldPos.z);
-        foliage.scale.set(scale, scale, scale);
-        foliage.castShadow = true;
-        group.add(foliage);
+        dummy.position.set(worldPos.x, h + 2.5 * scale, worldPos.z);
+        dummy.scale.set(scale, scale, scale);
+        dummy.updateMatrix();
+        foliageMesh.setMatrixAt(i, dummy.matrix);
       }
+
+      group.add(trunkMesh);
+      group.add(foliageMesh);
     }
   }
 

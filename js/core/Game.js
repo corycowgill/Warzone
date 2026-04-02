@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { EventBus } from './EventBus.js';
-import { GAME_CONFIG, NATIONS, BUILDING_STATS, UNIT_STATS, RESEARCH_UPGRADES } from './Constants.js';
+import { GAME_CONFIG, NATIONS, BUILDING_STATS, UNIT_STATS, RESEARCH_UPGRADES, SALVAGE_CONFIG, RESOURCE_NODE_CONFIG, CONSTRUCTION_CONFIG } from './Constants.js';
 import { SceneManager } from '../rendering/SceneManager.js';
 import { CameraController } from '../rendering/CameraController.js';
 import { EffectsManager } from '../rendering/EffectsManager.js';
@@ -19,6 +19,8 @@ import { UnitFactory } from '../units/UnitFactory.js';
 import { BuildingFactory } from '../buildings/BuildingFactory.js';
 import { SoundManager } from '../systems/SoundManager.js';
 import { FogOfWar } from '../systems/FogOfWar.js';
+import { NationAbilitySystem } from '../systems/NationAbilitySystem.js';
+import { PostProcessing } from '../rendering/PostProcessing.js';
 import { assetManager } from '../rendering/AssetManager.js';
 
 export class Game {
@@ -67,6 +69,9 @@ export class Game {
     this.unitFactory = null;
     this.soundManager = null;
     this.fogOfWar = null;
+    this.nationAbilitySystem = null;
+    this.postProcessing = null;
+    this.resourceNodes = [];
     this.aiController2 = null;
     this._mapEventTimer = 0;
     this._mapEventInterval = 60; // seconds between events
@@ -137,6 +142,14 @@ export class Game {
       this.cameraController.moveTo(50, mapSize / 2);
 
       this.effectsManager = new EffectsManager(this);
+
+      // GD-061: Post-processing (bloom + vignette)
+      try {
+        this.postProcessing = new PostProcessing(this.sceneManager);
+      } catch (e) {
+        console.warn('Post-processing not available:', e.message);
+      }
+
       this.inputManager = new InputManager(this);
       this.pathfinding = new PathfindingSystem(this);
       this.selectionManager = new SelectionManager(this);
@@ -167,6 +180,16 @@ export class Game {
       if (this.mode !== 'SPECTATE') {
         this.fogOfWar = new FogOfWar(this, 'player');
       }
+
+      // Initialize nation ability system
+      this.nationAbilitySystem = new NationAbilitySystem(this);
+
+      // Place resource nodes on the map
+      this.placeResourceNodes();
+
+      // Initialize salvage tracking
+      this.stats.player.salvageIncome = 0;
+      this.stats.enemy.salvageIncome = 0;
 
       // Track game stats
       this._onUnitCreated = (data) => {
@@ -218,6 +241,28 @@ export class Game {
         }
       };
       this.eventBus.on('unit:promoted', this._onUnitPromoted);
+
+      // Salvage income: award SP on kills (GD-064)
+      this._onSalvageKill = (data) => {
+        if (!data.attacker || !data.defender) return;
+        if (data.defender._isCache) return; // caches handled separately
+        const defType = data.defender.type;
+        if (SALVAGE_CONFIG.excludeTypes.includes(defType)) return;
+        const cost = data.defender.cost || 0;
+        if (cost <= 0) return;
+        const salvage = Math.round(cost * SALVAGE_CONFIG.percentage);
+        if (salvage <= 0) return;
+        const team = data.attacker.team;
+        if (this.teams[team]) {
+          this.teams[team].sp += salvage;
+          if (this.stats[team]) this.stats[team].salvageIncome = (this.stats[team].salvageIncome || 0) + salvage;
+          // Floating gold text
+          if (this.effectsManager) {
+            this.effectsManager.createSalvageText(data.defender.getPosition().clone(), salvage);
+          }
+        }
+      };
+      this.eventBus.on('combat:kill', this._onSalvageKill);
 
       this.setState('PLAYING');
     } catch (err) {
@@ -342,6 +387,95 @@ export class Game {
     this.eventBus.on('combat:kill', this._onCacheKill);
   }
 
+  placeResourceNodes() {
+    const mapSize = GAME_CONFIG.mapSize * GAME_CONFIG.worldScale;
+    const nodeCount = RESOURCE_NODE_CONFIG.count;
+    const margin = 50;
+    this.resourceNodes = [];
+
+    for (let i = 0; i < nodeCount; i++) {
+      let x, z, attempts = 0;
+      // Bias some nodes toward center (contested territory)
+      const centerBias = i < 3;
+      do {
+        if (centerBias) {
+          x = mapSize * 0.3 + Math.random() * mapSize * 0.4;
+          z = margin + Math.random() * (mapSize - 2 * margin);
+        } else {
+          x = margin + Math.random() * (mapSize - 2 * margin);
+          z = margin + Math.random() * (mapSize - 2 * margin);
+        }
+        attempts++;
+      } while (attempts < 30 && this.terrain && (this.terrain.isWater(x, z) || !this.terrain.isWalkable(x, z)));
+
+      if (attempts >= 30) continue;
+
+      const y = this.terrain ? this.terrain.getHeightAt(x, z) : 0;
+      const node = this._createResourceNode(x, y, z, i);
+      this.resourceNodes.push(node);
+    }
+  }
+
+  _createResourceNode(x, y, z, index) {
+    const group = new THREE.Group();
+
+    // Glowing crystal pillar
+    const pillarGeo = new THREE.CylinderGeometry(0.5, 0.8, 3, 6);
+    const pillarMat = new THREE.MeshPhongMaterial({
+      color: RESOURCE_NODE_CONFIG.glowColor,
+      emissive: RESOURCE_NODE_CONFIG.glowColor,
+      emissiveIntensity: 0.5,
+      transparent: true,
+      opacity: 0.9
+    });
+    const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+    pillar.position.y = 1.5;
+    pillar.castShadow = true;
+    group.add(pillar);
+
+    // Glowing base ring
+    const ringGeo = new THREE.RingGeometry(1.5, 2, 24);
+    ringGeo.rotateX(-Math.PI / 2);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: RESOURCE_NODE_CONFIG.glowColor,
+      transparent: true,
+      opacity: 0.4,
+      side: THREE.DoubleSide
+    });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.position.y = 0.1;
+    group.add(ring);
+
+    // Point light
+    const light = new THREE.PointLight(RESOURCE_NODE_CONFIG.glowColor, 1.5, 20);
+    light.position.y = 3;
+    group.add(light);
+
+    group.position.set(x, y, z);
+    this.sceneManager.scene.add(group);
+
+    return {
+      mesh: group,
+      position: new THREE.Vector3(x, y, z),
+      index
+    };
+  }
+
+  // Check if a building is near a resource node for bonus income
+  getBuildingNodeBonus(building) {
+    if (!building || !building.alive) return 0;
+    if (building.type !== 'resourcedepot' && building.type !== 'supplydepot') return 0;
+
+    const bPos = building.getPosition();
+    for (const node of this.resourceNodes) {
+      const dist = bPos.distanceTo(node.position);
+      if (dist <= RESOURCE_NODE_CONFIG.captureRadius) {
+        return RESOURCE_NODE_CONFIG.bonusIncome;
+      }
+    }
+    return 0;
+  }
+
   createUnit(type, team, position) {
     const unit = this.unitFactory.create(type, team, position);
     if (unit) {
@@ -402,6 +536,12 @@ export class Game {
     if (entity.mesh) {
       this.sceneManager.scene.remove(entity.mesh);
     }
+    // GD-062: Clean up carrier drones
+    if (entity._drones) {
+      for (const drone of entity._drones) {
+        if (drone.mesh) this.sceneManager.scene.remove(drone.mesh);
+      }
+    }
   }
 
   addProjectile(projectile) {
@@ -440,6 +580,11 @@ export class Game {
         entity.update(delta);
       } else {
         this.effectsManager.createExplosion(entity.mesh.position);
+        // GD-065: Smoke after explosion + debris for buildings
+        this.effectsManager.createSmoke(entity.mesh.position.clone());
+        if (entity.isBuilding) {
+          this.effectsManager.createDebris(entity.mesh.position.clone());
+        }
         this.removeEntity(entity);
         this.eventBus.emit(entity.isUnit ? 'unit:destroyed' : 'building:destroyed', { entity });
       }
@@ -468,6 +613,10 @@ export class Game {
 
     if (this.fogOfWar) {
       this.fogOfWar.update(delta);
+    }
+
+    if (this.nationAbilitySystem) {
+      this.nationAbilitySystem.update(delta);
     }
 
     if (this.aiController) {
@@ -722,7 +871,11 @@ export class Game {
     }
 
     if (this.sceneManager) {
-      this.sceneManager.render();
+      if (this.postProcessing && this.postProcessing.enabled) {
+        this.postProcessing.render();
+      } else {
+        this.sceneManager.render();
+      }
     }
   }
 

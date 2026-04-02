@@ -35,9 +35,15 @@ export class ResourceSystem {
       // Bonus income from resource/supply depots
       const buildings = this.game.getBuildings(team);
       for (const building of buildings) {
+        // Skip buildings still under construction
+        if (building._constructing) continue;
         const stats = BUILDING_STATS[building.type];
         if (stats && stats.income && building.alive) {
           income += stats.income;
+        }
+        // Resource node proximity bonus (GD-060)
+        if (this.game.getBuildingNodeBonus) {
+          income += this.game.getBuildingNodeBonus(building);
         }
       }
 
@@ -103,9 +109,13 @@ export class ResourceSystem {
 
     const buildings = this.game.getBuildings(team);
     for (const building of buildings) {
+      if (building._constructing) continue;
       const stats = BUILDING_STATS[building.type];
       if (stats && stats.income && building.alive) {
         income += stats.income;
+      }
+      if (this.game.getBuildingNodeBonus) {
+        income += this.game.getBuildingNodeBonus(building);
       }
     }
 

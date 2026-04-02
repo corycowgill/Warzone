@@ -254,6 +254,8 @@ export class AIController {
     this.buildNextStructure();
     this.buildDefenses();
     this.produceUnits();
+    this.considerSuperweapon();
+    this.considerBuildNearNode();
 
     // Early harassment for aggressive nations
     if (this.personality && this.personality.earlyHarass && this.gameTime > 60 && this.gameTime < this.gracePeriod) {
@@ -767,6 +769,9 @@ export class AIController {
     // Assess attack force - retreat if losing
     this.assessAttackForce();
 
+    // GD-058: Use nation ability
+    this.considerNationAbility();
+
     const myUnits = this.game.getUnits(this.team);
 
     for (const unit of myUnits) {
@@ -1043,5 +1048,130 @@ export class AIController {
     }
 
     return nearest;
+  }
+
+  // GD-058: AI uses nation abilities contextually
+  considerNationAbility() {
+    if (!this.game.nationAbilitySystem) return;
+    const nas = this.game.nationAbilitySystem;
+    if (!nas.canUse(this.team)) return;
+
+    const ability = nas.getAbility(this.team);
+    if (!ability) return;
+
+    const myUnits = this.game.getUnits(this.team);
+    const enemyUnits = this.game.getUnits(this.enemyTeam);
+    const inCombat = myUnits.filter(u => u.attackTarget && u.attackTarget.alive);
+
+    // Use abilities in appropriate contexts
+    switch (ability.id) {
+      case 'lend_lease':
+        // Use when low on SP and need units
+        if (this.game.teams[this.team].sp < 200) {
+          nas.activate(this.team);
+        }
+        break;
+      case 'naval_supremacy':
+        // Use when we have naval units in combat
+        if (inCombat.some(u => u.domain === 'naval')) {
+          nas.activate(this.team);
+        }
+        break;
+      case 'resistance_network':
+        // Use periodically for scouting
+        if (this.gameTime > 120 && this.attackWaveCount > 0) {
+          nas.activate(this.team);
+        }
+        break;
+      case 'banzai_charge':
+        // Use when attacking with infantry
+        if (inCombat.filter(u => u.type === 'infantry').length >= 3) {
+          nas.activate(this.team);
+        }
+        break;
+      case 'blitzkrieg':
+        // Use when launching an attack with land units
+        if (inCombat.filter(u => u.domain === 'land').length >= 4) {
+          nas.activate(this.team);
+        }
+        break;
+      case 'war_economy':
+        // Use when we have high SP to spend
+        if (this.game.teams[this.team].sp > 500 && myUnits.length < GAME_CONFIG.maxUnitsPerTeam - 5) {
+          nas.activate(this.team);
+        }
+        break;
+    }
+  }
+
+  // GD-059: AI builds and uses superweapons
+  considerSuperweapon() {
+    if (this.gameTime < 180) return; // Don't build too early
+
+    const myBuildings = this.game.getBuildings(this.team);
+    const hasSuperweapon = myBuildings.some(b => b.type === 'superweapon' && b.alive);
+    const hasWarFactory = myBuildings.some(b => b.type === 'warfactory' && b.alive);
+    const sp = this.game.teams[this.team].sp;
+
+    // Build superweapon facility in late game
+    if (!hasSuperweapon && hasWarFactory && sp > 1000) {
+      this.tryBuildBuilding('superweapon');
+    }
+
+    // Fire superweapon when charged
+    if (hasSuperweapon) {
+      const sw = myBuildings.find(b => b.type === 'superweapon' && b.alive && b.isCharged);
+      if (sw && sw.fire) {
+        // Target enemy HQ or largest unit cluster
+        const enemyHQ = this.game.getHQ(this.enemyTeam);
+        if (enemyHQ) {
+          sw.fire(enemyHQ.getPosition().clone());
+        } else {
+          const target = this.findPriorityTarget();
+          if (target) sw.fire(target);
+        }
+      }
+    }
+  }
+
+  // GD-060: AI prioritizes building near resource nodes
+  considerBuildNearNode() {
+    if (!this.game.resourceNodes || this.game.resourceNodes.length === 0) return;
+    if (this.gameTime < 60) return;
+
+    const myBuildings = this.game.getBuildings(this.team);
+    const sp = this.game.teams[this.team].sp;
+    if (sp < 300) return;
+
+    // Check if we already have a depot near each node
+    for (const node of this.game.resourceNodes) {
+      const hasNearby = myBuildings.some(b =>
+        (b.type === 'resourcedepot' || b.type === 'supplydepot') &&
+        b.alive && b.getPosition().distanceTo(node.position) < 15
+      );
+      if (hasNearby) continue;
+
+      // Only build near nodes on our side or in the middle
+      const mapSize = GAME_CONFIG.mapSize * GAME_CONFIG.worldScale;
+      const hq = this.game.getHQ(this.team);
+      if (!hq) continue;
+
+      const distToMyHQ = node.position.distanceTo(hq.getPosition());
+      const enemyHQ = this.game.getHQ(this.enemyTeam);
+      const distToEnemyHQ = enemyHQ ? node.position.distanceTo(enemyHQ.getPosition()) : Infinity;
+
+      if (distToMyHQ < distToEnemyHQ * 1.3) {
+        // Build a supply depot near this node
+        const buildPos = node.position.clone();
+        buildPos.x += (Math.random() - 0.5) * 6;
+        buildPos.z += (Math.random() - 0.5) * 6;
+        buildPos.x = Math.max(15, Math.min(mapSize - 15, buildPos.x));
+        buildPos.z = Math.max(15, Math.min(mapSize - 15, buildPos.z));
+        if (this.game.terrain && this.game.terrain.isWalkable(buildPos.x, buildPos.z)) {
+          this.game.productionSystem.requestBuilding('supplydepot', this.team, buildPos);
+          break; // Only try one per tick
+        }
+      }
+    }
   }
 }

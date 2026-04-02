@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { UNIT_STATS, BUILDING_STATS, TECH_TREE, NATIONS, GAME_CONFIG } from '../core/Constants.js';
+import { UNIT_STATS, BUILDING_STATS, TECH_TREE, NATIONS, GAME_CONFIG, CONSTRUCTION_CONFIG } from '../core/Constants.js';
 
 export class ProductionSystem {
   constructor(game) {
@@ -10,6 +10,12 @@ export class ProductionSystem {
     const buildings = this.game.entities.filter(e => e.isBuilding && e.alive);
 
     for (const building of buildings) {
+      // Handle construction phase (GD-063)
+      if (building._constructing) {
+        this._updateConstruction(building, delta);
+        continue; // Don't produce while constructing
+      }
+
       if (!building.currentProduction) continue;
 
       // If timer reached zero, complete production
@@ -102,6 +108,10 @@ export class ProductionSystem {
         cost = Math.round(cost * nationData.bonuses.costReduction);
       }
     }
+    // War Economy nation ability cost reduction
+    if (this.game.nationAbilitySystem) {
+      cost = Math.round(cost * this.game.nationAbilitySystem.getCostMultiplier(building.team));
+    }
 
     if (!this.game.resourceSystem.canAfford(building.team, cost)) {
       this.game.eventBus.emit('production:error', {
@@ -188,6 +198,11 @@ export class ProductionSystem {
 
     // Create the building
     const building = this.game.createBuilding(type, team, position);
+
+    // GD-063: Building construction phase
+    if (building && !CONSTRUCTION_CONFIG.preBuiltTypes.includes(type)) {
+      this._startConstruction(building);
+    }
 
     if (this.game.soundManager) {
       this.game.soundManager.play('build');
@@ -281,5 +296,105 @@ export class ProductionSystem {
     }
 
     return available;
+  }
+
+  // GD-063: Building Construction Phase
+  _startConstruction(building) {
+    const stats = BUILDING_STATS[building.type];
+    if (!stats) return;
+
+    building._constructing = true;
+    building._constructionTime = (stats.cost || 200) / 50; // ~4s for 200 cost, ~16s for 800 cost
+    building._constructionElapsed = 0;
+    building._constructionMaxHP = building.maxHealth;
+
+    // Start at 10% HP
+    building.health = Math.round(building.maxHealth * CONSTRUCTION_CONFIG.startHPPercent);
+
+    // Semi-transparent during construction
+    if (building.mesh) {
+      building.mesh.traverse(child => {
+        if (child.isMesh && child.material) {
+          if (!child.material._origOpacity) {
+            child.material._origOpacity = child.material.opacity;
+            child.material._origTransparent = child.material.transparent;
+          }
+          child.material.transparent = true;
+          child.material.opacity = 0.4;
+        }
+      });
+      // Scale down
+      building.mesh.scale.set(0.5, 0.5, 0.5);
+    }
+  }
+
+  _updateConstruction(building, delta) {
+    building._constructionElapsed += delta;
+    const progress = Math.min(1, building._constructionElapsed / building._constructionTime);
+
+    // Gain HP proportionally
+    const targetHP = Math.round(
+      building._constructionMaxHP * (CONSTRUCTION_CONFIG.startHPPercent + (1 - CONSTRUCTION_CONFIG.startHPPercent) * progress)
+    );
+    building.health = Math.min(targetHP, building._constructionMaxHP);
+
+    // Scale up
+    if (building.mesh) {
+      const scale = 0.5 + 0.5 * progress;
+      building.mesh.scale.set(scale, scale, scale);
+    }
+
+    // Construction complete
+    if (progress >= 1) {
+      building._constructing = false;
+      building.health = building._constructionMaxHP;
+
+      // Restore materials
+      if (building.mesh) {
+        building.mesh.scale.set(1, 1, 1);
+        building.mesh.traverse(child => {
+          if (child.isMesh && child.material && child.material._origOpacity !== undefined) {
+            child.material.opacity = child.material._origOpacity;
+            child.material.transparent = child.material._origTransparent;
+            delete child.material._origOpacity;
+            delete child.material._origTransparent;
+          }
+        });
+      }
+
+      if (building.team === 'player' && this.game.uiManager?.hud) {
+        this.game.uiManager.hud.showNotification(
+          `${building.type.charAt(0).toUpperCase() + building.type.slice(1)} construction complete!`,
+          '#00ff88'
+        );
+      }
+    }
+  }
+
+  cancelConstruction(building) {
+    if (!building || !building._constructing) return false;
+    const stats = BUILDING_STATS[building.type];
+    if (!stats) return false;
+
+    // Refund 75%
+    const refund = Math.round(stats.cost * CONSTRUCTION_CONFIG.cancelRefundPercent);
+    this.game.resourceSystem.addIncome(building.team, refund);
+    this.game.eventBus.emit('resource:changed', {
+      player: this.game.teams.player.sp,
+      enemy: this.game.teams.enemy.sp
+    });
+
+    // Remove building
+    building.alive = false;
+    this.game.removeEntity(building);
+    if (building.mesh) {
+      this.game.sceneManager.scene.remove(building.mesh);
+    }
+
+    if (building.team === 'player' && this.game.uiManager?.hud) {
+      this.game.uiManager.hud.showNotification(`Construction cancelled. Refund: ${refund} SP`, '#ffcc00');
+    }
+
+    return true;
   }
 }

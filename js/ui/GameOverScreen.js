@@ -183,6 +183,9 @@ export class GameOverScreen {
 
             <div style="color: #888;">Buildings Lost:</div>
             <div style="color: #ff6644; text-align: right;">${this.stats.buildingsLost}</div>
+
+            <div style="color: #888;">Salvage Income:</div>
+            <div style="color: #ffd700; text-align: right;">${this.game.stats?.player?.salvageIncome || 0} SP</div>
           </div>
         </div>
 

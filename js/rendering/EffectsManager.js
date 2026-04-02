@@ -193,6 +193,164 @@ export class EffectsManager {
     });
   }
 
+  // GD-064: Gold salvage text
+  createSalvageText(position, amount) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 128;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    const text = `+${amount} SP`;
+    ctx.font = 'bold 40px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 3;
+    ctx.strokeText(text, 64, 32);
+    ctx.fillStyle = '#ffd700';
+    ctx.fillText(text, 64, 32);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    const material = new THREE.SpriteMaterial({ map: texture, transparent: true, opacity: 1.0, depthTest: false });
+    const sprite = new THREE.Sprite(material);
+    sprite.scale.set(3.5, 1.75, 1);
+    sprite.position.copy(position);
+    sprite.position.y += 5;
+    this.scene.add(sprite);
+
+    this.activeEffects.push({
+      type: 'damageNumber',
+      group: sprite,
+      material,
+      texture,
+      lifetime: 1.5,
+      elapsed: 0,
+      startY: sprite.position.y
+    });
+  }
+
+  // GD-065: Smoke particles lingering after explosions
+  createSmoke(position) {
+    const particleCount = 6;
+    const group = new THREE.Group();
+    group.position.copy(position);
+    const particles = [];
+
+    for (let i = 0; i < particleCount; i++) {
+      const size = 0.5 + Math.random() * 0.8;
+      const geo = new THREE.SphereGeometry(size, 4, 4);
+      const mat = new THREE.MeshBasicMaterial({ color: 0x666666, transparent: true, opacity: 0.6 });
+      const p = new THREE.Mesh(geo, mat);
+      p.userData.velocity = new THREE.Vector3(
+        (Math.random() - 0.5) * 2,
+        1 + Math.random() * 2,
+        (Math.random() - 0.5) * 2
+      );
+      group.add(p);
+      particles.push(p);
+    }
+
+    this.scene.add(group);
+    this.activeEffects.push({
+      type: 'smoke',
+      group,
+      particles,
+      lifetime: 2.5,
+      elapsed: 0
+    });
+  }
+
+  // GD-065: Projectile trail line
+  createProjectileTrail(from, to) {
+    const points = [from.clone(), to.clone()];
+    points[0].y += 2;
+    points[1].y += 2;
+    const geo = new THREE.BufferGeometry().setFromPoints(points);
+    const mat = new THREE.LineBasicMaterial({ color: 0xffcc44, transparent: true, opacity: 0.8 });
+    const line = new THREE.Line(geo, mat);
+    this.scene.add(line);
+
+    this.activeEffects.push({
+      type: 'trail',
+      group: line,
+      material: mat,
+      geometry: geo,
+      lifetime: 0.2,
+      elapsed: 0
+    });
+  }
+
+  // GD-065: Debris on building destruction
+  createDebris(position) {
+    const count = 8;
+    const group = new THREE.Group();
+    group.position.copy(position);
+    const particles = [];
+
+    for (let i = 0; i < count; i++) {
+      const size = 0.2 + Math.random() * 0.4;
+      const geo = new THREE.BoxGeometry(size, size, size);
+      const mat = new THREE.MeshPhongMaterial({
+        color: Math.random() > 0.5 ? 0x888888 : 0x664422,
+        transparent: true,
+        opacity: 1.0
+      });
+      const p = new THREE.Mesh(geo, mat);
+      p.userData.velocity = new THREE.Vector3(
+        (Math.random() - 0.5) * 12,
+        5 + Math.random() * 10,
+        (Math.random() - 0.5) * 12
+      );
+      p.userData.rotSpeed = new THREE.Vector3(
+        Math.random() * 5, Math.random() * 5, Math.random() * 5
+      );
+      group.add(p);
+      particles.push(p);
+    }
+
+    this.scene.add(group);
+    this.activeEffects.push({
+      type: 'debris',
+      group,
+      particles,
+      lifetime: 1.5,
+      elapsed: 0
+    });
+  }
+
+  // GD-065: Tank dust while moving
+  createDustPuff(position) {
+    const group = new THREE.Group();
+    group.position.copy(position);
+    const particles = [];
+
+    for (let i = 0; i < 3; i++) {
+      const size = 0.3 + Math.random() * 0.3;
+      const geo = new THREE.SphereGeometry(size, 4, 4);
+      const mat = new THREE.MeshBasicMaterial({
+        color: 0xccaa77,
+        transparent: true,
+        opacity: 0.4
+      });
+      const p = new THREE.Mesh(geo, mat);
+      p.userData.velocity = new THREE.Vector3(
+        (Math.random() - 0.5) * 1,
+        0.5 + Math.random(),
+        (Math.random() - 0.5) * 1
+      );
+      group.add(p);
+      particles.push(p);
+    }
+
+    this.scene.add(group);
+    this.activeEffects.push({
+      type: 'smoke',
+      group,
+      particles,
+      lifetime: 1.0,
+      elapsed: 0
+    });
+  }
+
   createDamageVignette() {
     // Create a full-screen red border flash using CSS overlay
     if (this._vignetteEl) return; // already active
@@ -231,6 +389,9 @@ export class EffectsManager {
         if (effect.type === 'damageNumber') {
           effect.material.dispose();
           effect.texture.dispose();
+        } else if (effect.type === 'trail') {
+          if (effect.material) effect.material.dispose();
+          if (effect.geometry) effect.geometry.dispose();
         } else {
           effect.group.traverse(child => {
             if (child.geometry) child.geometry.dispose();
@@ -260,6 +421,26 @@ export class EffectsManager {
         // Float upward and fade out
         effect.group.position.y = effect.startY + progress * 4;
         effect.material.opacity = 1.0 - progress;
+      } else if (effect.type === 'smoke') {
+        for (const particle of effect.particles) {
+          particle.position.addScaledVector(particle.userData.velocity, delta);
+          particle.material.opacity = 0.6 * (1.0 - progress);
+          const scale = 1.0 + progress * 2;
+          particle.scale.set(scale, scale, scale);
+        }
+      } else if (effect.type === 'trail') {
+        effect.material.opacity = 0.8 * (1.0 - progress);
+      } else if (effect.type === 'debris') {
+        for (const particle of effect.particles) {
+          particle.position.addScaledVector(particle.userData.velocity, delta);
+          particle.userData.velocity.y -= 15 * delta;
+          if (particle.userData.rotSpeed) {
+            particle.rotation.x += particle.userData.rotSpeed.x * delta;
+            particle.rotation.y += particle.userData.rotSpeed.y * delta;
+            particle.rotation.z += particle.userData.rotSpeed.z * delta;
+          }
+          particle.material.opacity = 1.0 - progress;
+        }
       }
     }
   }

@@ -94,7 +94,13 @@ export class CombatSystem {
       }
     }
 
-    const finalDmg = Math.max(1, baseDmg * modifier * armorReduction * terrainMod * ditchMod);
+    // Banzai Charge vulnerability (GD-058)
+    let banzaiMod = 1.0;
+    if (defender.isUnit && defender._banzaiVulnerability) {
+      banzaiMod = defender._banzaiVulnerability;
+    }
+
+    const finalDmg = Math.max(1, baseDmg * modifier * armorReduction * terrainMod * ditchMod * banzaiMod);
 
     // Apply damage
     defender.takeDamage(finalDmg);
@@ -130,6 +136,8 @@ export class CombatSystem {
     // Create muzzle flash effect
     if (this.game.effectsManager) {
       this.game.effectsManager.createMuzzleFlash(attackerPos);
+      // GD-065: Projectile trail
+      this.game.effectsManager.createProjectileTrail(attackerPos, defenderPos);
     }
 
     // Play attack sound (unit-type-specific)
@@ -401,27 +409,34 @@ export class CombatSystem {
     const ab = UNIT_ABILITIES.carrier;
     if (unit.getPosition().distanceTo(targetPos) > ab.range * 3) return false;
     unit.abilityCooldown = ab.cooldown;
-    const enemyTeam = unit.team === 'player' ? 'enemy' : 'player';
-    const interval = ab.squadronDuration / ab.squadronCount;
-    for (let i = 0; i < ab.squadronCount; i++) {
-      setTimeout(() => {
-        if (!unit.alive) return;
-        let nearest = null, nd = Infinity;
-        for (const enemy of this.game.getEntitiesByTeam(enemyTeam)) {
-          if (!enemy.alive) continue;
-          const d = enemy.getPosition().distanceTo(targetPos);
-          if (d < nd && d < 15) { nd = d; nearest = enemy; }
-        }
-        if (nearest) {
-          nearest.takeDamage(ab.squadronDamage);
-          if (!nearest.alive && unit.addKill) {
-            unit.addKill();
-            this.game.eventBus.emit('combat:kill', { attacker: unit, defender: nearest });
+
+    // GD-062: Use new carrier drone launch system
+    if (unit.launchSquadron) {
+      unit.launchSquadron(targetPos, ab.squadronDuration);
+    } else {
+      // Fallback for non-reworked carriers
+      const enemyTeam = unit.team === 'player' ? 'enemy' : 'player';
+      const interval = ab.squadronDuration / ab.squadronCount;
+      for (let i = 0; i < ab.squadronCount; i++) {
+        setTimeout(() => {
+          if (!unit.alive) return;
+          let nearest = null, nd = Infinity;
+          for (const enemy of this.game.getEntitiesByTeam(enemyTeam)) {
+            if (!enemy.alive) continue;
+            const d = enemy.getPosition().distanceTo(targetPos);
+            if (d < nd && d < 15) { nd = d; nearest = enemy; }
           }
-          if (this.game.effectsManager) this.game.effectsManager.createMuzzleFlash(nearest.getPosition());
-        }
-        if (this.game.soundManager) this.game.soundManager.play('attack');
-      }, i * interval * 1000);
+          if (nearest) {
+            nearest.takeDamage(ab.squadronDamage);
+            if (!nearest.alive && unit.addKill) {
+              unit.addKill();
+              this.game.eventBus.emit('combat:kill', { attacker: unit, defender: nearest });
+            }
+            if (this.game.effectsManager) this.game.effectsManager.createMuzzleFlash(nearest.getPosition());
+          }
+          if (this.game.soundManager) this.game.soundManager.play('attack');
+        }, i * interval * 1000);
+      }
     }
     this.game.eventBus.emit('ability:used', { unit, ability: 'launch_squadron', target: targetPos });
     return true;
@@ -448,6 +463,9 @@ export class CombatSystem {
   autoAcquireTarget(unit) {
     // Hold fire stance: never auto-acquire targets
     if (unit.stance === 'holdfire') return;
+
+    // GD-062: Carriers have no direct attack (drones handle it)
+    if (unit.damage <= 0) return;
 
     // Auto-acquire if idle or in attack-move mode
     if (unit.moveTarget && !unit._attackMove) return;
