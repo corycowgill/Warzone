@@ -20,6 +20,7 @@ import { BuildingFactory } from '../buildings/BuildingFactory.js';
 import { SoundManager } from '../systems/SoundManager.js';
 import { FogOfWar } from '../systems/FogOfWar.js';
 import { NationAbilitySystem } from '../systems/NationAbilitySystem.js';
+import { AlertSystem } from '../systems/AlertSystem.js';
 import { PostProcessing } from '../rendering/PostProcessing.js';
 import { assetManager } from '../rendering/AssetManager.js';
 
@@ -70,6 +71,7 @@ export class Game {
     this.soundManager = null;
     this.fogOfWar = null;
     this.nationAbilitySystem = null;
+    this.alertSystem = null;
     this.postProcessing = null;
     this.resourceNodes = [];
     this.aiController2 = null;
@@ -185,6 +187,11 @@ export class Game {
 
       // Initialize nation ability system
       this.nationAbilitySystem = new NationAbilitySystem(this);
+
+      // Initialize alert notification system (GD-087)
+      if (this.mode !== 'SPECTATE') {
+        this.alertSystem = new AlertSystem(this);
+      }
 
       // Place resource nodes on the map
       this.placeResourceNodes();
@@ -715,6 +722,10 @@ export class Game {
       this.nationAbilitySystem.update(delta);
     }
 
+    if (this.alertSystem) {
+      this.alertSystem.update(delta);
+    }
+
     if (this.aiController) {
       this.aiController.update(delta);
     }
@@ -1184,6 +1195,11 @@ export class Game {
     if (this.uiManager && this.uiManager.gameOverScreen && this.uiManager.gameOverScreen.dispose) {
       this.uiManager.gameOverScreen.dispose();
       this.uiManager.gameOverScreen = null;
+    }
+    // Clean up alert system
+    if (this.alertSystem) {
+      this.alertSystem.destroy();
+      this.alertSystem = null;
     }
     // Clean up orphaned UI elements
     const resPanel = document.getElementById('research-panel');
