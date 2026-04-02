@@ -1265,16 +1265,31 @@ export class HUD {
     const worldPos = this.game.inputManager.getWorldPosition(event.clientX, event.clientY);
 
     if (worldPos) {
-      const selected = this.game.selectionManager.getSelected().filter(e => e.isUnit && e.ability);
-      for (const unit of selected) {
-        if (unit.canUseAbility()) {
-          this.game.combatSystem.executeAbility(unit, worldPos, null);
+      // GD-111: Check for commander ability targeting first
+      const cmdSystem = this.game.commandSystem;
+      if (cmdSystem._commanderAbilityUnit && cmdSystem._commanderAbilityIndex !== undefined) {
+        const cmd = cmdSystem._commanderAbilityUnit;
+        const idx = cmdSystem._commanderAbilityIndex;
+        if (cmd.alive && cmd.isAbilityReady(idx)) {
+          cmd.useAbility(idx, worldPos);
+        }
+        cmdSystem._commanderAbilityUnit = null;
+        cmdSystem._commanderAbilityIndex = undefined;
+      } else {
+        // Regular unit ability targeting
+        const selected = this.game.selectionManager.getSelected().filter(e => e.isUnit && e.ability);
+        for (const unit of selected) {
+          if (unit.canUseAbility()) {
+            this.game.combatSystem.executeAbility(unit, worldPos, null);
+          }
         }
       }
     }
 
     // Always reset state even if worldPos was null
     this.game.commandSystem.abilityTargetMode = false;
+    this.game.commandSystem._commanderAbilityUnit = null;
+    this.game.commandSystem._commanderAbilityIndex = undefined;
     document.body.style.cursor = 'default';
   }
 

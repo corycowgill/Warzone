@@ -429,6 +429,8 @@ export class CommandSystem {
         this.patrolMode = false;
         this.buildPlacementMode = false;
         this.buildPlacementType = null;
+        this._commanderAbilityUnit = null;
+        this._commanderAbilityIndex = undefined;
         document.body.style.cursor = 'default';
         break;
 
@@ -516,6 +518,38 @@ export class CommandSystem {
             this.game._lastCombatAlertPos.x,
             this.game._lastCombatAlertPos.z
           );
+        }
+        break;
+      }
+
+      case '1':
+      case '2':
+      case '3': {
+        // GD-111: Commander ability hotkeys [1][2][3]
+        const abilityIndex = parseInt(key) - 1;
+        const commanders = selected.filter(e => e.isUnit && e.type === 'commander' && e.commanderAbilities);
+        if (commanders.length > 0) {
+          const cmd = commanders[0];
+          if (cmd.commanderAbilities[abilityIndex]) {
+            if (cmd.isAbilityReady(abilityIndex)) {
+              const ability = cmd.commanderAbilities[abilityIndex];
+              // If ability needs a target position, enter targeting mode
+              if (ability.range) {
+                this._commanderAbilityUnit = cmd;
+                this._commanderAbilityIndex = abilityIndex;
+                this.abilityTargetMode = true;
+                document.body.style.cursor = 'crosshair';
+                this.game.eventBus.emit('notification', { message: `Click to use ${ability.name}`, color: '#ffcc00' });
+              } else {
+                // Self-cast / no target needed
+                cmd.useAbility(abilityIndex, cmd.getPosition());
+              }
+            } else {
+              const cd = Math.ceil(cmd.commanderCooldowns[abilityIndex]);
+              this.game.eventBus.emit('notification', { message: `Ability on cooldown (${cd}s)`, color: '#ff4444' });
+              if (this.game.soundManager) this.game.soundManager.play('error');
+            }
+          }
         }
         break;
       }

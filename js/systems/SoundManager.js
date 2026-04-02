@@ -232,6 +232,7 @@ export class SoundManager {
       case 'select': this.playSelectAck(unitType); this.playVoiceLine('select'); break;
       case 'acknowledge': this.playAttackAck(unitType); this.playVoiceLine('attack'); break;
       case 'build': this.playBuild(); break;
+      case 'ability': this.playAbility(); break;
       case 'error': this.playError(); break;
       case 'victory': this.playVictoryFanfare(); break;
       case 'defeat': this.playDefeatSting(); break;
@@ -799,6 +800,22 @@ export class SoundManager {
     osc.start(now); osc.stop(now + 0.3);
   }
 
+  playAbility() {
+    // Ability activation: rising tri-tone with shimmer
+    const ctx = this.audioContext;
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(400, now);
+    osc.frequency.setValueAtTime(600, now + 0.08);
+    osc.frequency.setValueAtTime(900, now + 0.16);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.12, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+    osc.connect(gain); gain.connect(this.sfxGain);
+    osc.start(now); osc.stop(now + 0.35);
+  }
+
   playError() {
     const ctx = this.audioContext;
     const now = ctx.currentTime;
@@ -960,6 +977,10 @@ export class SoundManager {
   }
 
   stopAllMusic() {
+    // Cancel any queued speech synthesis voice lines
+    if (window.speechSynthesis) {
+      try { window.speechSynthesis.cancel(); } catch (e) { /* ok */ }
+    }
     this._currentMusicType = null;
     if (this._menuMusic) {
       this._stopMusicObj(this._menuMusic);
@@ -1360,28 +1381,7 @@ export class SoundManager {
   }
 
   // ==================== AMBIENT ENVIRONMENTAL SOUNDS ====================
-
-  startAmbient() {
-    if (!this.initialized || !this.enabled) return;
-    this.stopAmbient();
-    this._startWindAmbient();
-    this._startDistantArtillery();
-  }
-
-  stopAmbient() {
-    if (this._ambientWind) {
-      this._stopMusicObj(this._ambientWind);
-      this._ambientWind = null;
-    }
-    if (this._ambientWater) {
-      this._stopMusicObj(this._ambientWater);
-      this._ambientWater = null;
-    }
-    if (this._ambientArtillery) {
-      this._stopMusicObj(this._ambientArtillery);
-      this._ambientArtillery = null;
-    }
-  }
+  // (Original startAmbient/stopAmbient removed; replaced by GD-107 enhanced versions below)
 
   _startWindAmbient() {
     // Constant filtered noise loop for wind

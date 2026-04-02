@@ -262,6 +262,15 @@ export class WeatherSystem {
   }
 
   dispose() {
+    // Restore original scene fog settings before cleanup
+    const scene = this.game.sceneManager?.scene;
+    if (scene && scene.fog) {
+      scene.fog.near = this._originalFogNear;
+      scene.fog.far = this._originalFogFar;
+      scene.fog.color.copy(this._originalFogColor);
+      scene.background = scene.fog.color.clone();
+    }
+
     while (this.particleGroup.children.length > 0) {
       const child = this.particleGroup.children[0];
       this.particleGroup.remove(child);

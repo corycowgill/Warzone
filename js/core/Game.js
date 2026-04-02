@@ -85,6 +85,7 @@ export class Game {
     this.strategicOverlay = null;
     this._mapEventTimer = 0;
     this._mapEventInterval = 60; // seconds between events
+    this._pendingTimeouts = []; // Track setTimeout IDs for cleanup on restart
     this._tutorialStep = 0;
     this._tutorialTimer = 0;
     this._tutorialShown = false;
@@ -328,14 +329,14 @@ export class Game {
               if (aura.armor) u.armor = (u.armor || 0) + aura.armor;
             }
             // Schedule removal
-            setTimeout(() => {
+            this._pendingTimeouts.push(setTimeout(() => {
               for (const u of affected) {
                 if (!u.alive) continue;
                 if (aura.damageMult) delete u._cmdAuraDmg;
                 if (aura.speedMult) delete u._cmdAuraSpd;
                 if (aura.armor) u.armor = Math.max(0, (u.armor || 0) - aura.armor);
               }
-            }, duration * 1000);
+            }, duration * 1000));
             if (this.soundManager) this.soundManager.play('ability');
             if (team === 'player' && this.uiManager?.hud) {
               this.uiManager.hud.showNotification(`${ability.name} activated!`, '#44ff88');
@@ -356,7 +357,8 @@ export class Game {
               const shellOffset = new THREE.Vector3((Math.random() - 0.5) * radius, 0, (Math.random() - 0.5) * radius);
               const shellPos = pos.clone().add(shellOffset);
               // Delayed impact for each shell
-              setTimeout(() => {
+              this._pendingTimeouts.push(setTimeout(() => {
+                if (this.state !== 'PLAYING') return;
                 const enemies = this.getEntitiesByTeam(otherTeam);
                 for (const enemy of enemies) {
                   if (!enemy.alive) continue;
@@ -372,7 +374,7 @@ export class Game {
                 }
                 if (this.effectsManager) this.effectsManager.createExplosion(shellPos);
                 if (this.cameraController) this.cameraController.shake(1.5);
-              }, s * 600);
+              }, s * 600));
             }
             if (this.soundManager) this.soundManager.play('explosion');
             break;
@@ -383,7 +385,7 @@ export class Game {
             const radius = ability.radius || 15;
             const duration = ability.duration || 8;
             this._smokeZones = this._smokeZones || [];
-            this._smokeZones.push({ position: pos.clone(), radius, expiry: this.gameElapsed + duration });
+            this._smokeZones.push({ position: pos.clone(), radius, timer: duration });
             for (let i = 0; i < 6; i++) {
               const offset = new THREE.Vector3((Math.random() - 0.5) * radius, 0, (Math.random() - 0.5) * radius);
               if (this.effectsManager) this.effectsManager.createSmoke(pos.clone().add(offset));
@@ -406,7 +408,7 @@ export class Game {
               closest._sabotaged = true;
               const savedProduction = closest.currentProduction;
               closest.currentProduction = null;
-              setTimeout(() => {
+              this._pendingTimeouts.push(setTimeout(() => {
                 if (closest.alive) {
                   closest._sabotaged = false;
                   // Restore production if it was interrupted
@@ -414,7 +416,7 @@ export class Game {
                     closest.productionQueue.unshift(savedProduction);
                   }
                 }
-              }, disableDur * 1000);
+              }, disableDur * 1000));
               if (this.effectsManager) this.effectsManager.createSmoke(closest.getPosition().clone());
             }
             break;
@@ -429,7 +431,7 @@ export class Game {
               b.maxHealth = Math.floor(b.maxHealth * mult);
               b.health = Math.min(b.health + (b.maxHealth - b._origMaxHP), b.maxHealth);
             }
-            setTimeout(() => {
+            this._pendingTimeouts.push(setTimeout(() => {
               for (const b of buildings) {
                 if (b.alive && b._origMaxHP) {
                   b.maxHealth = b._origMaxHP;
@@ -437,7 +439,7 @@ export class Game {
                   delete b._origMaxHP;
                 }
               }
-            }, duration * 1000);
+            }, duration * 1000));
             if (this.soundManager) this.soundManager.play('ability');
             break;
           }
@@ -445,7 +447,7 @@ export class Game {
             // Commander self-buff: 2x damage
             const duration = ability.duration || 10;
             unit._cmdAuraDmg = ability.selfDamageMult || 2.0;
-            setTimeout(() => { if (unit.alive) delete unit._cmdAuraDmg; }, duration * 1000);
+            this._pendingTimeouts.push(setTimeout(() => { if (unit.alive) delete unit._cmdAuraDmg; }, duration * 1000));
             if (this.soundManager) this.soundManager.play('ability');
             break;
           }
@@ -458,13 +460,13 @@ export class Game {
               const offset = new THREE.Vector3((Math.random() - 0.5) * 10, 0, (Math.random() - 0.5) * 10);
               const turret = this.createBuilding('turret', team, pos.clone().add(offset));
               if (turret) {
-                setTimeout(() => {
+                this._pendingTimeouts.push(setTimeout(() => {
                   if (turret.alive) {
                     turret.health = 0;
                     turret.alive = false;
                     this.eventBus.emit('building:destroyed', { entity: turret });
                   }
-                }, dur * 1000);
+                }, dur * 1000));
               }
             }
             if (this.soundManager) this.soundManager.play('build');
@@ -1760,6 +1762,14 @@ export class Game {
     }
     // Reset commander state
     this._commanderState = null;
+
+    // Clear all pending timeouts from commander abilities
+    if (this._pendingTimeouts) {
+      for (const id of this._pendingTimeouts) {
+        clearTimeout(id);
+      }
+      this._pendingTimeouts = [];
+    }
 
     // Clean up nation ability button
     const abilityBtn = document.getElementById('nation-ability-btn');
