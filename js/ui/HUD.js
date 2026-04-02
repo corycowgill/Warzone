@@ -437,7 +437,11 @@ export class HUD {
     const resState = this.game.research?.player;
     if (resState?.inProgress) {
       if (!this._researchDisplay) {
+        // Remove orphaned element from previous game session
+        const existing = document.getElementById('hud-research-display');
+        if (existing) existing.remove();
         this._researchDisplay = document.createElement('div');
+        this._researchDisplay.id = 'hud-research-display';
         this._researchDisplay.style.cssText = 'position:fixed;bottom:225px;right:10px;background:rgba(0,0,0,0.8);border:1px solid #00ccaa;border-radius:4px;padding:4px 8px;font-size:11px;color:#00ffcc;font-family:sans-serif;z-index:100;';
         document.body.appendChild(this._researchDisplay);
       }

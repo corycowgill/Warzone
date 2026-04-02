@@ -87,8 +87,22 @@ export class PathfindingSystem {
     }
 
     // Land units use walkable grid
-    return terrain.walkableGrid[gy]?.[gx] === true ||
-           terrain.walkableGrid[gy]?.[gx] === 1;
+    const walkable = terrain.walkableGrid[gy]?.[gx] === true ||
+                     terrain.walkableGrid[gy]?.[gx] === 1;
+    if (!walkable) return false;
+
+    // Check for wall buildings that block movement
+    const wx = gx * this.worldScale;
+    const wz = gy * this.worldScale;
+    for (const entity of this.game.entities) {
+      if (!entity.alive || !entity.isBuilding) continue;
+      if (entity.type !== 'wall') continue;
+      const pos = entity.getPosition();
+      const dx = pos.x - wx;
+      const dz = pos.z - wz;
+      if (dx * dx + dz * dz < 9) return false; // within 3 units
+    }
+    return true;
   }
 
   findNearestPassable(gx, gy, domain) {

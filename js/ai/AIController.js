@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { UNIT_STATS, BUILDING_STATS, GAME_CONFIG, AI_DIFFICULTY, DAMAGE_MODIFIERS, RESEARCH_UPGRADES } from '../core/Constants.js';
+import { UNIT_STATS, BUILDING_STATS, GAME_CONFIG, AI_DIFFICULTY, DAMAGE_MODIFIERS, RESEARCH_UPGRADES, BUILDING_UPGRADES } from '../core/Constants.js';
 
 // Multiple build order strategies
 const BUILD_ORDERS = {
@@ -116,6 +116,24 @@ export class AIController {
 
     this.chosenBuildOrder = [...BUILD_ORDERS[this.strategy]];
     this.buildOrderIndex = 0;
+
+    // Remove shipyard from build order if no significant water on the map
+    if (!this.hasSignificantWater()) {
+      this.chosenBuildOrder = this.chosenBuildOrder.filter(b => b !== 'shipyard');
+    }
+  }
+
+  hasSignificantWater() {
+    if (!this.game.terrain) return false;
+    const mapSize = GAME_CONFIG.mapSize;
+    let waterCells = 0;
+    const totalSamples = 100;
+    for (let i = 0; i < totalSamples; i++) {
+      const x = Math.random() * mapSize * GAME_CONFIG.worldScale;
+      const z = Math.random() * mapSize * GAME_CONFIG.worldScale;
+      if (this.game.terrain.isWater(x, z)) waterCells++;
+    }
+    return waterCells > totalSamples * 0.15; // >15% water
   }
 
   update(delta) {
@@ -247,6 +265,9 @@ export class AIController {
 
     // AI research upgrades
     this.considerResearch();
+
+    // AI building upgrades
+    this.considerBuildingUpgrades();
   }
 
   considerResearch() {
@@ -268,6 +289,21 @@ export class AIController {
       if (!hasBuilding) continue;
       this.game.startResearch(this.team, id);
       break;
+    }
+  }
+
+  considerBuildingUpgrades() {
+    const sp = this.game.teams[this.team].sp;
+    if (sp < 300) return; // save resources for units
+    const buildings = this.game.getBuildings(this.team);
+    for (const b of buildings) {
+      if (!b.canUpgrade || !b.canUpgrade()) continue;
+      const cost = b.getUpgradeCost();
+      if (cost > 0 && sp >= cost && this.game.resourceSystem.canAfford(this.team, cost)) {
+        this.game.resourceSystem.spend(this.team, cost);
+        b.upgrade();
+        break; // one upgrade per tactical tick
+      }
     }
   }
 
@@ -444,7 +480,10 @@ export class AIController {
       } else if (building.type === 'airfield') {
         unitType = this.chooseAirUnit(myUnits);
       } else if (building.type === 'shipyard') {
-        unitType = this.chooseNavalUnit(myUnits);
+        // Only build naval units if there's water on the map
+        if (this.hasSignificantWater()) {
+          unitType = this.chooseNavalUnit(myUnits);
+        }
       }
 
       // Apply nation personality unit bias
@@ -941,8 +980,8 @@ export class AIController {
       for (const unit of inCombat) {
         this.retreatUnit(unit);
       }
-      // Reset attack cooldown to regroup
-      this.lastAttackTime = this.attackCooldown * 0.5;
+      // Reset attack cooldown to enforce full delay before re-attacking
+      this.lastAttackTime = 0;
     }
   }
 

@@ -818,6 +818,17 @@ export class Game {
       const state = this.research[team];
       if (!state.inProgress) continue;
 
+      // Cancel research if building was destroyed
+      if (state.building && !state.building.alive) {
+        state.inProgress = null;
+        state.timer = 0;
+        state.building = null;
+        if (team === 'player' && this.uiManager && this.uiManager.hud) {
+          this.uiManager.hud.showNotification('Research cancelled: building destroyed!', '#ff4444');
+        }
+        continue;
+      }
+
       state.timer -= delta;
       if (state.timer <= 0) {
         const upgradeId = state.inProgress;
@@ -931,6 +942,12 @@ export class Game {
       this.uiManager.gameOverScreen.dispose();
       this.uiManager.gameOverScreen = null;
     }
+    // Clean up orphaned UI elements
+    const resPanel = document.getElementById('research-panel');
+    if (resPanel) resPanel.remove();
+    const resDisplay = document.getElementById('hud-research-display');
+    if (resDisplay) resDisplay.remove();
+
     // Clean up minimap event listeners
     if (this.minimap && this.minimap.dispose) {
       this.minimap.dispose();

@@ -108,6 +108,12 @@ export class ResourceSystem {
         income += stats.income;
       }
     }
+
+    // Supply Lines research bonus
+    if (this.game.hasResearch && this.game.hasResearch(team, 'supply_lines')) {
+      income = Math.floor(income * 1.25);
+    }
+
     return income;
   }
 }

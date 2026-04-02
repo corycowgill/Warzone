@@ -61,6 +61,11 @@ export class Building extends Entity {
         buildTime = buildTime / tierBonus.productionSpeed;
       }
 
+      // Apply blitz_training research bonus
+      if (this.game && this.game.hasResearch && this.game.hasResearch(this.team, 'blitz_training')) {
+        buildTime /= 1.15;
+      }
+
       this.productionTimer = buildTime;
     }
   }
