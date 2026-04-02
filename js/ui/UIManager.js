@@ -15,6 +15,8 @@ export class UIManager {
     // Nation selection state
     this.selectedPlayerNation = null;
     this.selectedEnemyNation = null;
+    this.selectedDifficulty = 'normal';
+    this.selectedMap = 'continental';
 
     this.setupEventListeners();
   }
@@ -114,6 +116,61 @@ export class UIManager {
       this.showMainMenu();
     });
 
+    // Difficulty selection buttons
+    const difficultyDescs = {
+      easy: 'Relaxed AI with slower build-up and weaker attacks.',
+      normal: 'Standard AI with varied strategies and smart targeting.',
+      hard: 'Aggressive AI with resource bonuses and relentless pressure.'
+    };
+    document.querySelectorAll('.difficulty-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const diff = btn.dataset.difficulty;
+        if (!diff) return;
+        this.selectedDifficulty = diff;
+        // Update button styles
+        document.querySelectorAll('.difficulty-btn').forEach(b => {
+          b.classList.remove('selected');
+          b.style.background = 'rgba(22,33,62,0.6)';
+          b.style.borderColor = 'rgba(255,255,255,0.08)';
+          b.style.boxShadow = 'none';
+        });
+        btn.classList.add('selected');
+        btn.style.background = 'rgba(0,255,65,0.1)';
+        btn.style.borderColor = '#00ff41';
+        btn.style.boxShadow = '0 0 10px rgba(0,255,65,0.2)';
+        // Update description
+        const descEl = document.getElementById('difficulty-desc');
+        if (descEl) descEl.textContent = difficultyDescs[diff] || '';
+      });
+    });
+
+    // Map selection buttons
+    const mapDescs = {
+      continental: 'Large landmass with water on one side.',
+      islands: 'Archipelago map — naval control is key.',
+      river: 'Two landmasses split by a river with crossing points.',
+      plains: 'Wide open terrain with minimal water.'
+    };
+    document.querySelectorAll('.map-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const map = btn.dataset.map;
+        if (!map) return;
+        this.selectedMap = map;
+        document.querySelectorAll('.map-btn').forEach(b => {
+          b.classList.remove('selected');
+          b.style.background = 'rgba(22,33,62,0.6)';
+          b.style.borderColor = 'rgba(255,255,255,0.08)';
+          b.style.boxShadow = 'none';
+        });
+        btn.classList.add('selected');
+        btn.style.background = 'rgba(0,255,65,0.1)';
+        btn.style.borderColor = '#00ff41';
+        btn.style.boxShadow = '0 0 10px rgba(0,255,65,0.2)';
+        const descEl = document.getElementById('map-desc');
+        if (descEl) descEl.textContent = mapDescs[map] || '';
+      });
+    });
+
     // Game over buttons
     document.getElementById('btn-play-again')?.addEventListener('click', () => {
       this.game.restart();
@@ -146,6 +203,16 @@ export class UIManager {
     document.getElementById('opt-sound')?.addEventListener('change', (e) => {
       if (this.game.soundManager) {
         this.game.soundManager.setEnabled(e.target.checked);
+      }
+    });
+    document.getElementById('opt-music-volume')?.addEventListener('input', (e) => {
+      if (this.game.soundManager) {
+        this.game.soundManager.setMusicVolume(parseInt(e.target.value) / 100);
+      }
+    });
+    document.getElementById('opt-music')?.addEventListener('change', (e) => {
+      if (this.game.soundManager) {
+        this.game.soundManager.setMusicEnabled(e.target.checked);
       }
     });
     document.getElementById('opt-camspeed')?.addEventListener('input', (e) => {
@@ -189,7 +256,9 @@ export class UIManager {
     this.game.startGame({
       mode: this.game.mode,
       playerNation: this.selectedPlayerNation,
-      enemyNation: enemyNation
+      enemyNation: enemyNation,
+      difficulty: this.selectedDifficulty,
+      mapTemplate: this.selectedMap
     });
   }
 
@@ -258,6 +327,8 @@ export class UIManager {
     // Reset selections when re-entering nation select
     this.selectedPlayerNation = null;
     this.selectedEnemyNation = null;
+    this.selectedDifficulty = 'normal';
+    this.selectedMap = 'continental';
     document.querySelectorAll('.nation-card').forEach(c => c.classList.remove('selected'));
     const startBtn = document.getElementById('btn-start-game');
     if (startBtn) startBtn.disabled = true;
@@ -271,6 +342,11 @@ export class UIManager {
       this.hud = new HUD(this.game);
     }
     this.hud.show();
+
+    // Create GameOverScreen early so it tracks stats from game start
+    if (!this.gameOverScreen) {
+      this.gameOverScreen = new GameOverScreen(this.game);
+    }
   }
 
   showGameOver(won) {

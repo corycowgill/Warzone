@@ -431,14 +431,15 @@ body {
   top: 50px;
   right: 10px;
   z-index: 10;
-  width: 200px;
+  width: 220px;
   padding: 12px;
   background: rgba(26, 26, 46, 0.92);
   border: 1px solid rgba(0, 255, 65, 0.12);
   border-radius: 3px;
-  max-height: 400px;
+  max-height: calc(100vh - 280px);
   overflow-y: auto;
 }
+
 
 .production-title {
   font-size: 12px;
@@ -530,12 +531,14 @@ body {
   position: fixed;
   top: 50px;
   right: 10px;
-  z-index: 10;
-  width: 200px;
+  z-index: 11;
+  width: 220px;
   padding: 12px;
-  background: rgba(26, 26, 46, 0.92);
-  border: 1px solid rgba(0, 255, 65, 0.12);
+  background: rgba(26, 26, 46, 0.95);
+  border: 1px solid rgba(0, 255, 65, 0.2);
   border-radius: 3px;
+  max-height: calc(100vh - 280px);
+  overflow-y: auto;
 }
 
 #build-options .prod-btn {

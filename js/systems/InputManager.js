@@ -45,11 +45,13 @@ export class InputManager {
     canvas.addEventListener('mouseup', (e) => {
       if (e.button === 0) {
         if (!this.isDragging) {
-          // Play selection sound
-          if (this.game.soundManager) {
-            this.game.soundManager.play('select');
-          }
           this.game.selectionManager.handleClick(e);
+          // Play selection sound with unit type from newly selected entity
+          if (this.game.soundManager) {
+            const selected = this.game.selectionManager.getSelected();
+            const unitType = selected.length > 0 && selected[0].isUnit ? selected[0].type : null;
+            this.game.soundManager.play('select', { unitType });
+          }
         } else {
           this.game.selectionManager.handleBoxSelectEnd(e);
         }

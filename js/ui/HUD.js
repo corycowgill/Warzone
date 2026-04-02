@@ -22,14 +22,15 @@ export class HUD {
     this.buildPlacementMode = false;
     this.buildPlacementType = null;
 
-    // Create notification area
+    // Create notification area (top-center, below resource bar)
     this.notificationArea = document.createElement('div');
     this.notificationArea.id = 'hud-notifications';
     this.notificationArea.style.cssText = `
-      position: absolute;
-      top: 50px;
-      right: 10px;
-      width: 280px;
+      position: fixed;
+      top: 44px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 300px;
       z-index: 100;
       pointer-events: none;
     `;
@@ -74,6 +75,10 @@ export class HUD {
       <div>B: Build menu</div>
       <div>Tab: Cycle buildings</div>
       <div>Esc: Cancel</div>
+      <div style="margin-top:4px;color:#00ccff;">Control Groups</div>
+      <div>Ctrl+0-9: Save group</div>
+      <div>0-9: Recall group</div>
+      <div>Double-tap: Center cam</div>
     `;
     document.body.appendChild(this.helpEl);
   }
@@ -82,7 +87,7 @@ export class HUD {
     if (!this.buildOptions) return;
     this.buildOptions.innerHTML = '';
 
-    const buildableTypes = ['barracks', 'warfactory', 'airfield', 'shipyard', 'resourcedepot'];
+    const buildableTypes = ['barracks', 'warfactory', 'airfield', 'shipyard', 'resourcedepot', 'supplydepot', 'turret', 'aaturret', 'bunker', 'wall'];
     for (const type of buildableTypes) {
       const stats = BUILDING_STATS[type];
       if (!stats) continue;
@@ -108,10 +113,22 @@ export class HUD {
       const requires = stats.requires || [];
       const reqStr = requires.length > 0 ? `<br><small style="color:#ff8844;">Requires: ${requires.map(r => this.formatName(r)).join(', ')}</small>` : '';
 
+      let descStr = '';
+      if (stats.produces && stats.produces.length > 0) {
+        descStr = 'Produces: ' + stats.produces.map(u => this.formatName(u)).join(', ');
+      } else if (stats.income) {
+        descStr = `<span style="color:#44dd88;">Income: +${stats.income} SP/s</span>`;
+      } else if (stats.damage) {
+        descStr = `DMG: ${stats.damage} | RNG: ${stats.range}`;
+        if (stats.garrisonSlots) descStr += ` | <span style="color:#66aaff;">Garrison: ${stats.garrisonSlots}</span>`;
+        if (stats.targetDomain) descStr += ` (${stats.targetDomain})`;
+      } else if (stats.blocksMovement) {
+        descStr = 'Blocks movement, high armor';
+      }
       btn.innerHTML = `
         <strong>${this.formatName(type)}</strong>
         <span style="color:#ffcc00;float:right;">${stats.cost} SP</span>
-        <br><small style="color:#999;">${stats.produces.length > 0 ? 'Produces: ' + stats.produces.map(u => this.formatName(u)).join(', ') : (type === 'resourcedepot' ? 'Income: +' + (stats.income || 8) + ' SP/s' : '')}</small>
+        <br><small style="color:#999;">${descStr}</small>
         ${reqStr}
       `;
       btn.addEventListener('click', () => {
@@ -188,6 +205,10 @@ export class HUD {
 
     this.game.eventBus.on('production:error', (data) => {
       this.showNotification(data.message, '#ff4444');
+    });
+
+    this.game.eventBus.on('production:cancelled', (data) => {
+      // Queue display will be refreshed by the click handler
     });
 
     // Listen for combat events
@@ -326,21 +347,23 @@ export class HUD {
         statsHtml += `<div style="margin-top:6px;font-size:12px;"><span style="color:#888;">Produces:</span> ${entity.produces.map(u => this.formatName(u)).join(', ')}</div>`;
       }
 
-      if (entity.currentProduction) {
-        const progress = entity.getProductionProgress();
-        const pctStr = Math.round(progress * 100);
-        statsHtml += `
-          <div style="margin-top:6px;">
-            <span style="color:#ffcc00;font-size:12px;">Building: ${this.formatName(entity.currentProduction)}</span>
-            <div style="background:#333;height:6px;border-radius:3px;margin-top:3px;overflow:hidden;">
-              <div style="background:#00ff88;height:100%;width:${pctStr}%;transition:width 0.2s;"></div>
-            </div>
-          </div>
-        `;
+      // Show garrison info for bunkers
+      if (entity.garrisonSlots !== undefined) {
+        const count = entity.garrisoned ? entity.garrisoned.length : 0;
+        statsHtml += `<div style="margin-top:6px;font-size:12px;"><span style="color:#66aaff;">Garrison:</span> ${count}/${entity.garrisonSlots} infantry`;
+        if (count > 0) {
+          statsHtml += ` <span style="color:#88ff88;">(+${count * 10} DMG)</span>`;
+          statsHtml += `</div><div style="margin-top:4px;"><button id="btn-eject-garrison" style="padding:4px 10px;background:#553333;color:#eee;border:1px solid #774444;border-radius:3px;cursor:pointer;font-size:11px;font-family:sans-serif;">Eject All</button></div>`;
+        } else {
+          statsHtml += `</div><div style="font-size:10px;color:#666;margin-top:2px;">Right-click with infantry to garrison</div>`;
+        }
       }
 
-      if (entity.productionQueue.length > 0) {
-        statsHtml += `<div style="color:#888;margin-top:3px;font-size:11px;">Queue: ${entity.productionQueue.map(u => this.formatName(u)).join(', ')}</div>`;
+      // Show production queue as interactive icons
+      const fullQueue = entity.getFullQueue();
+      if (fullQueue.length > 0) {
+        statsHtml += `<div style="margin-top:6px;"><span style="color:#ffcc00;font-size:12px;">Production Queue</span><span style="color:#666;font-size:10px;margin-left:6px;">(right-click to cancel)</span></div>`;
+        statsHtml += `<div id="prod-queue-icons" style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;"></div>`;
       }
     }
 
@@ -358,11 +381,119 @@ export class HUD {
       ${statsHtml}
     `;
 
+    // Wire up eject button for bunkers
+    if (entity.isBuilding && entity.garrisoned && entity.garrisoned.length > 0) {
+      const ejectBtn = document.getElementById('btn-eject-garrison');
+      if (ejectBtn) {
+        ejectBtn.addEventListener('click', () => {
+          entity.ejectAll();
+          this.showSingleEntityInfo(entity);
+          if (this.game.soundManager) this.game.soundManager.play('move');
+        });
+      }
+    }
+
+    // Populate production queue icons (after innerHTML is set)
+    if (entity.isBuilding) {
+      const fullQueue = entity.getFullQueue();
+      if (fullQueue.length > 0) {
+        this.populateQueueIcons(entity, fullQueue);
+      }
+    }
+
     // Show production buttons if it's a production building
     if (entity.isBuilding && entity.produces && entity.produces.length > 0) {
       this.showProductionButtons(entity);
     } else {
       this.hideProductionOptions();
+    }
+  }
+
+  populateQueueIcons(building, fullQueue) {
+    const container = document.getElementById('prod-queue-icons');
+    if (!container) return;
+
+    for (let i = 0; i < fullQueue.length; i++) {
+      const item = fullQueue[i];
+      const icon = document.createElement('div');
+      icon.style.cssText = `
+        position: relative;
+        width: 42px;
+        height: 36px;
+        background: ${item.isCurrent ? '#2a3a2a' : '#1a2a1a'};
+        border: 1px solid ${item.isCurrent ? '#00ff88' : '#445544'};
+        border-radius: 3px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        color: #ccc;
+        text-align: center;
+        line-height: 1.1;
+        user-select: none;
+        overflow: hidden;
+      `;
+
+      // Short name
+      const shortName = this.formatName(item.type).substring(0, 6);
+      icon.innerHTML = `<span style="z-index:1;pointer-events:none;">${shortName}</span>`;
+
+      // Progress bar for current item
+      if (item.isCurrent && item.progress > 0) {
+        const progressBar = document.createElement('div');
+        progressBar.style.cssText = `
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          height: 3px;
+          width: ${Math.round(item.progress * 100)}%;
+          background: #00ff88;
+        `;
+        icon.appendChild(progressBar);
+      }
+
+      // Queue index indicator
+      if (i === 0) {
+        const indicator = document.createElement('div');
+        indicator.style.cssText = `
+          position: absolute;
+          top: 1px;
+          right: 2px;
+          font-size: 8px;
+          color: #00ff88;
+          pointer-events: none;
+        `;
+        indicator.textContent = '\u25B6'; // play symbol
+        icon.appendChild(indicator);
+      }
+
+      // Right-click to cancel
+      icon.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (this.game.productionSystem) {
+          const success = this.game.productionSystem.cancelProduction(building, i);
+          if (success) {
+            const stats = UNIT_STATS[item.type];
+            this.showNotification(`Cancelled ${this.formatName(item.type)} (+${stats ? stats.cost : 0} SP refunded)`, '#ffaa00');
+            if (this.game.soundManager) this.game.soundManager.play('select');
+            // Refresh display
+            this.showSingleEntityInfo(building);
+          }
+        }
+      });
+
+      // Hover effect
+      icon.addEventListener('mouseenter', () => {
+        icon.style.borderColor = '#ff6644';
+        icon.title = `${this.formatName(item.type)} - Right-click to cancel`;
+      });
+      icon.addEventListener('mouseleave', () => {
+        icon.style.borderColor = item.isCurrent ? '#00ff88' : '#445544';
+      });
+
+      container.appendChild(icon);
     }
   }
 
@@ -405,6 +536,8 @@ export class HUD {
   // ============================
   showProductionButtons(building) {
     if (!this.productionPanel || !this.productionOptions) return;
+    // Don't show production panel when build menu is open (they overlap)
+    if (this.buildMenuOpen) return;
 
     this.productionPanel.classList.remove('hidden');
     this.productionOptions.innerHTML = '';
@@ -460,10 +593,14 @@ export class HUD {
           <div style="color:#888;font-size:10px;">${stats.buildTime}s</div>
         </div>
       `;
+      btn.title = `${this.formatName(unitType)} (${stats.cost} SP) — Shift+click to queue 5`;
 
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', (e) => {
         if (building.alive && this.game.productionSystem && available) {
-          this.game.productionSystem.requestProduction(building, unitType);
+          const count = e.shiftKey ? 5 : 1;
+          for (let i = 0; i < count; i++) {
+            this.game.productionSystem.requestProduction(building, unitType);
+          }
           this.showProductionButtons(building);
         }
       });
@@ -485,8 +622,12 @@ export class HUD {
 
   updateProductionPanel() {
     const selected = this.game.selectionManager?.getSelected() || [];
-    if (selected.length === 1 && selected[0].isBuilding && selected[0].currentProduction) {
+    if (selected.length === 1 && selected[0].isBuilding) {
       this.showSingleEntityInfo(selected[0]);
+    }
+    // Also refresh build menu availability when resources change
+    if (this.buildMenuOpen) {
+      this.updateBuildMenuAvailability();
     }
   }
 
@@ -507,6 +648,8 @@ export class HUD {
 
   openBuildMenu() {
     if (!this.buildMenu) return;
+    // Hide production panel while build menu is open to prevent overlap
+    this.hideProductionOptions();
     this.updateBuildMenuAvailability();
     this.buildMenu.classList.remove('hidden');
     this.buildMenuOpen = true;
@@ -517,6 +660,11 @@ export class HUD {
     this.buildMenu.classList.add('hidden');
     this.buildMenuOpen = false;
     this.cancelBuildPlacement();
+    // Restore production panel if a building is selected
+    const selected = this.game.selectionManager?.getSelected() || [];
+    if (selected.length === 1 && selected[0].isBuilding) {
+      this.showSingleEntityInfo(selected[0]);
+    }
   }
 
   enterBuildPlacement(buildingType) {
@@ -536,7 +684,9 @@ export class HUD {
 
     this.buildPlacementMode = true;
     this.buildPlacementType = buildingType;
-    this.closeBuildMenu();
+    // Close menu visually without canceling placement
+    if (this.buildMenu) this.buildMenu.classList.add('hidden');
+    this.buildMenuOpen = false;
     document.body.style.cursor = 'crosshair';
     this.showNotification(`Click to place ${this.formatName(buildingType)}. ESC to cancel.`, '#ffcc00');
   }
@@ -583,6 +733,7 @@ export class HUD {
       font-family: sans-serif;
       font-size: 13px;
       border-left: 3px solid ${color};
+      text-align: center;
       opacity: 1;
       transition: opacity 0.5s;
       pointer-events: none;

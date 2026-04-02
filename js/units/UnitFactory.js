@@ -27,6 +27,7 @@ export class UnitFactory {
             console.warn(`UnitFactory: Unknown unit type "${type}"`);
             return null;
         }
+
         return new UnitClass(team, position);
     }
 

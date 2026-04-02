@@ -5,12 +5,12 @@ import { UNIT_STATS } from '../core/Constants.js';
 export class Drone extends Unit {
     constructor(team, position) {
         super('drone', team, position, UNIT_STATS.drone);
+        this.rotorAngle = 0;
+        this.rotors = [];
         this.mesh = this.createMesh();
         this.mesh.position.copy(position);
         this.createSelectionRing(2);
         this.createHealthBar();
-        this.rotorAngle = 0;
-        this.rotors = [];
     }
 
     createMesh() {

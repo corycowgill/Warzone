@@ -18,6 +18,8 @@ import { UIManager } from '../ui/UIManager.js';
 import { UnitFactory } from '../units/UnitFactory.js';
 import { BuildingFactory } from '../buildings/BuildingFactory.js';
 import { SoundManager } from '../systems/SoundManager.js';
+import { FogOfWar } from '../systems/FogOfWar.js';
+import { assetManager } from '../rendering/AssetManager.js';
 
 export class Game {
   constructor() {
@@ -50,6 +52,7 @@ export class Game {
     this.effectsManager = null;
     this.unitFactory = null;
     this.soundManager = null;
+    this.fogOfWar = null;
   }
 
   init() {
@@ -63,23 +66,37 @@ export class Game {
   setState(newState) {
     this.state = newState;
     this.eventBus.emit('game:stateChange', { state: newState });
+    if (this.soundManager) {
+      this.soundManager.onStateChange(newState);
+    }
   }
 
-  startGame(config) {
+  async startGame(config) {
     try {
-      // config = { mode: '1P'|'2P', playerNation: 'america', enemyNation: 'japan' }
+      // config = { mode, playerNation, enemyNation, difficulty, mapTemplate, mapSeed }
       this.mode = config.mode;
       this.teams.player.nation = config.playerNation;
       this.teams.enemy.nation = config.enemyNation;
       this.teams.player.sp = GAME_CONFIG.startingSP;
       this.teams.enemy.sp = GAME_CONFIG.startingSP;
+      this.aiDifficulty = config.difficulty || 'normal';
       this.entities = [];
       this.projectiles = [];
 
       this.setState('LOADING');
 
-      // Initialize all systems
-      this.terrain = new Terrain(this);
+      // Preload 3D model assets (non-blocking — game starts even if some fail)
+      if (!assetManager.ready) {
+        await assetManager.preloadAll();
+      }
+
+      // Store asset manager reference for terrain and other systems
+      this.assetManager = assetManager;
+
+      // Initialize terrain with map template and seed
+      const mapTemplate = config.mapTemplate || 'continental';
+      const mapSeed = config.mapSeed || null;
+      this.terrain = new Terrain(this, mapTemplate, mapSeed);
       this.sceneManager.scene.add(this.terrain.mesh);
 
       const mapSize = GAME_CONFIG.mapSize * GAME_CONFIG.worldScale;
@@ -98,7 +115,7 @@ export class Game {
       this.unitFactory = new UnitFactory(this);
 
       if (this.mode === '1P') {
-        this.aiController = new AIController(this, 'enemy');
+        this.aiController = new AIController(this, 'enemy', this.aiDifficulty);
       }
 
       // Place initial buildings and units
@@ -109,6 +126,9 @@ export class Game {
 
       // Initialize minimap after HUD is shown
       this.minimap = new Minimap(this);
+
+      // Initialize Fog of War for the player team
+      this.fogOfWar = new FogOfWar(this, 'player');
 
       this.setState('PLAYING');
     } catch (err) {
@@ -144,6 +164,13 @@ export class Game {
     if (unit) {
       // Pass game reference so unit can access terrain for Y updates
       unit.game = this;
+
+      // Apply nation bonuses
+      const nationKey = this.teams[team]?.nation;
+      if (nationKey && unit.applyNationBonuses) {
+        unit.applyNationBonuses(nationKey);
+      }
+
       // Set Y from terrain height
       const y = this.terrain.getHeightAt(position.x, position.z);
       unit.mesh.position.y = y;
@@ -160,6 +187,12 @@ export class Game {
   createBuilding(type, team, position) {
     const building = BuildingFactory.create(type, team, position, this);
     if (building) {
+      // Set nation for production speed bonuses
+      const nationKey = this.teams[team]?.nation;
+      if (nationKey) {
+        building.nation = nationKey;
+      }
+
       const y = this.terrain.getHeightAt(position.x, position.z);
       building.mesh.position.y = y;
       this.addEntity(building);
@@ -240,6 +273,14 @@ export class Game {
     this.cameraController.update(delta);
     this.minimap.update();
 
+    if (this.soundManager) {
+      this.soundManager.update(delta);
+    }
+
+    if (this.fogOfWar) {
+      this.fogOfWar.update();
+    }
+
     if (this.aiController) {
       this.aiController.update(delta);
     }
@@ -307,6 +348,10 @@ export class Game {
     this.entities = [];
     this.projectiles = [];
     this.aiController = null;
+    if (this.fogOfWar) {
+      this.fogOfWar.dispose();
+      this.fogOfWar = null;
+    }
     this.setState('MENU');
     this.uiManager.showMainMenu();
   }

@@ -1,4 +1,4 @@
-import { GAME_CONFIG, BUILDING_STATS } from '../core/Constants.js';
+import { GAME_CONFIG, BUILDING_STATS, NATIONS, AI_DIFFICULTY } from '../core/Constants.js';
 
 export class ResourceSystem {
   constructor(game) {
@@ -23,12 +23,29 @@ export class ResourceSystem {
       // Base income
       let income = GAME_CONFIG.baseIncome;
 
-      // Bonus income from resource depots
+      // Nation income bonus
+      const nationKey = this.game.teams[team]?.nation;
+      if (nationKey) {
+        const nationData = NATIONS[nationKey];
+        if (nationData && nationData.bonuses && nationData.bonuses.incomeBonus) {
+          income += nationData.bonuses.incomeBonus;
+        }
+      }
+
+      // Bonus income from resource/supply depots
       const buildings = this.game.getBuildings(team);
       for (const building of buildings) {
-        if (building.type === 'resourcedepot' && building.alive) {
-          const depotIncome = BUILDING_STATS.resourcedepot.income || 8;
-          income += depotIncome;
+        const stats = BUILDING_STATS[building.type];
+        if (stats && stats.income && building.alive) {
+          income += stats.income;
+        }
+      }
+
+      // AI difficulty resource bonus
+      if (team === 'enemy' && this.game.aiDifficulty) {
+        const diffConfig = AI_DIFFICULTY[this.game.aiDifficulty];
+        if (diffConfig && diffConfig.resourceBonus > 0) {
+          income = Math.floor(income * (1 + diffConfig.resourceBonus));
         }
       }
 
@@ -69,10 +86,21 @@ export class ResourceSystem {
   // Calculate the income rate for a team (SP per second)
   getIncomeRate(team) {
     let income = GAME_CONFIG.baseIncome;
+
+    // Nation income bonus
+    const nationKey = this.game.teams[team]?.nation;
+    if (nationKey) {
+      const nationData = NATIONS[nationKey];
+      if (nationData && nationData.bonuses && nationData.bonuses.incomeBonus) {
+        income += nationData.bonuses.incomeBonus;
+      }
+    }
+
     const buildings = this.game.getBuildings(team);
     for (const building of buildings) {
-      if (building.type === 'resourcedepot' && building.alive) {
-        income += BUILDING_STATS.resourcedepot.income || 8;
+      const stats = BUILDING_STATS[building.type];
+      if (stats && stats.income && building.alive) {
+        income += stats.income;
       }
     }
     return income;

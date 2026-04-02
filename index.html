@@ -8,7 +8,8 @@
   <script type="importmap">
   {
     "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.172.0/build/three.module.js"
+      "three": "https://cdn.jsdelivr.net/npm/three@0.172.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.172.0/examples/jsm/"
     }
   }
   </script>
@@ -68,6 +69,29 @@
           </div>
         </div>
       </div>
+      <!-- Difficulty Selection -->
+      <div id="difficulty-select" style="margin-bottom:20px;">
+        <h3 class="panel-header" style="color:#8a9aaa;margin-bottom:10px;">AI Difficulty</h3>
+        <div style="display:flex;gap:10px;justify-content:center;">
+          <button class="difficulty-btn" data-difficulty="easy" style="padding:10px 20px;background:rgba(22,33,62,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:3px;color:#88cc88;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;letter-spacing:1px;transition:all 0.2s;">Easy</button>
+          <button class="difficulty-btn selected" data-difficulty="normal" style="padding:10px 20px;background:rgba(0,255,65,0.1);border:1px solid #00ff41;border-radius:3px;color:#ffcc44;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;letter-spacing:1px;transition:all 0.2s;box-shadow:0 0 10px rgba(0,255,65,0.2);">Normal</button>
+          <button class="difficulty-btn" data-difficulty="hard" style="padding:10px 20px;background:rgba(22,33,62,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:3px;color:#ff6644;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;letter-spacing:1px;transition:all 0.2s;">Hard</button>
+        </div>
+        <div id="difficulty-desc" style="color:#6a8a7a;font-size:11px;margin-top:6px;min-height:16px;">Standard AI with varied strategies and smart targeting.</div>
+      </div>
+
+      <!-- Map Selection -->
+      <div id="map-select" style="margin-bottom:20px;">
+        <h3 class="panel-header" style="color:#8a9aaa;margin-bottom:10px;">Map</h3>
+        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+          <button class="map-btn selected" data-map="continental" style="padding:8px 14px;background:rgba(0,255,65,0.1);border:1px solid #00ff41;border-radius:3px;color:#ccc;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;transition:all 0.2s;box-shadow:0 0 10px rgba(0,255,65,0.2);">Continental</button>
+          <button class="map-btn" data-map="islands" style="padding:8px 14px;background:rgba(22,33,62,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:3px;color:#ccc;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;transition:all 0.2s;">Islands</button>
+          <button class="map-btn" data-map="river" style="padding:8px 14px;background:rgba(22,33,62,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:3px;color:#ccc;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;transition:all 0.2s;">River Crossing</button>
+          <button class="map-btn" data-map="plains" style="padding:8px 14px;background:rgba(22,33,62,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:3px;color:#ccc;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;transition:all 0.2s;">Open Plains</button>
+        </div>
+        <div id="map-desc" style="color:#6a8a7a;font-size:11px;margin-top:6px;min-height:16px;">Large landmass with water on one side.</div>
+      </div>
+
       <div class="nation-select-actions">
         <button id="btn-start-game" class="menu-btn" disabled>Start Battle</button>
         <button id="btn-back-menu" class="menu-btn menu-btn-secondary">Back</button>
@@ -108,6 +132,16 @@
         <label style="color:#aaa;font-size:13px;display:flex;align-items:center;gap:8px;">
           <input type="checkbox" id="opt-sound" checked>
           Sound Effects
+        </label>
+      </div>
+      <div style="margin-bottom:15px;">
+        <label style="color:#aaa;font-size:13px;display:block;margin-bottom:4px;">Music Volume</label>
+        <input type="range" id="opt-music-volume" min="0" max="100" value="25" style="width:100%;">
+      </div>
+      <div style="margin-bottom:15px;">
+        <label style="color:#aaa;font-size:13px;display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" id="opt-music" checked>
+          Music
         </label>
       </div>
       <div style="margin-bottom:15px;">

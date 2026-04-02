@@ -7,7 +7,79 @@ export class SelectionManager {
     this.raycaster = new THREE.Raycaster();
     this.selectionBoxEl = null;
 
+    // Control groups: Ctrl+0-9 to save, 0-9 to recall, double-tap to center camera
+    this.controlGroups = new Array(10).fill(null).map(() => []);
+    this._lastGroupKeyTime = 0;
+    this._lastGroupKeyIndex = -1;
+    this._doubleTapThreshold = 300; // ms
+
     this.createSelectionBoxElement();
+    this.setupControlGroupKeys();
+  }
+
+  setupControlGroupKeys() {
+    window.addEventListener('keydown', (e) => {
+      if (this.game.state !== 'PLAYING') return;
+      const key = e.key;
+      // Only handle digit keys 0-9
+      if (key >= '0' && key <= '9') {
+        const groupIndex = parseInt(key);
+        if (e.ctrlKey || e.metaKey) {
+          // Ctrl+Number: save current selection to control group
+          e.preventDefault();
+          this.saveControlGroup(groupIndex);
+        } else if (!e.altKey && !e.shiftKey) {
+          // Number key alone: recall control group
+          // Check for double-tap to center camera
+          const now = Date.now();
+          if (this._lastGroupKeyIndex === groupIndex && (now - this._lastGroupKeyTime) < this._doubleTapThreshold) {
+            // Double-tap: center camera on group
+            this.centerCameraOnGroup(groupIndex);
+            this._lastGroupKeyIndex = -1; // reset to avoid triple-tap
+          } else {
+            this.recallControlGroup(groupIndex);
+            this._lastGroupKeyIndex = groupIndex;
+          }
+          this._lastGroupKeyTime = now;
+        }
+      }
+    });
+  }
+
+  saveControlGroup(index) {
+    // Save current selection (store entity references)
+    this.controlGroups[index] = [...this.selected];
+    if (this.game.uiManager && this.game.uiManager.hud) {
+      this.game.uiManager.hud.showNotification(`Group ${index} saved (${this.selected.length} units)`, '#00ccff');
+    }
+  }
+
+  recallControlGroup(index) {
+    // Filter out dead entities
+    this.controlGroups[index] = this.controlGroups[index].filter(e => e.alive);
+    const group = this.controlGroups[index];
+    if (group.length === 0) return;
+    this.selectEntities(group);
+  }
+
+  centerCameraOnGroup(index) {
+    this.controlGroups[index] = this.controlGroups[index].filter(e => e.alive);
+    const group = this.controlGroups[index];
+    if (group.length === 0) return;
+
+    // Calculate center of group
+    let cx = 0, cz = 0;
+    for (const entity of group) {
+      const pos = entity.getPosition();
+      cx += pos.x;
+      cz += pos.z;
+    }
+    cx /= group.length;
+    cz /= group.length;
+
+    if (this.game.cameraController) {
+      this.game.cameraController.moveTo(cx, cz);
+    }
   }
 
   createSelectionBoxElement() {
@@ -58,11 +130,12 @@ export class SelectionManager {
     // Determine which team the active player controls
     const ownTeam = this.game.mode === '2P' ? this.game.activeTeam : 'player';
 
-    // Gather all entity meshes for raycasting
+    // Gather all entity meshes for raycasting (skip fog-hidden enemies)
     const entityMeshes = [];
     const meshToEntity = new Map();
     for (const entity of this.game.entities) {
       if (!entity.alive || !entity.mesh) continue;
+      if (entity.mesh.visible === false) continue; // skip fog-hidden entities
       entity.mesh.traverse((child) => {
         if (child.isMesh) {
           entityMeshes.push(child);

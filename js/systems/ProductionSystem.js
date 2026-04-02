@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { UNIT_STATS, BUILDING_STATS, TECH_TREE } from '../core/Constants.js';
+import { UNIT_STATS, BUILDING_STATS, TECH_TREE, NATIONS } from '../core/Constants.js';
 
 export class ProductionSystem {
   constructor(game) {
@@ -67,11 +67,19 @@ export class ProductionSystem {
       return false;
     }
 
-    // Check cost
+    // Check cost (with nation cost reduction)
     const stats = UNIT_STATS[unitType];
     if (!stats) return false;
 
-    const cost = stats.cost;
+    let cost = stats.cost;
+    const nationKey = this.game.teams[building.team]?.nation;
+    if (nationKey) {
+      const nationData = NATIONS[nationKey];
+      if (nationData && nationData.bonuses && nationData.bonuses.costReduction) {
+        cost = Math.round(cost * nationData.bonuses.costReduction);
+      }
+    }
+
     if (!this.game.resourceSystem.canAfford(building.team, cost)) {
       this.game.eventBus.emit('production:error', {
         message: `Not enough SP (need ${cost})`
@@ -179,6 +187,37 @@ export class ProductionSystem {
       const hasReq = teamBuildings.some(b => b.type === req && b.alive);
       if (!hasReq) return false;
     }
+    return true;
+  }
+
+  /**
+   * Cancel a production queue item and refund the cost.
+   * @param {Building} building
+   * @param {number} index - 0 = current production, 1+ = queue index
+   * @returns {boolean} true if cancelled successfully
+   */
+  cancelProduction(building, index) {
+    if (!building || !building.alive) return false;
+
+    const cancelled = building.cancelQueueItem(index);
+    if (!cancelled) return false;
+
+    // Refund full cost
+    const stats = UNIT_STATS[cancelled];
+    if (stats) {
+      this.game.resourceSystem.addIncome(building.team, stats.cost);
+      this.game.eventBus.emit('resource:changed', {
+        player: this.game.teams.player.sp,
+        enemy: this.game.teams.enemy.sp
+      });
+    }
+
+    this.game.eventBus.emit('production:cancelled', {
+      building,
+      unitType: cancelled,
+      refund: stats ? stats.cost : 0
+    });
+
     return true;
   }
 

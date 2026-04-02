@@ -1,57 +1,118 @@
 import * as THREE from 'three';
-import { UNIT_STATS, BUILDING_STATS, GAME_CONFIG } from '../core/Constants.js';
+import { UNIT_STATS, BUILDING_STATS, GAME_CONFIG, AI_DIFFICULTY, DAMAGE_MODIFIERS } from '../core/Constants.js';
+
+// Multiple build order strategies
+const BUILD_ORDERS = {
+  rush: ['barracks', 'barracks', 'resourcedepot', 'warfactory'],
+  boom: ['resourcedepot', 'barracks', 'resourcedepot', 'warfactory', 'resourcedepot', 'airfield'],
+  turtle: ['barracks', 'turret', 'resourcedepot', 'warfactory', 'turret', 'aaturret', 'airfield'],
+  air: ['barracks', 'resourcedepot', 'warfactory', 'airfield', 'airfield', 'resourcedepot'],
+  balanced: ['barracks', 'resourcedepot', 'warfactory', 'airfield', 'resourcedepot', 'shipyard']
+};
 
 export class AIController {
-  constructor(game, team = 'enemy') {
+  constructor(game, team = 'enemy', difficulty = 'normal') {
     this.game = game;
     this.team = team;
     this.enemyTeam = team === 'enemy' ? 'player' : 'enemy';
 
+    // Difficulty settings
+    this.difficulty = difficulty;
+    this.config = AI_DIFFICULTY[difficulty] || AI_DIFFICULTY.normal;
+
     // Strategy state
-    this.strategy = 'balanced'; // 'rush' | 'balanced' | 'turtle'
+    this.strategy = 'balanced';
+    this.chosenBuildOrder = null;
 
     // Layer timers
     this.strategicTimer = 0;
-    this.strategicInterval = 10;
+    this.strategicInterval = this.config.strategicInterval;
 
     this.tacticalTimer = 0;
-    this.tacticalInterval = 3;
+    this.tacticalInterval = this.config.tacticalInterval;
 
     this.microTimer = 0;
-    this.microInterval = 1;
+    this.microInterval = this.config.microInterval;
 
-    // Track build order progress
+    // Scouting
+    this.scoutTimer = 0;
+    this.scoutInterval = 20;
+    this.scoutSent = false;
+    this.lastKnownEnemyComposition = {};
+
+    // Build tracking
     this.buildOrderIndex = 0;
     this.lastAttackTime = 0;
     this.attackCooldown = 30;
+    this.nextBuildSlot = 1;
+    this.attackWaveCount = 0;
+    this.gameTime = 0;
 
-    // Build order: the sequence of buildings AI wants to construct
-    this.buildOrder = ['barracks', 'resourcedepot', 'warfactory', 'airfield', 'resourcedepot', 'shipyard'];
-    this.nextBuildSlot = 1; // Slot index for building placement
+    // Grace period: AI won't attack during this time (seconds)
+    this.gracePeriod = difficulty === 'easy' ? 120 : difficulty === 'hard' ? 45 : 75;
+
+    // Choose initial strategy
+    this.chooseStrategy();
+  }
+
+  chooseStrategy() {
+    if (!this.config.buildOrderVariety) {
+      // Easy AI always uses balanced
+      this.strategy = 'balanced';
+      this.chosenBuildOrder = [...BUILD_ORDERS.balanced];
+      return;
+    }
+
+    // Randomly pick a strategy weighted by situation
+    const strategies = ['rush', 'boom', 'turtle', 'air', 'balanced'];
+    const weights = [0.2, 0.2, 0.15, 0.2, 0.25];
+
+    let r = Math.random();
+    let cumulative = 0;
+    for (let i = 0; i < strategies.length; i++) {
+      cumulative += weights[i];
+      if (r <= cumulative) {
+        this.strategy = strategies[i];
+        break;
+      }
+    }
+
+    this.chosenBuildOrder = [...BUILD_ORDERS[this.strategy]];
+    this.buildOrderIndex = 0;
   }
 
   update(delta) {
     if (this.game.state !== 'PLAYING') return;
+    this.gameTime += delta;
 
-    // Strategic layer - every 10s
+    // Strategic layer
     this.strategicTimer += delta;
     if (this.strategicTimer >= this.strategicInterval) {
       this.strategicTimer = 0;
       this.updateStrategy();
     }
 
-    // Tactical layer - every 3s
+    // Tactical layer
     this.tacticalTimer += delta;
     if (this.tacticalTimer >= this.tacticalInterval) {
       this.tacticalTimer = 0;
       this.executeTactics();
     }
 
-    // Micro layer - every 1s
+    // Micro layer
     this.microTimer += delta;
     if (this.microTimer >= this.microInterval) {
       this.microTimer = 0;
       this.executeMicro();
+    }
+
+    // Scouting layer
+    if (this.config.scouting) {
+      this.scoutTimer += delta;
+      if (this.scoutTimer >= this.scoutInterval) {
+        this.scoutTimer = 0;
+        this.executeScouting();
+      }
     }
   }
 
@@ -63,12 +124,55 @@ export class AIController {
     const enemyUnits = this.game.getUnits(this.enemyTeam);
     const mySP = this.game.teams[this.team].sp;
 
+    // Count enemy composition (for counter-play)
+    this.lastKnownEnemyComposition = {};
+    for (const unit of enemyUnits) {
+      this.lastKnownEnemyComposition[unit.type] = (this.lastKnownEnemyComposition[unit.type] || 0) + 1;
+    }
+
+    // Adapt strategy based on game state
+    if (this.config.countersPlayer) {
+      this.adaptToEnemyComposition();
+    }
+
+    // Adjust attack cooldown based on strategy and unit count
     if (enemyUnits.length > myUnits.length * 1.5) {
-      this.strategy = 'turtle';
-    } else if (mySP > 800 && myUnits.length >= 5) {
-      this.strategy = 'rush';
+      // Outgunned - build up more
+      this.attackCooldown = 45;
+    } else if (mySP > 1000 && myUnits.length >= 8) {
+      this.attackCooldown = 20;
     } else {
-      this.strategy = 'balanced';
+      this.attackCooldown = 30;
+    }
+  }
+
+  adaptToEnemyComposition() {
+    const comp = this.lastKnownEnemyComposition;
+    const airCount = (comp.drone || 0) + (comp.plane || 0);
+    const tankCount = comp.tank || 0;
+    const infantryCount = comp.infantry || 0;
+    const totalEnemy = airCount + tankCount + infantryCount;
+
+    if (totalEnemy === 0) return;
+
+    // If enemy is heavy air, prioritize AA and anti-air units
+    if (airCount / totalEnemy > 0.4) {
+      this.tryBuildDefense('aaturret');
+    }
+
+    // If enemy is heavy tanks, ensure we have war factory and planes
+    if (tankCount / totalEnemy > 0.5) {
+      // Planes counter tanks well
+      if (!this.chosenBuildOrder.includes('airfield')) {
+        this.chosenBuildOrder.push('airfield');
+      }
+    }
+  }
+
+  tryBuildDefense(type) {
+    const existing = this.game.getBuildings(this.team).filter(b => b.type === type);
+    if (existing.length < 2) {
+      this.tryBuildBuilding(type);
     }
   }
 
@@ -78,6 +182,7 @@ export class AIController {
   executeTactics() {
     this.ensureBarracks();
     this.buildNextStructure();
+    this.buildDefenses();
     this.produceUnits();
     this.considerAttack();
   }
@@ -89,10 +194,67 @@ export class AIController {
     }
   }
 
-  buildNextStructure() {
-    if (this.buildOrderIndex >= this.buildOrder.length) return;
+  buildDefenses() {
+    // Only turtle strategy or hard AI builds defenses proactively
+    if (this.strategy !== 'turtle' && this.difficulty !== 'hard') return;
 
-    const nextType = this.buildOrder[this.buildOrderIndex];
+    const myBuildings = this.game.getBuildings(this.team);
+    const turretCount = myBuildings.filter(b => b.type === 'turret').length;
+    const aaTurretCount = myBuildings.filter(b => b.type === 'aaturret').length;
+
+    const mySP = this.game.teams[this.team].sp;
+
+    // Build turrets if we have barracks and enough SP
+    if (turretCount < 3 && mySP > 400) {
+      const hasBarracks = myBuildings.some(b => b.type === 'barracks' && b.alive);
+      if (hasBarracks) {
+        this.tryBuildDefenseNearBase('turret');
+      }
+    }
+
+    // Build AA turrets if war factory exists
+    if (aaTurretCount < 2 && mySP > 500) {
+      const hasWarfactory = myBuildings.some(b => b.type === 'warfactory' && b.alive);
+      if (hasWarfactory) {
+        this.tryBuildDefenseNearBase('aaturret');
+      }
+    }
+  }
+
+  tryBuildDefenseNearBase(type) {
+    const hq = this.game.getHQ(this.team);
+    if (!hq) return;
+
+    const hqPos = hq.getPosition();
+    const angle = Math.random() * Math.PI * 2;
+    const radius = 20 + Math.random() * 15;
+
+    const buildPos = new THREE.Vector3(
+      hqPos.x + Math.cos(angle) * radius,
+      0,
+      hqPos.z + Math.sin(angle) * radius
+    );
+
+    const worldSize = GAME_CONFIG.mapSize * GAME_CONFIG.worldScale;
+    buildPos.x = Math.max(15, Math.min(worldSize - 15, buildPos.x));
+    buildPos.z = Math.max(15, Math.min(worldSize - 15, buildPos.z));
+
+    if (this.game.terrain && !this.game.terrain.isWalkable(buildPos.x, buildPos.z)) return;
+
+    this.game.productionSystem.requestBuilding(type, this.team, buildPos);
+  }
+
+  buildNextStructure() {
+    if (!this.chosenBuildOrder || this.buildOrderIndex >= this.chosenBuildOrder.length) {
+      // Build order complete - add more resource depots
+      const depots = this.game.getBuildings(this.team).filter(b => b.type === 'resourcedepot');
+      if (depots.length < 4 && this.game.teams[this.team].sp > 400) {
+        this.tryBuildBuilding('resourcedepot');
+      }
+      return;
+    }
+
+    const nextType = this.chosenBuildOrder[this.buildOrderIndex];
     const stats = BUILDING_STATS[nextType];
     if (!stats) {
       this.buildOrderIndex++;
@@ -104,13 +266,13 @@ export class AIController {
       const teamBuildings = this.game.getBuildings(this.team);
       for (const req of stats.requires) {
         if (!teamBuildings.some(b => b.type === req && b.alive)) {
-          return; // Can't build yet, wait for prerequisite
+          return;
         }
       }
     }
 
-    // For resource depots, allow multiples
-    if (nextType !== 'resourcedepot') {
+    // For non-depot buildings, skip if already exists (except turrets/AA)
+    if (nextType !== 'resourcedepot' && nextType !== 'turret' && nextType !== 'aaturret' && nextType !== 'wall') {
       const existing = this.game.getBuildings(this.team).filter(b => b.type === nextType);
       if (existing.length > 0) {
         this.buildOrderIndex++;
@@ -136,7 +298,6 @@ export class AIController {
 
     const hqPos = hq.getPosition();
 
-    // Place buildings in a grid pattern near HQ
     const slot = this.nextBuildSlot;
     const row = Math.floor(slot / 3);
     const col = slot % 3;
@@ -148,17 +309,15 @@ export class AIController {
       hqPos.z + (row + 1) * spacing
     );
 
-    // Clamp to map bounds
     const worldSize = GAME_CONFIG.mapSize * GAME_CONFIG.worldScale;
     buildPos.x = Math.max(15, Math.min(worldSize - 15, buildPos.x));
     buildPos.z = Math.max(15, Math.min(worldSize - 15, buildPos.z));
 
-    // Check if terrain is walkable before building
     if (this.game.terrain && !this.game.terrain.isWalkable(buildPos.x, buildPos.z)) {
-      // Try nearby positions
       const offsets = [
         { x: spacing, z: 0 }, { x: -spacing, z: 0 },
-        { x: 0, z: spacing }, { x: 0, z: -spacing }
+        { x: 0, z: spacing }, { x: 0, z: -spacing },
+        { x: spacing, z: spacing }, { x: -spacing, z: -spacing }
       ];
       let found = false;
       for (const off of offsets) {
@@ -186,7 +345,6 @@ export class AIController {
     const buildings = this.game.getBuildings(this.team);
     const myUnits = this.game.getUnits(this.team);
 
-    // Don't produce if at unit cap
     if (myUnits.length >= GAME_CONFIG.maxUnitsPerTeam) return;
 
     for (const building of buildings) {
@@ -200,16 +358,14 @@ export class AIController {
       } else if (building.type === 'warfactory') {
         unitType = 'tank';
       } else if (building.type === 'airfield') {
-        // Mix of drones and planes
-        const drones = myUnits.filter(u => u.type === 'drone').length;
-        unitType = drones < 3 ? 'drone' : 'plane';
+        unitType = this.chooseAirUnit(myUnits);
       } else if (building.type === 'shipyard') {
-        // Cycle through naval units
-        const battleships = myUnits.filter(u => u.type === 'battleship').length;
-        const subs = myUnits.filter(u => u.type === 'submarine').length;
-        if (battleships < 2) unitType = 'battleship';
-        else if (subs < 2) unitType = 'submarine';
-        else unitType = 'battleship';
+        unitType = this.chooseNavalUnit(myUnits);
+      }
+
+      // Counter-play: if we know enemy has lots of air, prioritize AA-friendly units
+      if (this.config.countersPlayer && unitType) {
+        unitType = this.adjustForCounter(unitType, building, myUnits);
       }
 
       if (unitType && building.canProduce(unitType)) {
@@ -218,46 +374,168 @@ export class AIController {
     }
   }
 
+  chooseAirUnit(myUnits) {
+    const drones = myUnits.filter(u => u.type === 'drone').length;
+    const planes = myUnits.filter(u => u.type === 'plane').length;
+
+    // Strategy-based air choices
+    if (this.strategy === 'air') {
+      return planes < drones ? 'plane' : 'drone';
+    }
+    return drones < 3 ? 'drone' : 'plane';
+  }
+
+  chooseNavalUnit(myUnits) {
+    const battleships = myUnits.filter(u => u.type === 'battleship').length;
+    const subs = myUnits.filter(u => u.type === 'submarine').length;
+    if (battleships < 2) return 'battleship';
+    if (subs < 2) return 'submarine';
+    return 'battleship';
+  }
+
+  adjustForCounter(unitType, building, myUnits) {
+    const comp = this.lastKnownEnemyComposition;
+    const airCount = (comp.drone || 0) + (comp.plane || 0);
+    const tankCount = comp.tank || 0;
+
+    if (airCount > 3 && building.type === 'airfield') {
+      // Build more planes to counter air
+      return 'plane';
+    }
+    if (tankCount > 4 && building.type === 'warfactory') {
+      return 'tank';
+    }
+    return unitType;
+  }
+
   considerAttack() {
+    // Grace period: don't attack until enough time has passed
+    if (this.gameTime < this.gracePeriod) return;
+
     const myUnits = this.game.getUnits(this.team);
     const idleUnits = myUnits.filter(u => !u.attackTarget && !u.moveTarget);
 
+    const threshold = this.config.attackThresholdMultiplier;
     let attackThreshold;
     switch (this.strategy) {
-      case 'rush': attackThreshold = 5; break;
-      case 'turtle': attackThreshold = 12; break;
-      default: attackThreshold = 8; break;
+      case 'rush': attackThreshold = Math.floor(6 * threshold); break;
+      case 'turtle': attackThreshold = Math.floor(14 * threshold); break;
+      case 'air': attackThreshold = Math.floor(8 * threshold); break;
+      default: attackThreshold = Math.floor(10 * threshold); break;
     }
+
+    // Minimum units required scales with wave count (first wave needs more)
+    const minUnits = this.attackWaveCount === 0 ? 5 : 3;
 
     this.lastAttackTime += this.tacticalInterval;
 
     if (idleUnits.length >= attackThreshold || this.lastAttackTime > this.attackCooldown) {
-      if (idleUnits.length >= 3) {
-        this.launchAttack(idleUnits);
+      if (idleUnits.length >= minUnits) {
+        if (this.config.multiPronged && idleUnits.length >= 8) {
+          this.launchMultiProngedAttack(idleUnits);
+        } else {
+          this.launchAttack(idleUnits);
+        }
       }
     }
+  }
+
+  // =============================================
+  // ATTACK LOGIC
+  // =============================================
+
+  findPriorityTarget() {
+    if (!this.config.targetPriority) {
+      // Simple: just target HQ
+      const enemyHQ = this.game.getHQ(this.enemyTeam);
+      return enemyHQ ? enemyHQ.getPosition().clone() : null;
+    }
+
+    // Smart targeting: production buildings > resource depots > HQ > anything
+    const enemyBuildings = this.game.getBuildings(this.enemyTeam);
+    const priorities = ['warfactory', 'airfield', 'barracks', 'resourcedepot', 'headquarters'];
+
+    for (const pType of priorities) {
+      const target = enemyBuildings.find(b => b.type === pType && b.alive);
+      if (target) {
+        return target.getPosition().clone();
+      }
+    }
+
+    // Fall back to any enemy entity
+    const enemies = this.game.getEntitiesByTeam(this.enemyTeam);
+    if (enemies.length > 0) {
+      return enemies[0].getPosition().clone();
+    }
+
+    return null;
+  }
+
+  findSecondaryTarget() {
+    const enemyBuildings = this.game.getBuildings(this.enemyTeam);
+    // Find a target different from the primary
+    const depots = enemyBuildings.filter(b => b.type === 'resourcedepot' && b.alive);
+    if (depots.length > 0) {
+      return depots[0].getPosition().clone();
+    }
+
+    const prodBuildings = enemyBuildings.filter(b =>
+      (b.type === 'barracks' || b.type === 'warfactory' || b.type === 'airfield') && b.alive
+    );
+    if (prodBuildings.length > 0) {
+      return prodBuildings[prodBuildings.length - 1].getPosition().clone();
+    }
+
+    // Fall back to HQ
+    const hq = this.game.getHQ(this.enemyTeam);
+    return hq ? hq.getPosition().clone() : null;
   }
 
   launchAttack(units) {
     if (units.length === 0) return;
     this.lastAttackTime = 0;
+    this.attackWaveCount++;
 
-    // Find priority target
-    const enemyHQ = this.game.getHQ(this.enemyTeam);
-    let targetPos;
+    const targetPos = this.findPriorityTarget();
+    if (!targetPos) return;
 
-    if (enemyHQ) {
-      targetPos = enemyHQ.getPosition().clone();
-    } else {
-      const enemies = this.game.getEntitiesByTeam(this.enemyTeam);
-      if (enemies.length > 0) {
-        targetPos = enemies[0].getPosition().clone();
-      } else {
-        return;
-      }
+    this.sendUnitsToTarget(units, targetPos);
+  }
+
+  launchMultiProngedAttack(units) {
+    if (units.length === 0) return;
+    this.lastAttackTime = 0;
+    this.attackWaveCount++;
+
+    const primaryTarget = this.findPriorityTarget();
+    const secondaryTarget = this.findSecondaryTarget();
+
+    if (!primaryTarget) return;
+
+    // Split units into two groups
+    const midpoint = Math.floor(units.length * 0.6);
+    const mainForce = units.slice(0, midpoint);
+    const flankForce = units.slice(midpoint);
+
+    // Main force attacks primary target
+    this.sendUnitsToTarget(mainForce, primaryTarget);
+
+    // Flanking force attacks secondary target (or approaches from different angle)
+    if (secondaryTarget && flankForce.length >= 2) {
+      this.sendUnitsToTarget(flankForce, secondaryTarget);
+    } else if (flankForce.length >= 2) {
+      // Attack primary from a different angle
+      const flankOffset = new THREE.Vector3(
+        (Math.random() > 0.5 ? 1 : -1) * 30,
+        0,
+        (Math.random() > 0.5 ? 1 : -1) * 30
+      );
+      const flankTarget = primaryTarget.clone().add(flankOffset);
+      this.sendUnitsToTarget(flankForce, flankTarget);
     }
+  }
 
-    // Send units with spread
+  sendUnitsToTarget(units, targetPos) {
     for (const unit of units) {
       const offset = new THREE.Vector3(
         (Math.random() - 0.5) * 20,
@@ -266,7 +544,6 @@ export class AIController {
       );
       const attackPos = targetPos.clone().add(offset);
 
-      // Use pathfinding
       if (unit.domain === 'land' && this.game.pathfinding) {
         const path = this.game.pathfinding.findPathForDomain(
           unit.getPosition(), attackPos, unit.domain
@@ -281,6 +558,46 @@ export class AIController {
       }
       unit._attackMove = true;
     }
+  }
+
+  // =============================================
+  // SCOUTING
+  // =============================================
+  executeScouting() {
+    if (this.scoutSent) return;
+
+    const myUnits = this.game.getUnits(this.team);
+    // Prefer drones for scouting, fall back to infantry
+    let scout = myUnits.find(u => u.type === 'drone' && !u.attackTarget && !u.moveTarget);
+    if (!scout) {
+      scout = myUnits.find(u => u.type === 'infantry' && !u.attackTarget && !u.moveTarget);
+    }
+    if (!scout) return;
+
+    // Scout toward enemy side of map
+    const mapSize = GAME_CONFIG.mapSize * GAME_CONFIG.worldScale;
+    const scoutTarget = new THREE.Vector3(
+      mapSize * 0.7 + Math.random() * mapSize * 0.2,
+      0,
+      mapSize * (0.2 + Math.random() * 0.6)
+    );
+
+    if (scout.domain === 'land' && this.game.pathfinding) {
+      const path = this.game.pathfinding.findPathForDomain(
+        scout.getPosition(), scoutTarget, scout.domain
+      );
+      if (path && path.length > 1) {
+        scout.followPath(path);
+      } else {
+        scout.moveTo(scoutTarget);
+      }
+    } else {
+      scout.moveTo(scoutTarget);
+    }
+
+    this.scoutSent = true;
+    // Reset scout flag after a while so we scout again
+    setTimeout(() => { this.scoutSent = false; }, 60000);
   }
 
   // =============================================
@@ -301,6 +618,11 @@ export class AIController {
         unit.attackTarget = null;
       }
 
+      // Focus fire: if attacking, check if a better target exists nearby
+      if (this.difficulty === 'hard' && unit.attackTarget) {
+        this.checkFocusFire(unit);
+      }
+
       // If unit is idle, look for nearby enemies
       if (!unit.attackTarget && !unit.moveTarget) {
         const nearbyEnemy = this.findNearestEnemy(unit, unit.range * 5);
@@ -308,6 +630,30 @@ export class AIController {
           unit.attackEntity(nearbyEnemy);
         }
       }
+    }
+  }
+
+  checkFocusFire(unit) {
+    // Find enemies nearby that are already low HP - focus them down
+    const enemies = this.game.getEntitiesByTeam(this.enemyTeam);
+    let weakest = null;
+    let weakestHPRatio = 1;
+    const range = unit.range * 4;
+
+    for (const enemy of enemies) {
+      if (!enemy.alive) continue;
+      const dist = unit.distanceTo(enemy);
+      if (dist > range) continue;
+
+      const hpRatio = enemy.health / enemy.maxHealth;
+      if (hpRatio < weakestHPRatio && hpRatio < 0.5) {
+        weakestHPRatio = hpRatio;
+        weakest = enemy;
+      }
+    }
+
+    if (weakest && weakest !== unit.attackTarget) {
+      unit.attackEntity(weakest);
     }
   }
 

@@ -1,10 +1,11 @@
 import * as THREE from 'three';
-import { UNIT_STATS } from '../core/Constants.js';
+import { UNIT_STATS, UNIT_ABILITIES } from '../core/Constants.js';
 
 export class CommandSystem {
   constructor(game) {
     this.game = game;
     this.attackMoveMode = false;
+    this.abilityTargetMode = false; // G key targeting mode
     this.buildPlacementMode = false;
     this.buildPlacementType = null;
     this.raycaster = new THREE.Raycaster();
@@ -48,6 +49,7 @@ export class CommandSystem {
     const meshToEntity = new Map();
     for (const entity of enemyEntities) {
       if (!entity.mesh) continue;
+      if (entity.mesh.visible === false) continue; // skip fog-hidden entities
       entity.mesh.traverse((child) => {
         if (child.isMesh) {
           entityMeshes.push(child);
@@ -73,6 +75,48 @@ export class CommandSystem {
           clickedEnemy = meshToEntity.get(intersects[0].object);
         }
         if (clickedEnemy) break;
+      }
+    }
+
+    // Check for friendly bunker under cursor (garrison command)
+    if (!clickedEnemy) {
+      const friendlyEntities = this.game.getEntitiesByTeam(ownTeam);
+      const friendlyMeshes = [];
+      const friendlyMeshToEntity = new Map();
+      for (const entity of friendlyEntities) {
+        if (!entity.mesh || !entity.isBuilding || !entity.garrisonUnit) continue;
+        entity.mesh.traverse((child) => {
+          if (child.isMesh) {
+            friendlyMeshes.push(child);
+            friendlyMeshToEntity.set(child, entity);
+          }
+        });
+      }
+      if (friendlyMeshes.length > 0) {
+        const friendlyHits = this.raycaster.intersectObjects(friendlyMeshes, false);
+        if (friendlyHits.length > 0) {
+          let bunker = null;
+          for (const hit of friendlyHits) {
+            let obj = hit.object;
+            while (obj) {
+              if (friendlyMeshToEntity.has(obj)) { bunker = friendlyMeshToEntity.get(obj); break; }
+              obj = obj.parent;
+            }
+            if (bunker) break;
+          }
+          if (bunker) {
+            const infantry = selectedUnits.filter(u => u.type === 'infantry');
+            let garrisoned = 0;
+            for (const unit of infantry) {
+              if (bunker.garrisonUnit(unit)) garrisoned++;
+            }
+            if (garrisoned > 0) {
+              this.game.eventBus.emit('command:garrison', { bunker, count: garrisoned });
+              if (this.game.soundManager) this.game.soundManager.play('move');
+              return;
+            }
+          }
+        }
       }
     }
 
@@ -150,9 +194,10 @@ export class CommandSystem {
 
     this.game.eventBus.emit('command:move', { units, position });
 
-    // Play move sound
+    // Play move sound (use first unit's type for the bark)
     if (this.game.soundManager) {
-      this.game.soundManager.play('move');
+      const unitType = units.length > 0 ? units[0].type : null;
+      this.game.soundManager.play('move', { unitType });
     }
   }
 
@@ -163,7 +208,8 @@ export class CommandSystem {
     this.game.eventBus.emit('command:attack', { units, target });
 
     if (this.game.soundManager) {
-      this.game.soundManager.play('acknowledge');
+      const unitType = units.length > 0 ? units[0].type : null;
+      this.game.soundManager.play('acknowledge', { unitType });
     }
   }
 

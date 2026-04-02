@@ -124,6 +124,34 @@ export class Minimap {
       ctx.fillRect(0, 0, this.size, this.size);
     }
 
+    // Draw fog of war overlay on minimap
+    const fog = this.game.fogOfWar;
+    if (fog) {
+      const fogImageData = ctx.getImageData(0, 0, this.size, this.size);
+      const fogData = fogImageData.data;
+      for (let py = 0; py < this.size; py++) {
+        for (let px = 0; px < this.size; px++) {
+          const gx = Math.floor((px / this.size) * this.mapSize);
+          const gz = Math.floor((py / this.size) * this.mapSize);
+          const state = fog.getStateAtGrid(gx, gz);
+          const idx = (py * this.size + px) * 4;
+          if (state === 0) {
+            // Unexplored: darken to near black
+            fogData[idx] = Math.floor(fogData[idx] * 0.1);
+            fogData[idx + 1] = Math.floor(fogData[idx + 1] * 0.1);
+            fogData[idx + 2] = Math.floor(fogData[idx + 2] * 0.1);
+          } else if (state === 1) {
+            // Explored but not visible: darken somewhat
+            fogData[idx] = Math.floor(fogData[idx] * 0.45);
+            fogData[idx + 1] = Math.floor(fogData[idx + 1] * 0.45);
+            fogData[idx + 2] = Math.floor(fogData[idx + 2] * 0.45);
+          }
+          // state === 2: visible, no change
+        }
+      }
+      ctx.putImageData(fogImageData, 0, 0);
+    }
+
     // Draw entities
     if (this.game.entities) {
       const entities = this.game.entities;
@@ -132,6 +160,20 @@ export class Minimap {
         if (!entity.alive) continue;
 
         const pos = entity.getPosition();
+
+        // Respect fog of war for enemy entities on minimap
+        if (fog && entity.team !== 'player') {
+          const gx = Math.floor(pos.x / (GAME_CONFIG.worldScale));
+          const gz = Math.floor(pos.z / (GAME_CONFIG.worldScale));
+          const state = fog.getStateAtGrid(gx, gz);
+          if (state < 2) {
+            // Not visible: only show enemy buildings in explored territory
+            if (!(entity.isBuilding && state === 1)) {
+              continue;
+            }
+          }
+        }
+
         const mp = this.worldToMinimap(pos.x, pos.z);
 
         // Team color
