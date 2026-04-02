@@ -24,6 +24,9 @@ GD-046: Global Research System (10 upgrades) | GD-047: Terrain Elevation Damage 
 ## Cycle 8 - Completed (4 features)
 GD-051: Wall Pathfinding Blocking | GD-052: Ditch Cover Damage Reduction | GD-053: AI Naval/Water Awareness | GD-054: AI Building Upgrades
 
+## Final Polish - Completed (3 items)
+GD-055: Supply Cache Code Deduplication | GD-056: AI Scout Game-Time Timer | GD-057: AI Carrier Production
+
 ## QA Fixes Applied
 - Cycle 1: 6 fixes (GAME_CONFIG import, minimap Vector3, ability mode reset, double-click state, entity flash null check, production panel alive check)
 - Cycle 2: 4 fixes (aura position, event listener leak, fog ghost position, ace attack balance)
@@ -32,6 +35,7 @@ GD-051: Wall Pathfinding Blocking | GD-052: Ditch Cover Damage Reduction | GD-05
 - Cycle 5: 4 fixes (map event timer reset, spectate input guard, aiController2 leak, supply cache targeting)
 - Cycle 6: 9 fixes (minimap delta, unused variable, minimap listener leak, GameOverScreen listener leak, button visual reset, spectate panel, gameMode reset/history, annihilation fallback, dead stats code)
 - Cycle 7: 5 fixes (research building destroyed, blitz_training effect, income display, research DOM leak, AI retreat timer)
+- Cycle 8: 7 fixes (wall pathfinding O(1) cache, production progress bar, queue time estimate, AI shipyard filter, turret ditch reduction, research refund, scout timer)
 
 ## Pending / Deferred
 | ID | Priority | Status | Description |
@@ -45,6 +49,7 @@ GD-051: Wall Pathfinding Blocking | GD-052: Ditch Cover Damage Reduction | GD-05
 | GD-028 | MEDIUM | DONE (as GD-035) | Smart Control Group Auto-Refill |
 | GD-029 | MEDIUM | PENDING | Last Seen Ghost Overlay (partially done via GD-017) |
 
-## Total Features Implemented: 43
-## Total QA Fixes: 34
-## Git Commits: 20
+## Total Features Implemented: 46
+## Total QA Fixes: 41
+## Git Commits: 23
+## Game Designer Rating: 9/10 - "Exceptionally well-architected single-player military RTS"
