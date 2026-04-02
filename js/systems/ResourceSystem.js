@@ -49,6 +49,11 @@ export class ResourceSystem {
         }
       }
 
+      // Supply Lines research bonus (+25% income)
+      if (this.game.hasResearch && this.game.hasResearch(team, 'supply_lines')) {
+        income = Math.floor(income * 1.25);
+      }
+
       // Apply income
       this.addIncome(team, income);
     }

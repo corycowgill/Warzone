@@ -309,6 +309,102 @@ export const FORMATION_CONFIG = {
   separationForce: 8,
 };
 
+// ============================================================
+// RESEARCH UPGRADES - Global upgrades purchasable at buildings
+// ============================================================
+export const RESEARCH_UPGRADES = {
+  improved_armor: {
+    name: 'Improved Armor',
+    description: '+2 armor to all land units',
+    cost: 300,
+    researchTime: 15,
+    building: 'warfactory',
+    applies: (unit) => unit.domain === 'land',
+    effect: { armor: 2 }
+  },
+  advanced_optics: {
+    name: 'Advanced Optics',
+    description: '+20% air unit vision and range',
+    cost: 350,
+    researchTime: 12,
+    building: 'airfield',
+    applies: (unit) => unit.domain === 'air',
+    effect: { visionMult: 1.2, rangeMult: 1.2 }
+  },
+  fortified_bunkers: {
+    name: 'Fortified Bunkers',
+    description: '+25% building HP',
+    cost: 250,
+    researchTime: 10,
+    building: 'barracks',
+    applies: (entity) => entity.isBuilding,
+    effect: { hpMult: 1.25 }
+  },
+  rapid_fire: {
+    name: 'Rapid Fire',
+    description: '+15% attack rate for infantry',
+    cost: 200,
+    researchTime: 10,
+    building: 'barracks',
+    applies: (unit) => unit.type === 'infantry',
+    effect: { attackRateMult: 1.15 }
+  },
+  heavy_shells: {
+    name: 'Heavy Shells',
+    description: '+20% tank and battleship damage',
+    cost: 400,
+    researchTime: 15,
+    building: 'warfactory',
+    applies: (unit) => unit.type === 'tank' || unit.type === 'battleship',
+    effect: { damageMult: 1.2 }
+  },
+  field_medics: {
+    name: 'Field Medics',
+    description: 'Infantry slowly regenerate HP',
+    cost: 250,
+    researchTime: 12,
+    building: 'barracks',
+    applies: (unit) => unit.type === 'infantry',
+    effect: { regen: 2 }
+  },
+  jet_engines: {
+    name: 'Jet Engines',
+    description: '+25% air unit speed',
+    cost: 300,
+    researchTime: 12,
+    building: 'airfield',
+    applies: (unit) => unit.domain === 'air',
+    effect: { speedMult: 1.25 }
+  },
+  naval_plating: {
+    name: 'Naval Plating',
+    description: '+3 armor to all naval units',
+    cost: 350,
+    researchTime: 15,
+    building: 'shipyard',
+    applies: (unit) => unit.domain === 'naval',
+    effect: { armor: 3 }
+  },
+  supply_lines: {
+    name: 'Supply Lines',
+    description: '+25% income from all sources',
+    cost: 400,
+    researchTime: 20,
+    building: 'resourcedepot',
+    applies: null,
+    effect: { incomeMult: 1.25 }
+  },
+  blitz_training: {
+    name: 'Blitz Training',
+    description: '+15% production speed globally',
+    cost: 350,
+    researchTime: 18,
+    building: 'headquarters',
+    applies: null,
+    effect: { productionMult: 1.15 }
+  }
+};
+
 export const GAME_CONFIG = {
   mapSize: 128,
   worldScale: 2,

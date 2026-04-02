@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { UNIT_STATS, BUILDING_STATS, GAME_CONFIG, AI_DIFFICULTY, DAMAGE_MODIFIERS } from '../core/Constants.js';
+import { UNIT_STATS, BUILDING_STATS, GAME_CONFIG, AI_DIFFICULTY, DAMAGE_MODIFIERS, RESEARCH_UPGRADES } from '../core/Constants.js';
 
 // Multiple build order strategies
 const BUILD_ORDERS = {
@@ -239,6 +239,36 @@ export class AIController {
     }
 
     this.considerAttack();
+
+    // Opportunistic raids on normal/hard difficulty
+    if (this.config.targetPriority && this.gameTime > this.gracePeriod + 30) {
+      this.detectOpportunisticRaid();
+    }
+
+    // AI research upgrades
+    this.considerResearch();
+  }
+
+  considerResearch() {
+    if (!this.game.research) return;
+    const state = this.game.research[this.team];
+    if (!state || state.inProgress) return;
+    const sp = this.game.teams[this.team].sp;
+    if (sp < 250) return; // need resources for units first
+
+    // Prioritize research based on strategy
+    const priorities = ['improved_armor', 'heavy_shells', 'rapid_fire', 'field_medics',
+                        'advanced_optics', 'jet_engines', 'naval_plating', 'supply_lines',
+                        'fortified_bunkers', 'blitz_training'];
+    for (const id of priorities) {
+      if (state.completed.includes(id)) continue;
+      const upgrade = RESEARCH_UPGRADES[id];
+      if (!upgrade || upgrade.cost > sp) continue;
+      const hasBuilding = this.game.getBuildings(this.team).some(b => b.type === upgrade.building);
+      if (!hasBuilding) continue;
+      this.game.startResearch(this.team, id);
+      break;
+    }
   }
 
   ensureBarracks() {
@@ -675,6 +705,9 @@ export class AIController {
   // MICRO LAYER
   // =============================================
   executeMicro() {
+    // Assess attack force - retreat if losing
+    this.assessAttackForce();
+
     const myUnits = this.game.getUnits(this.team);
 
     for (const unit of myUnits) {
@@ -859,12 +892,80 @@ export class AIController {
   }
 
   retreatUnit(unit) {
-    const hq = this.game.getHQ(this.team);
-    if (hq) {
-      const retreatPos = hq.getPosition().clone();
-      retreatPos.x += (Math.random() - 0.5) * 15;
-      retreatPos.z += (Math.random() - 0.5) * 15;
+    // Try to retreat to nearest friendly defensive building first
+    const friendlyBuildings = this.game.getBuildings(this.team);
+    const defenses = friendlyBuildings.filter(b =>
+      (b.isTurret || b.type === 'bunker') && b.alive
+    );
+    let retreatPos = null;
+    let bestDist = Infinity;
+
+    for (const def of defenses) {
+      const dist = unit.distanceTo(def);
+      if (dist < bestDist) {
+        bestDist = dist;
+        retreatPos = def.getPosition().clone();
+      }
+    }
+
+    // Fall back to HQ if no nearby defenses
+    if (!retreatPos || bestDist > 80) {
+      const hq = this.game.getHQ(this.team);
+      if (hq) retreatPos = hq.getPosition().clone();
+    }
+
+    if (retreatPos) {
+      retreatPos.x += (Math.random() - 0.5) * 10;
+      retreatPos.z += (Math.random() - 0.5) * 10;
       unit.moveTo(retreatPos);
+      unit.attackTarget = null;
+    }
+  }
+
+  // Assess whether an attacking force is losing and should retreat
+  assessAttackForce() {
+    const myUnits = this.game.getUnits(this.team);
+    const inCombat = myUnits.filter(u => u.attackTarget && u.attackTarget.alive);
+    if (inCombat.length < 3) return; // too few to assess
+
+    // Calculate total remaining HP ratio of combat units
+    let totalHP = 0, totalMaxHP = 0;
+    for (const unit of inCombat) {
+      totalHP += unit.health;
+      totalMaxHP += unit.maxHealth;
+    }
+    const hpRatio = totalHP / totalMaxHP;
+
+    // If force has lost >40% HP, retreat all combat units
+    if (hpRatio < 0.6) {
+      for (const unit of inCombat) {
+        this.retreatUnit(unit);
+      }
+      // Reset attack cooldown to regroup
+      this.lastAttackTime = this.attackCooldown * 0.5;
+    }
+  }
+
+  // Detect if enemy base is undefended for opportunistic raids
+  detectOpportunisticRaid() {
+    const enemyUnits = this.game.getUnits(this.enemyTeam);
+    const enemyHQ = this.game.getHQ(this.enemyTeam);
+    if (!enemyHQ) return;
+
+    const hqPos = enemyHQ.getPosition();
+    const nearHQ = enemyUnits.filter(u => {
+      const dist = u.getPosition().distanceTo(hqPos);
+      return dist < 50;
+    });
+
+    // If less than 25% of enemy units are near their base, launch opportunistic raid
+    if (enemyUnits.length > 3 && nearHQ.length < enemyUnits.length * 0.25) {
+      const myIdleUnits = this.game.getUnits(this.team).filter(
+        u => !u.attackTarget && !u.moveTarget
+      );
+      if (myIdleUnits.length >= 3) {
+        this.sendUnitsToTarget(myIdleUnits.slice(0, Math.min(5, myIdleUnits.length)), hqPos.clone());
+      }
     }
   }
 

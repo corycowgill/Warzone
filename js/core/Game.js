@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { EventBus } from './EventBus.js';
-import { GAME_CONFIG, NATIONS, BUILDING_STATS, UNIT_STATS } from './Constants.js';
+import { GAME_CONFIG, NATIONS, BUILDING_STATS, UNIT_STATS, RESEARCH_UPGRADES } from './Constants.js';
 import { SceneManager } from '../rendering/SceneManager.js';
 import { CameraController } from '../rendering/CameraController.js';
 import { EffectsManager } from '../rendering/EffectsManager.js';
@@ -41,6 +41,12 @@ export class Game {
     this.stats = {
       player: { unitsProduced: 0, unitsLost: 0, buildingsDestroyed: 0, damageDealt: 0 },
       enemy: { unitsProduced: 0, unitsLost: 0, buildingsDestroyed: 0, damageDealt: 0 }
+    };
+
+    // Research state per team
+    this.research = {
+      player: { completed: [], inProgress: null, timer: 0, building: null },
+      enemy: { completed: [], inProgress: null, timer: 0, building: null }
     };
 
     // Systems (initialized in startGame)
@@ -371,6 +377,7 @@ export class Game {
       const y = this.terrain.getHeightAt(position.x, position.z);
       unit.mesh.position.y = y;
       this.addEntity(unit);
+      this.applyAllResearchToEntity(unit);
       this.eventBus.emit('unit:created', { unit });
 
       if (this.soundManager) {
@@ -392,6 +399,7 @@ export class Game {
       const y = this.terrain.getHeightAt(position.x, position.z);
       building.mesh.position.y = y;
       this.addEntity(building);
+      this.applyAllResearchToEntity(building);
       this.eventBus.emit('building:created', { building });
     }
     return building;
@@ -494,6 +502,16 @@ export class Game {
         if (unit.health < unit.maxHealth && unit.distanceTo(hq) < 30) {
           unit.health = Math.min(unit.maxHealth, unit.health + 2 * delta);
         }
+      }
+    }
+
+    // Update research
+    this.updateResearch(delta);
+
+    // Apply regen from Field Medics research
+    for (const entity of this.entities) {
+      if (entity.alive && entity._regenRate && entity.health < entity.maxHealth) {
+        entity.health = Math.min(entity.maxHealth, entity.health + entity._regenRate * delta);
       }
     }
 
@@ -767,6 +785,102 @@ export class Game {
     this.eventBus.emit('turn:switched', { team: this.activeTeam });
   }
 
+  // Research system
+  startResearch(team, upgradeId) {
+    const upgrade = RESEARCH_UPGRADES[upgradeId];
+    if (!upgrade) return false;
+    const state = this.research[team];
+    if (!state) return false;
+    if (state.completed.includes(upgradeId)) return false;
+    if (state.inProgress) return false;
+    if (this.teams[team].sp < upgrade.cost) return false;
+
+    // Check if the team has the required building
+    const hasBuilding = this.getBuildings(team).some(b => b.type === upgrade.building);
+    if (!hasBuilding) return false;
+
+    this.teams[team].sp -= upgrade.cost;
+    state.inProgress = upgradeId;
+    state.timer = upgrade.researchTime;
+
+    // Find the building doing the research
+    const building = this.getBuildings(team).find(b => b.type === upgrade.building);
+    if (building) {
+      state.building = building;
+      building._researching = upgradeId;
+    }
+
+    return true;
+  }
+
+  updateResearch(delta) {
+    for (const team of ['player', 'enemy']) {
+      const state = this.research[team];
+      if (!state.inProgress) continue;
+
+      state.timer -= delta;
+      if (state.timer <= 0) {
+        const upgradeId = state.inProgress;
+        state.completed.push(upgradeId);
+        state.inProgress = null;
+        state.timer = 0;
+        if (state.building) {
+          state.building._researching = null;
+          state.building = null;
+        }
+
+        // Apply upgrade effects to existing entities
+        this.applyResearchUpgrade(team, upgradeId);
+
+        if (team === 'player' && this.uiManager && this.uiManager.hud) {
+          const upgrade = RESEARCH_UPGRADES[upgradeId];
+          this.uiManager.hud.showNotification(`Research complete: ${upgrade.name}!`, '#00ffcc');
+        }
+        if (this.soundManager) this.soundManager.play('produce');
+        this.eventBus.emit('research:complete', { team, upgradeId });
+      }
+    }
+  }
+
+  applyResearchUpgrade(team, upgradeId) {
+    const upgrade = RESEARCH_UPGRADES[upgradeId];
+    if (!upgrade) return;
+    const entities = this.entities.filter(e => e.team === team && e.alive);
+    for (const entity of entities) {
+      this.applyUpgradeToEntity(entity, upgrade);
+    }
+  }
+
+  applyUpgradeToEntity(entity, upgrade) {
+    if (upgrade.applies && !upgrade.applies(entity)) return;
+    const fx = upgrade.effect;
+    if (fx.armor) entity.armor = (entity.armor || 0) + fx.armor;
+    if (fx.visionMult) entity.vision = (entity.vision || 10) * fx.visionMult;
+    if (fx.rangeMult) entity.range = (entity.range || 6) * fx.rangeMult;
+    if (fx.hpMult) {
+      const ratio = entity.health / entity.maxHealth;
+      entity.maxHealth *= fx.hpMult;
+      entity.health = entity.maxHealth * ratio;
+    }
+    if (fx.attackRateMult) entity.attackRate = (entity.attackRate || 1) * fx.attackRateMult;
+    if (fx.damageMult) entity.damage = (entity.damage || 1) * fx.damageMult;
+    if (fx.speedMult) entity.speed = (entity.speed || 1) * fx.speedMult;
+    if (fx.regen) entity._regenRate = (entity._regenRate || 0) + fx.regen;
+  }
+
+  applyAllResearchToEntity(entity) {
+    const team = entity.team;
+    if (!this.research[team]) return;
+    for (const upgradeId of this.research[team].completed) {
+      const upgrade = RESEARCH_UPGRADES[upgradeId];
+      if (upgrade) this.applyUpgradeToEntity(entity, upgrade);
+    }
+  }
+
+  hasResearch(team, upgradeId) {
+    return this.research[team]?.completed.includes(upgradeId) || false;
+  }
+
   capitalize(str) {
     return str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
   }
@@ -808,6 +922,10 @@ export class Game {
     }
     this._hillControl = null;
     this.gameMode = null;
+    this.research = {
+      player: { completed: [], inProgress: null, timer: 0, building: null },
+      enemy: { completed: [], inProgress: null, timer: 0, building: null }
+    };
     // Clean up GameOverScreen event listeners
     if (this.uiManager && this.uiManager.gameOverScreen && this.uiManager.gameOverScreen.dispose) {
       this.uiManager.gameOverScreen.dispose();

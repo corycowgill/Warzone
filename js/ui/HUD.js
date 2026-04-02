@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { UNIT_STATS, BUILDING_STATS, TECH_TREE, NATIONS, GAME_CONFIG, UNIT_COUNTERS, VETERANCY, BUILDING_UPGRADES } from '../core/Constants.js';
+import { UNIT_STATS, BUILDING_STATS, TECH_TREE, NATIONS, GAME_CONFIG, UNIT_COUNTERS, VETERANCY, BUILDING_UPGRADES, RESEARCH_UPGRADES } from '../core/Constants.js';
 
 export class HUD {
   constructor(game) {
@@ -95,7 +95,12 @@ export class HUD {
       <div>T: Tech tree</div>
       <div>Shift+RClick: Queue waypoint</div>
       <div>Ctrl+P: Pause/Resume</div>
+      <div>R: Research panel</div>
       <div>Esc: Cancel</div>
+      <div style="margin-top:4px;color:#ff8844;">Production</div>
+      <div>I: Infantry | K: Tank</div>
+      <div>J: Drone | L: Plane</div>
+      <div>N: Battleship | U: Sub</div>
       <div style="margin-top:4px;color:#00ccff;">Control Groups</div>
       <div>Ctrl+0-9: Save group</div>
       <div>0-9: Recall group</div>
@@ -326,6 +331,16 @@ export class HUD {
           this.toggleTechTree();
         }
       }
+
+      // Production hotkeys when a production building is selected
+      if (this.game.state === 'PLAYING' && !this.buildPlacementMode) {
+        this.handleProductionHotkey(e);
+      }
+
+      // R key to open research panel for selected building
+      if ((e.key === 'r' || e.key === 'R') && this.game.state === 'PLAYING') {
+        this.toggleResearchPanel();
+      }
     });
   }
 
@@ -393,6 +408,44 @@ export class HUD {
       }
 
       this.gameTimerDisplay.textContent = timerText;
+    }
+
+    // Military score comparison
+    if (!this._scoreDisplay) {
+      this._scoreDisplay = document.createElement('span');
+      this._scoreDisplay.className = 'resource-value';
+      this._scoreDisplay.style.cssText = 'font-size:11px;margin-left:8px;';
+      const scoreItem = document.createElement('div');
+      scoreItem.className = 'resource-item';
+      scoreItem.innerHTML = '<span class="resource-label">Score:</span>';
+      scoreItem.appendChild(this._scoreDisplay);
+      const bar = document.getElementById('resource-bar');
+      if (bar) {
+        const optionsItem = bar.querySelector('[style*="margin-left:auto"]');
+        if (optionsItem) bar.insertBefore(scoreItem, optionsItem);
+        else bar.appendChild(scoreItem);
+      }
+    }
+    const pScore = this.getMilitaryScore('player');
+    const eScore = this.getMilitaryScore('enemy');
+    if (this._scoreDisplay) {
+      const leading = pScore >= eScore;
+      this._scoreDisplay.innerHTML = `<span style="color:${leading ? '#88ff88' : '#ff8888'}">${pScore}</span> vs <span style="color:${!leading ? '#88ff88' : '#ff8888'}">${eScore}</span>`;
+    }
+
+    // Research progress indicator
+    const resState = this.game.research?.player;
+    if (resState?.inProgress) {
+      if (!this._researchDisplay) {
+        this._researchDisplay = document.createElement('div');
+        this._researchDisplay.style.cssText = 'position:fixed;bottom:225px;right:10px;background:rgba(0,0,0,0.8);border:1px solid #00ccaa;border-radius:4px;padding:4px 8px;font-size:11px;color:#00ffcc;font-family:sans-serif;z-index:100;';
+        document.body.appendChild(this._researchDisplay);
+      }
+      const upg = RESEARCH_UPGRADES[resState.inProgress];
+      this._researchDisplay.textContent = `Researching: ${upg?.name || '?'} (${Math.ceil(resState.timer)}s)`;
+      this._researchDisplay.style.display = 'block';
+    } else if (this._researchDisplay) {
+      this._researchDisplay.style.display = 'none';
     }
 
     // Spectator mode: show enemy resources too
@@ -1297,6 +1350,138 @@ export class HUD {
   // ============================
   // Helpers
   // ============================
+  // Production hotkeys: when a production building is selected
+  // I = infantry, T = tank (if warfactory), D = drone (if airfield), etc.
+  handleProductionHotkey(e) {
+    const key = e.key.toLowerCase();
+    const hotkeys = { 'i': 'infantry', 'k': 'tank', 'j': 'drone', 'l': 'plane',
+                      'n': 'battleship', 'u': 'submarine' };
+    const unitType = hotkeys[key];
+    if (!unitType) return;
+
+    const selected = this.game.selectionManager?.getSelected() || [];
+    const building = selected.find(ent =>
+      ent.isBuilding && ent.alive && ent.produces && ent.produces.includes(unitType) && ent.team === 'player'
+    );
+    if (!building) return;
+
+    e.preventDefault();
+    if (this.game.productionSystem) {
+      this.game.productionSystem.requestProduction(building, unitType);
+    }
+  }
+
+  // Research panel
+  toggleResearchPanel() {
+    const selected = this.game.selectionManager?.getSelected() || [];
+    const building = selected.find(ent =>
+      ent.isBuilding && ent.alive && ent.team === 'player'
+    );
+    if (!building) return;
+
+    // Find available research for this building type
+    const available = Object.entries(RESEARCH_UPGRADES).filter(([id, upg]) =>
+      upg.building === building.type
+    );
+    if (available.length === 0) {
+      this.showNotification('No research available at this building', '#888888');
+      return;
+    }
+
+    // Create or update research panel
+    let panel = document.getElementById('research-panel');
+    if (panel && panel.style.display !== 'none') {
+      panel.style.display = 'none';
+      return;
+    }
+
+    if (!panel) {
+      panel = document.createElement('div');
+      panel.id = 'research-panel';
+      panel.style.cssText = `
+        position: fixed;
+        right: 220px;
+        bottom: 60px;
+        background: rgba(0,0,0,0.9);
+        border: 1px solid #555;
+        border-radius: 6px;
+        padding: 12px;
+        z-index: 200;
+        font-family: sans-serif;
+        width: 250px;
+      `;
+      document.body.appendChild(panel);
+    }
+
+    const state = this.game.research?.player;
+    let html = '<h4 style="color:#00ffcc;margin:0 0 8px 0;font-size:13px;">Research (R)</h4>';
+
+    if (state?.inProgress) {
+      const upg = RESEARCH_UPGRADES[state.inProgress];
+      html += `<div style="color:#ffcc00;font-size:12px;margin-bottom:8px;">Researching: ${upg.name} (${Math.ceil(state.timer)}s)</div>`;
+    }
+
+    for (const [id, upg] of available) {
+      const completed = state?.completed.includes(id);
+      const inProgress = state?.inProgress === id;
+      const canAfford = this.game.teams.player.sp >= upg.cost;
+      const alreadyResearching = !!state?.inProgress;
+
+      let status = '';
+      let color = '#ccc';
+      let bg = '#333';
+      if (completed) { status = 'DONE'; color = '#00ff44'; bg = '#1a331a'; }
+      else if (inProgress) { status = `${Math.ceil(state.timer)}s`; color = '#ffcc00'; bg = '#332a00'; }
+      else if (alreadyResearching) { status = `${upg.cost} SP`; color = '#666'; }
+      else if (!canAfford) { status = `${upg.cost} SP`; color = '#ff4444'; }
+      else { status = `${upg.cost} SP`; color = '#88ff88'; }
+
+      html += `<div class="research-item" data-research="${id}" style="
+        padding:6px 8px;margin-bottom:4px;background:${bg};border:1px solid #444;
+        border-radius:3px;cursor:${completed || alreadyResearching ? 'default' : 'pointer'};
+        opacity:${completed || (alreadyResearching && !inProgress) ? '0.6' : '1'};
+      ">
+        <div style="display:flex;justify-content:space-between;">
+          <span style="color:#fff;font-size:12px;font-weight:600;">${upg.name}</span>
+          <span style="color:${color};font-size:11px;">${status}</span>
+        </div>
+        <div style="color:#888;font-size:10px;margin-top:2px;">${upg.description}</div>
+      </div>`;
+    }
+
+    html += '<div style="color:#666;font-size:10px;margin-top:4px;">Click to start research</div>';
+    panel.innerHTML = html;
+    panel.style.display = 'block';
+
+    // Add click handlers for research items
+    panel.querySelectorAll('.research-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const resId = item.dataset.research;
+        if (this.game.startResearch('player', resId)) {
+          this.showNotification(`Researching: ${RESEARCH_UPGRADES[resId].name}`, '#00ffcc');
+          this.toggleResearchPanel(); // refresh
+          this.toggleResearchPanel();
+        }
+      });
+    });
+  }
+
+  // Military score comparison for HUD
+  getMilitaryScore(team) {
+    let score = 0;
+    const units = this.game.getUnits(team);
+    for (const u of units) {
+      const stats = UNIT_STATS[u.type];
+      score += stats ? stats.cost : 50;
+    }
+    const buildings = this.game.getBuildings(team);
+    for (const b of buildings) {
+      const stats = BUILDING_STATS[b.type];
+      score += stats ? stats.cost : 100;
+    }
+    return score;
+  }
+
   formatName(type) {
     if (!type) return '';
     return type.charAt(0).toUpperCase() + type.slice(1).replace(/([A-Z])/g, ' $1');

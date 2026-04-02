@@ -72,7 +72,18 @@ export class CombatSystem {
 
     // Apply armor reduction (each armor point reduces damage by 2%)
     const armorReduction = defender.armor ? 1 - (defender.armor * 0.02) : 1.0;
-    const finalDmg = Math.max(1, baseDmg * modifier * armorReduction);
+
+    // Terrain elevation advantage: +15% damage from high ground, -15% from low ground
+    let terrainMod = 1.0;
+    if (this.game.terrain && attacker.domain !== 'air' && (defender.domain !== 'air' || defender.isBuilding)) {
+      const aY = attacker.getPosition().y;
+      const dY = defender.getPosition().y;
+      const heightDiff = aY - dY;
+      if (heightDiff > 1.5) terrainMod = 1.15;
+      else if (heightDiff < -1.5) terrainMod = 0.85;
+    }
+
+    const finalDmg = Math.max(1, baseDmg * modifier * armorReduction * terrainMod);
 
     // Apply damage
     defender.takeDamage(finalDmg);
@@ -165,7 +176,18 @@ export class CombatSystem {
     const defenderKey = defender.isBuilding ? 'building' : defender.type;
     const modifier = DAMAGE_MODIFIERS[turret.type]?.[defenderKey] || 1.0;
     const armorReduction = defender.armor ? 1 - (defender.armor * 0.02) : 1.0;
-    const finalDmg = Math.max(1, baseDmg * modifier * armorReduction);
+
+    // Terrain elevation advantage for turrets
+    let terrainMod = 1.0;
+    if (this.game.terrain && (defender.domain !== 'air' || defender.isBuilding)) {
+      const tY = turret.getPosition().y;
+      const dY = defender.getPosition().y;
+      const heightDiff = tY - dY;
+      if (heightDiff > 1.5) terrainMod = 1.15;
+      else if (heightDiff < -1.5) terrainMod = 0.85;
+    }
+
+    const finalDmg = Math.max(1, baseDmg * modifier * armorReduction * terrainMod);
 
     defender.takeDamage(finalDmg);
     turret.attackCooldown = 1 / turret.attackRate;
