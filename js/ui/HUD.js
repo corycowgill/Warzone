@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { UNIT_STATS, BUILDING_STATS, TECH_TREE, NATIONS, GAME_CONFIG, UNIT_COUNTERS, VETERANCY } from '../core/Constants.js';
+import { UNIT_STATS, BUILDING_STATS, TECH_TREE, NATIONS, GAME_CONFIG, UNIT_COUNTERS, VETERANCY, BUILDING_UPGRADES } from '../core/Constants.js';
 
 export class HUD {
   constructor(game) {
@@ -50,6 +50,9 @@ export class HUD {
     // Create keyboard shortcuts help overlay
     this.createHelpOverlay();
 
+    // Create tech tree overlay
+    this.createTechTreeOverlay();
+
     this.populateBuildMenu();
     this.setupEventListeners();
   }
@@ -85,7 +88,9 @@ export class HUD {
       <div>D: Hold position</div>
       <div>G: Use ability</div>
       <div>B: Build menu</div>
+      <div>F: Cycle formation</div>
       <div>Tab: Cycle buildings</div>
+      <div>T: Tech tree</div>
       <div>Esc: Cancel</div>
       <div style="margin-top:4px;color:#00ccff;">Control Groups</div>
       <div>Ctrl+0-9: Save group</div>
@@ -251,6 +256,11 @@ export class HUD {
       }
     });
 
+    // Formation change notification
+    this.game.eventBus.on('command:formation', (data) => {
+      this.showNotification(`Formation: ${data.type.charAt(0).toUpperCase() + data.type.slice(1)}`, '#00ccff');
+    });
+
     // Build menu toggle events
     this.game.eventBus.on('ui:toggleBuildPanel', () => {
       this.toggleBuildMenu();
@@ -289,16 +299,27 @@ export class HUD {
       }
     });
 
-    // ESC to close build menu, F1 for help
+    // Tech tree button
+    document.getElementById('btn-techtree')?.addEventListener('click', () => {
+      this.toggleTechTree();
+    });
+
+    // ESC to close build menu, F1 for help, T for tech tree
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         this.closeBuildMenu();
         this.cancelBuildPlacement();
+        this.hideTechTree();
       }
       if (e.key === 'F1') {
         e.preventDefault();
         if (this.helpEl) {
           this.helpEl.style.display = this.helpEl.style.display === 'none' ? 'block' : 'none';
+        }
+      }
+      if (e.key === 't' || e.key === 'T') {
+        if (this.game.state === 'PLAYING') {
+          this.toggleTechTree();
         }
       }
     });
@@ -448,6 +469,46 @@ export class HUD {
       if (fullQueue.length > 0) {
         statsHtml += `<div style="margin-top:6px;"><span style="color:#ffcc00;font-size:12px;">Production Queue</span><span style="color:#666;font-size:10px;margin-left:6px;">(right-click to cancel)</span></div>`;
         statsHtml += `<div id="prod-queue-icons" style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;"></div>`;
+        // Show queue summary
+        const totalCost = entity.getTotalQueueCost();
+        const totalTime = Math.ceil(entity.getTotalQueueTime());
+        const minutes = Math.floor(totalTime / 60);
+        const seconds = totalTime % 60;
+        const timeStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+        statsHtml += `<div style="margin-top:4px;font-size:11px;color:#888;">Queue: <span style="color:#ffcc00;">${totalCost} SP</span> over <span style="color:#88ff88;">${timeStr}</span></div>`;
+      }
+
+      // Show tier and upgrade option
+      if (entity.canUpgrade && entity.canUpgrade()) {
+        const cost = entity.getUpgradeCost();
+        const tierBonusNext = BUILDING_UPGRADES[entity.type]?.bonuses[entity.tier + 1];
+        const label = tierBonusNext ? tierBonusNext.label : `Tier ${entity.tier + 1}`;
+        const activeTeam = this.game.mode === '2P' ? this.game.activeTeam : 'player';
+        const canAfford = this.game.resourceSystem ? this.game.resourceSystem.canAfford(activeTeam, cost) : false;
+
+        statsHtml += `
+          <div style="margin-top:8px;">
+            <button id="btn-upgrade-building" style="
+              padding:6px 14px;
+              background:${canAfford ? '#2a3a2a' : '#333'};
+              color:${canAfford ? '#ffcc00' : '#666'};
+              border:1px solid ${canAfford ? '#ffcc00' : '#555'};
+              border-radius:4px;
+              cursor:${canAfford ? 'pointer' : 'not-allowed'};
+              font-family:sans-serif;
+              font-size:12px;
+              width:100%;
+            ">Upgrade to Tier ${entity.tier + 1} - ${cost} SP<br><small style="color:#888;">${label}</small></button>
+          </div>
+        `;
+      }
+
+      // Show current tier
+      if (entity.tier > 1) {
+        const currentTierBonus = entity.getTierBonus ? entity.getTierBonus() : null;
+        if (currentTierBonus) {
+          statsHtml += `<div style="margin-top:4px;font-size:11px;color:#ffcc00;">Tier ${entity.tier}: ${currentTierBonus.label}</div>`;
+        }
       }
     }
 
@@ -475,6 +536,24 @@ export class HUD {
           if (this.game.soundManager) this.game.soundManager.play('move');
         });
       }
+    }
+
+    // Wire up upgrade button
+    const upgradeBtn = document.getElementById('btn-upgrade-building');
+    if (upgradeBtn && entity.canUpgrade && entity.canUpgrade()) {
+      upgradeBtn.addEventListener('click', () => {
+        const cost = entity.getUpgradeCost();
+        const activeTeam = this.game.mode === '2P' ? this.game.activeTeam : 'player';
+        if (this.game.resourceSystem && this.game.resourceSystem.canAfford(activeTeam, cost)) {
+          this.game.resourceSystem.spend(activeTeam, cost);
+          entity.upgrade();
+          this.showNotification(`Upgraded to Tier ${entity.tier}!`, '#ffcc00');
+          if (this.game.soundManager) this.game.soundManager.play('build');
+          this.showSingleEntityInfo(entity);
+        } else {
+          this.showNotification('Not enough SP!', '#ff4444');
+        }
+      });
     }
 
     // Populate production queue icons (after innerHTML is set)
@@ -571,7 +650,12 @@ export class HUD {
       // Hover effect
       icon.addEventListener('mouseenter', () => {
         icon.style.borderColor = '#ff6644';
-        icon.title = `${this.formatName(item.type)} - Right-click to cancel`;
+        if (item.isCurrent) {
+          const remaining = Math.ceil(building.getRemainingTime());
+          icon.title = `${this.formatName(item.type)} - ${remaining}s remaining - Right-click to cancel`;
+        } else {
+          icon.title = `${this.formatName(item.type)} - Right-click to cancel`;
+        }
       });
       icon.addEventListener('mouseleave', () => {
         icon.style.borderColor = item.isCurrent ? '#00ff88' : '#445544';
@@ -1052,6 +1136,123 @@ export class HUD {
       this.rallyFlag = null;
     }
     this.rallyTargetBuilding = null;
+  }
+
+  // ============================
+  // Tech Tree Visualization
+  // ============================
+  createTechTreeOverlay() {
+    this.techTreeEl = document.createElement('div');
+    this.techTreeEl.id = 'tech-tree-overlay';
+    this.techTreeEl.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.95);
+      border: 2px solid #555;
+      border-radius: 12px;
+      padding: 30px;
+      z-index: 10002;
+      max-width: 700px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      display: none;
+      font-family: sans-serif;
+      color: #ccc;
+    `;
+    document.body.appendChild(this.techTreeEl);
+  }
+
+  showTechTree() {
+    if (!this.techTreeEl) return;
+    const activeTeam = this.game.mode === '2P' ? this.game.activeTeam : 'player';
+    const teamBuildings = this.game.getBuildings(activeTeam);
+    const ownedTypes = new Set(teamBuildings.map(b => b.type));
+
+    let html = `<h2 style="color:#ffcc00;margin:0 0 20px 0;text-align:center;letter-spacing:2px;">TECH TREE</h2>`;
+
+    // Buildings section
+    html += `<h3 style="color:#00ff44;margin:15px 0 10px 0;font-size:14px;">Buildings</h3>`;
+    html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;">`;
+
+    const buildingTypes = Object.keys(BUILDING_STATS);
+    for (const type of buildingTypes) {
+      const stats = BUILDING_STATS[type];
+      const owned = ownedTypes.has(type);
+      const requires = stats.requires || [];
+      const hasReqs = requires.every(r => ownedTypes.has(r));
+
+      let borderColor = owned ? '#00ff44' : hasReqs ? '#ffcc00' : '#ff4444';
+      let bgColor = owned ? 'rgba(0,255,65,0.1)' : 'rgba(0,0,0,0.3)';
+      let statusIcon = owned ? '\u2713' : hasReqs ? '\u25CB' : '\u2715';
+      let statusColor = owned ? '#00ff44' : hasReqs ? '#ffcc00' : '#ff4444';
+
+      html += `
+        <div style="background:${bgColor};border:1px solid ${borderColor};border-radius:6px;padding:10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <strong style="color:#fff;font-size:12px;">${this.formatName(type)}</strong>
+            <span style="color:${statusColor};font-size:14px;">${statusIcon}</span>
+          </div>
+          <div style="font-size:10px;color:#888;margin-top:4px;">HP: ${stats.hp} | Cost: ${stats.cost} SP</div>
+          ${requires.length > 0 ? `<div style="font-size:10px;color:#ff8844;margin-top:2px;">Requires: ${requires.map(r => this.formatName(r)).join(', ')}</div>` : ''}
+          ${stats.produces && stats.produces.length > 0 ? `<div style="font-size:10px;color:#66aaff;margin-top:2px;">Produces: ${stats.produces.map(u => this.formatName(u)).join(', ')}</div>` : ''}
+        </div>
+      `;
+    }
+    html += `</div>`;
+
+    // Units section
+    html += `<h3 style="color:#00ff44;margin:20px 0 10px 0;font-size:14px;">Units</h3>`;
+    html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;">`;
+
+    const unitTypes = Object.keys(UNIT_STATS);
+    for (const type of unitTypes) {
+      const stats = UNIT_STATS[type];
+      const tech = TECH_TREE[type];
+      const canProduce = tech ? ownedTypes.has(tech.building) && tech.requires.every(r => ownedTypes.has(r)) : false;
+
+      let borderColor = canProduce ? '#00ff44' : '#ff4444';
+      let bgColor = canProduce ? 'rgba(0,255,65,0.1)' : 'rgba(0,0,0,0.3)';
+
+      html += `
+        <div style="background:${bgColor};border:1px solid ${borderColor};border-radius:6px;padding:10px;">
+          <strong style="color:#fff;font-size:12px;">${this.formatName(type)}</strong>
+          <span style="color:#888;font-size:10px;margin-left:4px;">${stats.domain}</span>
+          <div style="font-size:10px;color:#888;margin-top:4px;">
+            HP:${stats.hp} ATK:${stats.damage} RNG:${stats.range} SPD:${stats.speed}
+          </div>
+          <div style="font-size:10px;color:#ffcc00;margin-top:2px;">${stats.cost} SP | ${stats.buildTime}s</div>
+          ${tech ? `<div style="font-size:10px;color:#ff8844;margin-top:2px;">From: ${this.formatName(tech.building)}</div>` : ''}
+        </div>
+      `;
+    }
+    html += `</div>`;
+
+    // Close button
+    html += `<div style="text-align:center;margin-top:20px;">
+      <button id="btn-close-techtree" style="padding:8px 24px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer;font-size:14px;">Close (T)</button>
+    </div>`;
+
+    this.techTreeEl.innerHTML = html;
+    this.techTreeEl.style.display = 'block';
+
+    document.getElementById('btn-close-techtree')?.addEventListener('click', () => {
+      this.hideTechTree();
+    });
+  }
+
+  hideTechTree() {
+    if (this.techTreeEl) this.techTreeEl.style.display = 'none';
+  }
+
+  toggleTechTree() {
+    if (this.techTreeEl && this.techTreeEl.style.display !== 'none') {
+      this.hideTechTree();
+    } else {
+      this.showTechTree();
+    }
   }
 
   // ============================

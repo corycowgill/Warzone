@@ -33,6 +33,18 @@ export class ProductionSystem {
 
     const unit = this.game.createUnit(unitType, building.team, spawnPos);
 
+    // Apply tier bonuses to the spawned unit
+    const tierBonus = building.getTierBonus ? building.getTierBonus() : null;
+    if (tierBonus && unit) {
+      if (tierBonus.damageBonus && unit.damage) {
+        unit.damage = Math.round(unit.damage * tierBonus.damageBonus);
+      }
+      if (tierBonus.hpBonus && unit.maxHealth) {
+        unit.maxHealth = Math.round(unit.maxHealth * tierBonus.hpBonus);
+        unit.health = unit.maxHealth;
+      }
+    }
+
     // Clear production from building
     building.currentProduction = null;
     building.productionTimer = 0;

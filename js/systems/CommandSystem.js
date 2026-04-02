@@ -163,7 +163,45 @@ export class CommandSystem {
           z: 0
         });
       }
+    } else if (type === 'wedge') {
+      // V-shape formation pointing in movement direction
+      for (let i = 0; i < count; i++) {
+        const row = Math.floor(i / 2);
+        const side = i % 2 === 0 ? -1 : 1;
+        const col = Math.ceil((i + 1) / 2);
+        offsets.push({
+          x: side * col * spacing * 0.7,
+          z: -row * spacing
+        });
+      }
+      // Center first unit at point
+      if (offsets.length > 0) {
+        offsets[0] = { x: 0, z: spacing };
+      }
+    } else if (type === 'circle') {
+      // Ring formation
+      if (count === 1) {
+        offsets.push({ x: 0, z: 0 });
+      } else {
+        const radius = Math.max(spacing, count * spacing / (2 * Math.PI));
+        for (let i = 0; i < count; i++) {
+          const angle = (i / count) * Math.PI * 2;
+          offsets.push({
+            x: Math.cos(angle) * radius,
+            z: Math.sin(angle) * radius
+          });
+        }
+      }
+    } else if (type === 'column') {
+      // Single-file column
+      for (let i = 0; i < count; i++) {
+        offsets.push({
+          x: 0,
+          z: -i * spacing
+        });
+      }
     } else {
+      // Default box formation
       const perRow = Math.max(1, Math.ceil(Math.sqrt(count)));
       const totalRows = Math.ceil(count / perRow);
       for (let i = 0; i < count; i++) {

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Entity } from './Entity.js';
-import { BUILDING_STATS, UNIT_STATS, NATIONS } from '../core/Constants.js';
+import { BUILDING_STATS, UNIT_STATS, NATIONS, BUILDING_UPGRADES } from '../core/Constants.js';
 
 export class Building extends Entity {
   constructor(type, team, position, stats) {
@@ -18,6 +18,8 @@ export class Building extends Entity {
     this.productionTimer = 0;
     this.currentProduction = null;
     this.rallyPoint = position.clone().add(new THREE.Vector3(0, 0, 10));
+
+    this.tier = 1;
 
     // Nation reference for production speed bonus (set externally)
     this.nation = null;
@@ -51,6 +53,12 @@ export class Building extends Entity {
         if (nationData && nationData.bonuses && nationData.bonuses.productionSpeed > 1) {
           buildTime = buildTime / nationData.bonuses.productionSpeed;
         }
+      }
+
+      // Apply tier production speed bonus
+      const tierBonus = this.getTierBonus();
+      if (tierBonus && tierBonus.productionSpeed > 1) {
+        buildTime = buildTime / tierBonus.productionSpeed;
       }
 
       this.productionTimer = buildTime;
@@ -97,6 +105,76 @@ export class Building extends Entity {
       result.push({ type: unitType, progress: 0, isCurrent: false });
     }
     return result;
+  }
+
+  getTotalQueueCost() {
+    let total = 0;
+    const queue = this.getFullQueue();
+    for (const item of queue) {
+      const stats = UNIT_STATS[item.type];
+      if (stats) total += stats.cost;
+    }
+    return total;
+  }
+
+  getTotalQueueTime() {
+    let total = 0;
+    const queue = this.getFullQueue();
+    for (const item of queue) {
+      const stats = UNIT_STATS[item.type];
+      if (stats) {
+        let buildTime = stats.buildTime;
+        // Apply nation production speed bonus
+        if (this.nation && NATIONS[this.nation]?.bonuses?.productionSpeed) {
+          buildTime /= NATIONS[this.nation].bonuses.productionSpeed;
+        }
+        total += buildTime;
+      }
+    }
+    // Subtract elapsed time on current production
+    if (this.currentProduction) {
+      total -= this.productionProgress || 0;
+    }
+    return Math.max(0, total);
+  }
+
+  getRemainingTime() {
+    if (!this.currentProduction) return 0;
+    const stats = UNIT_STATS[this.currentProduction];
+    if (!stats) return 0;
+    let buildTime = stats.buildTime;
+    if (this.nation && NATIONS[this.nation]?.bonuses?.productionSpeed) {
+      buildTime /= NATIONS[this.nation].bonuses.productionSpeed;
+    }
+    return Math.max(0, buildTime - (this.productionProgress || 0));
+  }
+
+  upgrade() {
+    const upgradeConfig = BUILDING_UPGRADES[this.type];
+    if (!upgradeConfig) return false;
+    if (this.tier >= upgradeConfig.maxTier) return false;
+
+    const nextTier = this.tier + 1;
+    this.tier = nextTier;
+    return true;
+  }
+
+  canUpgrade() {
+    const upgradeConfig = BUILDING_UPGRADES[this.type];
+    if (!upgradeConfig) return false;
+    return this.tier < upgradeConfig.maxTier;
+  }
+
+  getUpgradeCost() {
+    const upgradeConfig = BUILDING_UPGRADES[this.type];
+    if (!upgradeConfig || this.tier >= upgradeConfig.maxTier) return 0;
+    return upgradeConfig.costs[this.tier];
+  }
+
+  getTierBonus() {
+    const upgradeConfig = BUILDING_UPGRADES[this.type];
+    if (!upgradeConfig) return null;
+    return upgradeConfig.bonuses[this.tier];
   }
 
   setRallyPoint(position) {

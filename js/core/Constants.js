@@ -23,6 +23,36 @@ export const BUILDING_STATS = {
   wall: { hp: 500, cost: 50, produces: [], size: 1, requires: [], armor: 5, blocksMovement: true }
 };
 
+export const BUILDING_UPGRADES = {
+  barracks: {
+    maxTier: 3,
+    costs: [0, 300, 600],
+    bonuses: {
+      1: { productionSpeed: 1.0, label: 'Base' },
+      2: { productionSpeed: 1.25, label: 'Veteran Training (+25% speed)' },
+      3: { productionSpeed: 1.5, label: 'Elite Academy (+50% speed, veteran spawn)' }
+    }
+  },
+  warfactory: {
+    maxTier: 3,
+    costs: [0, 400, 800],
+    bonuses: {
+      1: { productionSpeed: 1.0, label: 'Base' },
+      2: { productionSpeed: 1.2, label: 'Advanced Assembly (+20% speed)' },
+      3: { productionSpeed: 1.4, damageBonus: 1.1, label: 'Heavy Armor Works (+40% speed, +10% damage)' }
+    }
+  },
+  airfield: {
+    maxTier: 3,
+    costs: [0, 500, 900],
+    bonuses: {
+      1: { productionSpeed: 1.0, label: 'Base' },
+      2: { productionSpeed: 1.3, label: 'Flight School (+30% speed)' },
+      3: { productionSpeed: 1.5, hpBonus: 1.15, label: 'Ace Training (+50% speed, +15% HP)' }
+    }
+  }
+};
+
 // Tech tree: which buildings unlock which units
 export const TECH_TREE = {
   infantry: { building: 'barracks', requires: [] },
@@ -272,7 +302,7 @@ export const VETERANCY = {
 };
 
 export const FORMATION_CONFIG = {
-  types: ['box', 'line'],
+  types: ['box', 'line', 'wedge', 'circle', 'column'],
   defaultType: 'box',
   spacing: 4,
   separationRadius: 3,
