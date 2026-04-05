@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { Vec3Pool } from '../core/Vec3Pool.js';
 
 export class SelectionManager {
   constructor(game) {
@@ -273,8 +274,51 @@ export class SelectionManager {
       this.clearSelection();
     }
 
-    // Find all player units whose screen positions fall within the box
-    const units = this.game.getUnits(ownTeam);
+    // Performance: use spatial query to narrow candidates before screen-space check.
+    // Unproject the 4 screen corners of the selection box to the ground plane (y=0)
+    // to get a world-space bounding rect, then query the spatial grid.
+    let units;
+    const em = this.game.entityManager;
+    if (em) {
+      const groundHits = [];
+      const corners = [
+        [x1, y1], [x2, y1], [x1, y2], [x2, y2]
+      ];
+      const _ray = this.raycaster;
+      for (const [sx, sy] of corners) {
+        const ndc = new THREE.Vector2(
+          (sx / window.innerWidth) * 2 - 1,
+          -(sy / window.innerHeight) * 2 + 1
+        );
+        _ray.setFromCamera(ndc, camera);
+        // Intersect with y=0 ground plane
+        const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+        const hit = new THREE.Vector3();
+        if (_ray.ray.intersectPlane(plane, hit)) {
+          groundHits.push(hit);
+        }
+      }
+      if (groundHits.length >= 2) {
+        // Compute world-space AABB from ground hits with padding
+        let wMinX = Infinity, wMaxX = -Infinity, wMinZ = Infinity, wMaxZ = -Infinity;
+        for (const h of groundHits) {
+          if (h.x < wMinX) wMinX = h.x;
+          if (h.x > wMaxX) wMaxX = h.x;
+          if (h.z < wMinZ) wMinZ = h.z;
+          if (h.z > wMaxZ) wMaxZ = h.z;
+        }
+        // Add padding for units near edges
+        const pad = 5;
+        units = em.queryRect(wMinX - pad, wMinZ - pad, wMaxX + pad, wMaxZ + pad, {
+          alive: true, team: ownTeam, isUnit: true
+        });
+      } else {
+        units = this.game.getUnits(ownTeam);
+      }
+    } else {
+      units = this.game.getUnits(ownTeam);
+    }
+
     const selectedUnits = [];
 
     for (const unit of units) {
@@ -292,15 +336,22 @@ export class SelectionManager {
   }
 
   worldToScreen(worldPos, camera) {
-    const vector = worldPos.clone().project(camera);
+    // Performance: use pooled Vector3 to avoid allocation per unit during box select
+    const vector = Vec3Pool.acquire();
+    vector.copy(worldPos).project(camera);
 
     // Check if behind camera
-    if (vector.z > 1) return null;
+    if (vector.z > 1) {
+      Vec3Pool.release(vector);
+      return null;
+    }
 
-    return {
+    const result = {
       x: (vector.x * 0.5 + 0.5) * window.innerWidth,
       y: (-vector.y * 0.5 + 0.5) * window.innerHeight
     };
+    Vec3Pool.release(vector);
+    return result;
   }
 
   clearSelection() {

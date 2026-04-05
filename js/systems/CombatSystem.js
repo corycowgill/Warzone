@@ -1,6 +1,7 @@
 import * as THREE from 'three';
-import { DAMAGE_MODIFIERS, NATIONS, UNIT_ABILITIES, UNIT_STATS } from '../core/Constants.js';
+import { DAMAGE_MODIFIERS, NATIONS, UNIT_ABILITIES, UNIT_STATS, SALVAGE_CONFIG, BUILDING_STATS } from '../core/Constants.js';
 import { Projectile } from '../entities/Projectile.js';
+import { Vec3Pool } from '../core/Vec3Pool.js';
 
 export class CombatSystem {
   constructor(game) {
@@ -9,6 +10,11 @@ export class CombatSystem {
     this._intensityDecay = 2;
     // GD-075: Overkill protection - track committed damage per entity
     this._committedDamage = new Map();
+
+    // Salvage income: award 15% of destroyed entity's SP cost to killer's team
+    this.game.eventBus.on('combat:kill', ({ attacker, defender }) => {
+      this._awardSalvage(attacker, defender);
+    });
   }
 
   getCommittedDamage(entity) {
@@ -32,6 +38,29 @@ export class CombatSystem {
 
   clearCommittedDamage(entity) {
     this._committedDamage.delete(entity.id);
+  }
+
+  /**
+   * Award salvage income (15% of destroyed entity's SP cost) to the killer's team.
+   */
+  _awardSalvage(attacker, defender) {
+    if (!SALVAGE_CONFIG || !attacker || !defender) return;
+    // Only award for units/buildings, skip excluded types
+    if (SALVAGE_CONFIG.excludeTypes && SALVAGE_CONFIG.excludeTypes.includes(defender.type)) return;
+    // Determine attacker team
+    const team = attacker.team;
+    if (!team || team === 'neutral') return;
+    // Don't award salvage for killing your own units
+    if (team === defender.team) return;
+    // Look up cost
+    const stats = defender.isBuilding ? BUILDING_STATS[defender.type] : UNIT_STATS[defender.type];
+    if (!stats || !stats.cost) return;
+    const salvage = Math.floor(stats.cost * SALVAGE_CONFIG.percentage);
+    if (salvage <= 0) return;
+    // Add SP to the killer's team
+    if (this.game.resourceSystem) {
+      this.game.resourceSystem.addIncome(team, salvage);
+    }
   }
 
   update(delta) {
@@ -218,6 +247,24 @@ export class CombatSystem {
     // GD-125: Retreating units take -25% damage
     const retreatMod = (defender.isUnit && defender.isRetreating) ? 0.75 : 1.0;
 
+    // Spec 003: Japan Bushido Code - +10% damage when attacker below 50% HP
+    let bushidoMod = 1.0;
+    if (attacker.isUnit && attacker.nation === 'japan' && attacker.health < attacker.maxHealth * 0.5) {
+      const jNation = NATIONS.japan;
+      if (jNation && jNation.bonuses && jNation.bonuses.bushidoDamage) {
+        bushidoMod = jNation.bonuses.bushidoDamage;
+      }
+    }
+
+    // Spec 003: France Entrenched Doctrine - +20% damage for stationary infantry (3s+)
+    let stationaryMod = 1.0;
+    if (attacker.isUnit && attacker.nation === 'france' && attacker.isStationary) {
+      const fNation = NATIONS.france;
+      if (fNation && fNation.bonuses && fNation.bonuses.stationaryInfantryDamage) {
+        stationaryMod = fNation.bonuses.stationaryInfantryDamage;
+      }
+    }
+
     // Kids mode / difficulty damage scaling
     let difficultyMod = 1.0;
     const diffConfig = this.game._difficultyConfig;
@@ -229,7 +276,7 @@ export class CombatSystem {
       }
     }
 
-    const finalDmg = Math.max(1, baseDmg * modifier * armorReduction * terrainMod * ditchMod * banzaiMod * forestMod * cmdDmgMod * retreatMod * difficultyMod);
+    const finalDmg = Math.max(1, baseDmg * modifier * armorReduction * terrainMod * ditchMod * banzaiMod * forestMod * cmdDmgMod * retreatMod * bushidoMod * stationaryMod * difficultyMod);
 
     // GD-075: Track committed damage for overkill protection
     this.addCommittedDamage(defender, finalDmg);
@@ -237,16 +284,21 @@ export class CombatSystem {
     // Apply damage
     defender.takeDamage(finalDmg);
 
-    // AOE splash damage for mortar, SPG, bomber
+    // AOE splash damage for mortar, SPG, bomber — use spatial grid for efficient radius query
     if (stats && stats.aoeRadius) {
       const defPos = defender.getPosition();
-      const enemyTeam = attacker.team === 'player' ? 'enemy' : 'player';
-      const splashTargets = this.game.getEntitiesByTeam(enemyTeam);
-      for (const target of splashTargets) {
+      const aoeWorldRadius = stats.aoeRadius;
+      const splashTargets = this.game.spatialGrid.query(defPos.x, defPos.z, aoeWorldRadius);
+      for (let si = 0, slen = splashTargets.length; si < slen; si++) {
+        const target = splashTargets[si];
         if (!target.alive || target === defender) continue;
-        const d = target.getPosition().distanceTo(defPos);
-        if (d <= stats.aoeRadius) {
-          const splashDmg = finalDmg * (1 - d / stats.aoeRadius) * 0.5;
+        if (target.team === attacker.team) continue;
+        const tPos = target.getPosition();
+        const dx = tPos.x - defPos.x;
+        const dz = tPos.z - defPos.z;
+        const d = Math.sqrt(dx * dx + dz * dz);
+        if (d <= aoeWorldRadius) {
+          const splashDmg = finalDmg * (1 - d / aoeWorldRadius) * 0.5;
           if (splashDmg > 0) target.takeDamage(splashDmg);
         }
       }
@@ -257,10 +309,13 @@ export class CombatSystem {
       this.game.soundManager.notifyCombatOffscreen(defender.getPosition());
     }
 
-    // Create floating damage number
+    // Create floating damage number — use pooled Vector3 (effects only .copy() the position)
     if (this.game.effectsManager) {
       const effectiveness = modifier > 1.1 ? 'high' : modifier < 0.9 ? 'low' : 'normal';
-      this.game.effectsManager.createDamageNumber(defender.getPosition().clone(), finalDmg, effectiveness);
+      const dmgPos = Vec3Pool.acquire();
+      dmgPos.copy(defender.getPosition());
+      this.game.effectsManager.createDamageNumber(dmgPos, finalDmg, effectiveness);
+      Vec3Pool.release(dmgPos);
     }
 
     // Reset attack cooldown on the attacker (this is the ONLY place it's set)
@@ -288,13 +343,16 @@ export class CombatSystem {
     // Determine impact type from attacker type
     const _impactType = this._getImpactType(attacker);
 
-    // Create impact effect at defender position
+    // Create impact effect at defender position — use pooled Vector3 (effects only .copy() the position)
     if (this.game.effectsManager) {
-      this.game.effectsManager.createImpactEffect(defenderPos.clone(), _impactType);
+      const impactVec = Vec3Pool.acquire();
+      impactVec.copy(defenderPos);
+      this.game.effectsManager.createImpactEffect(impactVec, _impactType);
       // Spec 009: Water splash when projectile hits water terrain
       if (this.game.terrain && this.game.terrain.isWater(defenderPos.x, defenderPos.z)) {
-        this.game.effectsManager.createWaterSplash(defenderPos.clone());
+        this.game.effectsManager.createWaterSplash(impactVec);
       }
+      Vec3Pool.release(impactVec);
     }
 
     // Create muzzle flash effect
@@ -351,16 +409,19 @@ export class CombatSystem {
       // Clear attack target since defender is dead
       attacker.attackTarget = null;
 
-      // GD-105: Faction on-death effects (Zero kamikaze)
+      // GD-105: Faction on-death effects (Zero kamikaze) — use spatial grid for radius query
       if (defender.factionOnDeath && defender.factionOnDeath.type === 'kamikaze') {
         const deathPos = defender.getPosition();
         const kamiDmg = defender.factionOnDeath.damage;
         const kamiRadius = defender.factionOnDeath.radius;
-        const enemyTeam = defender.team === 'player' ? 'enemy' : 'player';
-        const targets = this.game.getEntitiesByTeam(enemyTeam);
-        for (const target of targets) {
-          if (!target.alive) continue;
-          const d = target.getPosition().distanceTo(deathPos);
+        const targets = this.game.spatialGrid.query(deathPos.x, deathPos.z, kamiRadius);
+        for (let ki = 0, klen = targets.length; ki < klen; ki++) {
+          const target = targets[ki];
+          if (!target.alive || target.team === defender.team) continue;
+          const tPos = target.getPosition();
+          const dx = tPos.x - deathPos.x;
+          const dz = tPos.z - deathPos.z;
+          const d = Math.sqrt(dx * dx + dz * dz);
           if (d <= kamiRadius) {
             const dmg = kamiDmg * (1 - d / kamiRadius);
             if (dmg > 0) target.takeDamage(dmg);
@@ -430,25 +491,30 @@ export class CombatSystem {
       this.game.soundManager.notifyCombatOffscreen(defender.getPosition());
     }
 
-    // Create floating damage number
+    // Create floating damage number — use pooled Vector3
     if (this.game.effectsManager) {
       const effectiveness = modifier > 1.1 ? 'high' : modifier < 0.9 ? 'low' : 'normal';
-      this.game.effectsManager.createDamageNumber(defender.getPosition().clone(), finalDmg, effectiveness);
+      const dmgPos = Vec3Pool.acquire();
+      dmgPos.copy(defender.getPosition());
+      this.game.effectsManager.createDamageNumber(dmgPos, finalDmg, effectiveness);
+      Vec3Pool.release(dmgPos);
     }
 
     // Projectile visual
     const projectile = new Projectile(turret, defender, 0, 100);
     this.game.addProjectile(projectile);
 
-    // Impact effect at defender position
+    // Impact effect at defender position — use pooled Vector3
     if (this.game.effectsManager) {
       const turretImpact = turret.type === 'aaturret' ? 'bullet' : 'shell';
-      const defPos = defender.getPosition().clone();
+      const defPos = Vec3Pool.acquire();
+      defPos.copy(defender.getPosition());
       this.game.effectsManager.createImpactEffect(defPos, turretImpact);
       // Spec 009: Water splash when projectile hits water terrain
       if (this.game.terrain && this.game.terrain.isWater(defPos.x, defPos.z)) {
-        this.game.effectsManager.createWaterSplash(defPos.clone());
+        this.game.effectsManager.createWaterSplash(defPos);
       }
+      Vec3Pool.release(defPos);
     }
 
     if (this.game.effectsManager) {
@@ -629,8 +695,11 @@ export class CombatSystem {
     for (let salvo = 0; salvo < ab.salvos; salvo++) {
       const timeoutId = setTimeout(() => {
         if (!unit.alive || this.game.state !== 'PLAYING') return;
-        const offset = new THREE.Vector3((this.game.rng.next() - 0.5) * 4, 0, (this.game.rng.next() - 0.5) * 4);
-        const impactPos = targetPos.clone().add(offset);
+        const impactPos = new THREE.Vector3(
+          targetPos.x + (this.game.rng.next() - 0.5) * 4,
+          targetPos.y,
+          targetPos.z + (this.game.rng.next() - 0.5) * 4
+        );
         for (const enemy of this.game.getEntitiesByTeam(enemyTeam)) {
           if (!enemy.alive) continue;
           const d = enemy.getPosition().distanceTo(impactPos);

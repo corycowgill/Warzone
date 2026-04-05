@@ -164,9 +164,9 @@ export class ProductionSystem {
       return false;
     }
 
-    // GD-111: Commander requires MU cost
-    if (unitType === 'commander') {
-      const muCost = 200;
+    // Check MU cost for advanced units (plane, battleship, carrier, submarine, commander, etc.)
+    const muCost = unitType === 'commander' ? 200 : (stats.muCost || 0);
+    if (muCost > 0) {
       if (!this.game.resourceSystem.canAffordMU(building.team, muCost)) {
         this.game.eventBus.emit('production:error', {
           message: `Not enough MU (need ${muCost})`,
@@ -175,15 +175,21 @@ export class ProductionSystem {
         if (this.game.soundManager) this.game.soundManager.play('error');
         return false;
       }
-      this.game.resourceSystem.spendMU(building.team, muCost);
+    }
 
-      // Check commander limit
+    // GD-111: Commander limit check
+    if (unitType === 'commander') {
       const hasCommander = this.game.entities.some(e => e.isUnit && e.type === 'commander' && e.team === building.team && e.alive);
       if (hasCommander) {
         this.game.eventBus.emit('production:error', { message: 'Commander already exists!' });
         if (this.game.soundManager) this.game.soundManager.play('error');
         return false;
       }
+    }
+
+    // Deduct MU cost if applicable
+    if (muCost > 0) {
+      this.game.resourceSystem.spendMU(building.team, muCost);
     }
 
     // Spend resources immediately
@@ -205,7 +211,15 @@ export class ProductionSystem {
     const stats = BUILDING_STATS[type];
     if (!stats) return false;
 
-    const cost = stats.cost;
+    // Spec 003: Austria Imperial Engineering - buildings cost 10% less
+    let cost = stats.cost;
+    const nationKey = this.game.teams[team]?.nation;
+    if (nationKey) {
+      const nationData = NATIONS[nationKey];
+      if (nationData && nationData.bonuses && nationData.bonuses.buildingCostReduction) {
+        cost = Math.round(cost * nationData.bonuses.buildingCostReduction);
+      }
+    }
 
     // Check if team can afford
     if (!this.game.resourceSystem.canAfford(team, cost)) {
@@ -319,10 +333,15 @@ export class ProductionSystem {
     const cancelled = building.cancelQueueItem(index);
     if (!cancelled) return false;
 
-    // Refund full cost
+    // Refund full cost (SP + MU)
     const stats = UNIT_STATS[cancelled];
     if (stats) {
       this.game.resourceSystem.addIncome(building.team, stats.cost);
+      // Refund MU cost if applicable
+      const muRefund = cancelled === 'commander' ? 200 : (stats.muCost || 0);
+      if (muRefund > 0) {
+        this.game.resourceSystem.addMUIncome(building.team, muRefund);
+      }
       this.game.eventBus.emit('resource:changed', {
         player: this.game.teams.player.sp,
         enemy: this.game.teams.enemy.sp,

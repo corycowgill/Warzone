@@ -61,6 +61,8 @@ export class Unit extends Entity {
 
     // --- Nation bonus tracking ---
     this.nation = null; // set after construction via applyNationBonuses()
+    this.stationaryTime = 0;   // Track how long infantry has been stationary (France bonus)
+    this.isStationary = false; // Flag for CombatSystem to read
 
     // --- Ability system ---
     this.ability = UNIT_ABILITIES[type] ? { ...UNIT_ABILITIES[type] } : null;
@@ -130,9 +132,21 @@ export class Unit extends Entity {
     }
 
     // Armor bonus (multiplier on base armor)
-    if (b.allArmor && this.baseArmor > 0) {
+    if (b.allArmor && b.allArmor !== 1.0 && this.baseArmor > 0) {
       this.baseArmor = Math.round(this.baseArmor * b.allArmor);
       this.armor = this.baseArmor;
+    }
+
+    // Germany Blitzkrieg: +1 flat armor and +10% speed for all vehicles (not infantry/mortar/engineer)
+    const vehicleTypes = ['tank', 'scoutcar', 'aahalftrack', 'apc', 'heavytank', 'spg'];
+    if (b.vehicleArmorFlat && vehicleTypes.includes(this.type)) {
+      this.baseArmor += b.vehicleArmorFlat;
+      this.armor = this.baseArmor;
+    }
+    // tankSpeed bonus also applies to all vehicles for Germany
+    if (b.tankSpeed && b.tankSpeed !== 1.0 && vehicleTypes.includes(this.type) && this.type !== 'tank') {
+      this.baseSpeed = this.baseSpeed * b.tankSpeed;
+      this.speed = this.baseSpeed;
     }
   }
 
@@ -634,6 +648,15 @@ export class Unit extends Entity {
 
     // Update status badge
     this.updateStatusBadge();
+
+    // Track stationary time for France Entrenched Doctrine passive
+    if (this.type === 'infantry' && !this.isMoving && !this.moveTarget) {
+      this.stationaryTime += deltaTime;
+      this.isStationary = this.stationaryTime >= 3.0;
+    } else {
+      this.stationaryTime = 0;
+      this.isStationary = false;
+    }
 
     // Movement
     if (this.moveTarget) {

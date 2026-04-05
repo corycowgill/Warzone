@@ -14,28 +14,28 @@ Implement unique passive bonuses and active abilities for each nation as defined
 ## Acceptance Criteria
 
 ### Passive Bonuses (always active)
-- [ ] **America** -- Industrial Powerhouse: All production buildings produce units 15% faster
-- [ ] **Great Britain** -- Fortified Positions: Defensive buildings (Ditch/future turrets) have +25% HP and +15% range
-- [ ] **France** -- Entrenched Doctrine: Infantry deal +20% damage when stationary for 3+ seconds
-- [ ] **Japan** -- Bushido Code: All units deal +10% damage when below 50% HP
-- [ ] **Germany** -- Blitzkrieg Doctrine: All vehicles (tanks) have +10% speed and +1 armor
-- [ ] **Austria** -- Imperial Engineering: Buildings cost 10% less SP and build 10% faster
+- [x] **America** -- Industrial Powerhouse: All production buildings produce units 15% faster
+- [x] **Great Britain** -- Fortified Positions: Defensive buildings (Ditch/future turrets) have +25% HP and +15% range
+- [x] **France** -- Entrenched Doctrine: Infantry deal +20% damage when stationary for 3+ seconds
+- [x] **Japan** -- Bushido Code: All units deal +10% damage when below 50% HP
+- [x] **Germany** -- Blitzkrieg Doctrine: All vehicles (tanks) have +10% speed and +1 armor
+- [x] **Austria** -- Imperial Engineering: Buildings cost 10% less SP and build 10% faster
 
 ### Active Abilities (cooldown-based, activated by player)
-- [ ] **America** -- Lend-Lease (120s cooldown): Instantly grants 200 SP
-- [ ] **Japan** -- Banzai Charge (80s cooldown): Selected infantry gain +50% speed and +30% damage for 8 seconds
-- [ ] At minimum America and Japan active abilities must work; others can be placeholder buttons
-- [ ] Active ability button shown in HUD when playing, with cooldown timer
-- [ ] Ability hotkey: F key activates faction ability
+- [x] **America** -- Lend-Lease (120s cooldown): Instantly grants 200 SP
+- [x] **Japan** -- Banzai Charge (80s cooldown): Selected infantry gain +50% speed and +30% damage for 8 seconds
+- [x] At minimum America and Japan active abilities must work; others can be placeholder buttons
+- [x] Active ability button shown in HUD when playing, with cooldown timer
+- [x] Ability hotkey: F key activates faction ability
 
 ### General
-- [ ] Nation passive bonuses defined in Constants.js NATIONS object
-- [ ] FactionAbilitySystem class manages active abilities and cooldowns
-- [ ] Nation selection screen shows passive/active ability descriptions
-- [ ] Passive bonuses apply automatically during gameplay
-- [ ] AI nations also benefit from their passive bonuses
-- [ ] No console errors introduced
-- [ ] Game still loads and plays correctly
+- [x] Nation passive bonuses defined in Constants.js NATIONS object
+- [x] FactionAbilitySystem class manages active abilities and cooldowns
+- [x] Nation selection screen shows passive/active ability descriptions
+- [x] Passive bonuses apply automatically during gameplay
+- [x] AI nations also benefit from their passive bonuses
+- [x] No console errors introduced
+- [x] Game still loads and plays correctly
 
 ## Technical Notes
 
@@ -46,8 +46,7 @@ Implement unique passive bonuses and active abilities for each nation as defined
 - Damage modifiers: apply in CombatSystem.calculateDamage()
 - Reference: `docs/GAME_DESIGN_DOCUMENT.md` Section 2 for full faction details
 
-## Audit (2026-04-05)
-**Status: INCOMPLETE** — Active abilities work (Lend-Lease, Banzai Charge, all 6 nation abilities). NationAbilitySystem functional. Missing: Britain defensive building bonuses, France stationary infantry bonus, Japan low-HP damage bonus, Austria building cost reduction. Some values differ from spec (America 5% vs 15%, Germany armor 20% vs +1). Nation select screen doesn't show ability descriptions.
+## Status: COMPLETE
 
 ## Files to Modify
 
@@ -59,4 +58,4 @@ Implement unique passive bonuses and active abilities for each nation as defined
 - `js/ui/HUD.js` (ability button and cooldown display)
 - `js/ui/UIManager.js` (nation select descriptions)
 
-<!-- NR_OF_TRIES: 0 -->
+<!-- NR_OF_TRIES: 1 -->

@@ -31,6 +31,28 @@ export class Building extends Entity {
     this._footprintOutline = null;
   }
 
+  // Apply nation-specific bonuses to defensive buildings (Britain: +25% HP, +15% range)
+  applyNationBonuses(nationKey) {
+    this.nation = nationKey;
+    const nationData = NATIONS[nationKey];
+    if (!nationData || !nationData.bonuses) return;
+
+    const b = nationData.bonuses;
+    const defensiveTypes = ['ditch', 'turret', 'aaturret', 'bunker'];
+
+    if (defensiveTypes.includes(this.type)) {
+      // Britain Fortified Positions: +25% HP for defensive buildings
+      if (b.defensiveBuildingHP && b.defensiveBuildingHP !== 1.0) {
+        this.maxHealth = Math.round(this.maxHealth * b.defensiveBuildingHP);
+        this.health = this.maxHealth;
+      }
+      // Britain Fortified Positions: +15% range for defensive buildings
+      if (b.defensiveBuildingRange && b.defensiveBuildingRange !== 1.0 && this.range) {
+        this.range = Math.round(this.range * b.defensiveBuildingRange * 100) / 100;
+      }
+    }
+  }
+
   setSelected(selected) {
     super.setSelected(selected);
 

@@ -2,10 +2,10 @@ export const UNIT_STATS = {
   infantry: { hp: 50, speed: 3, damage: 8, range: 6, cost: 50, domain: 'land', buildTime: 3, attackRate: 1.5, armor: 0, vision: 10 },
   tank: { hp: 200, speed: 4, damage: 35, range: 10, cost: 200, domain: 'land', buildTime: 6, attackRate: 0.8, armor: 3, vision: 12 },
   drone: { hp: 80, speed: 7, damage: 15, range: 8, cost: 150, domain: 'air', buildTime: 4, attackRate: 2.0, armor: 0, vision: 14 },
-  plane: { hp: 150, speed: 10, damage: 50, range: 12, cost: 300, domain: 'air', buildTime: 8, attackRate: 0.5, armor: 1, vision: 16 },
-  battleship: { hp: 400, speed: 2, damage: 60, range: 18, cost: 500, domain: 'naval', buildTime: 10, attackRate: 0.4, armor: 5, vision: 20 },
-  carrier: { hp: 500, speed: 1.5, damage: 10, range: 5, cost: 600, domain: 'naval', buildTime: 12, attackRate: 0.3, armor: 4, vision: 22 },
-  submarine: { hp: 150, speed: 3, damage: 80, range: 8, cost: 350, domain: 'naval', buildTime: 8, attackRate: 0.6, armor: 2, vision: 10 },
+  plane: { hp: 150, speed: 10, damage: 50, range: 12, cost: 300, muCost: 100, domain: 'air', buildTime: 8, attackRate: 0.5, armor: 1, vision: 16 },
+  battleship: { hp: 400, speed: 2, damage: 60, range: 18, cost: 500, muCost: 150, domain: 'naval', buildTime: 10, attackRate: 0.4, armor: 5, vision: 20 },
+  carrier: { hp: 500, speed: 1.5, damage: 10, range: 5, cost: 600, muCost: 200, domain: 'naval', buildTime: 12, attackRate: 0.3, armor: 4, vision: 22 },
+  submarine: { hp: 150, speed: 3, damage: 80, range: 8, cost: 350, muCost: 100, domain: 'naval', buildTime: 8, attackRate: 0.6, armor: 2, vision: 10 },
   // Cycle 10 - Tier 1
   mortar: { hp: 40, speed: 2, damage: 20, range: 14, cost: 100, domain: 'land', buildTime: 5, attackRate: 0.5, armor: 0, vision: 10, minRange: 4 },
   scoutcar: { hp: 60, speed: 8, damage: 5, range: 5, cost: 75, domain: 'land', buildTime: 3, attackRate: 1.5, armor: 1, vision: 18 },
@@ -39,7 +39,7 @@ export const BUILDING_STATS = {
   aaturret: { hp: 300, cost: 300, produces: [], size: 1, requires: ['warfactory'], damage: 30, range: 14, attackRate: 1.5, armor: 1, targetDomain: 'air' },
   wall: { hp: 500, cost: 50, produces: [], size: 1, requires: [], armor: 5, blocksMovement: true },
   superweapon: { hp: 800, cost: 800, produces: [], size: 4, requires: ['warfactory'], isSuperweapon: true },
-  munitionscache: { hp: 250, cost: 250, produces: [], size: 2, muIncome: 4, requires: ['barracks'] },
+  munitionscache: { hp: 250, cost: 250, produces: [], size: 2, muIncome: 5, requires: ['barracks'] },
   supplyexchange: { hp: 300, cost: 300, produces: [], size: 2, requires: ['headquarters'], isExchange: true }
 };
 
@@ -115,11 +115,12 @@ export const NATIONS = {
     color: 0x3355ff,
     side: 'allied',
     description: 'Versatile forces with superior infantry firepower',
+    passiveDesc: 'Industrial Powerhouse: All production 15% faster',
     bonuses: {
       infantryDamage: 1.15,     // +15% infantry damage
       tankDamage: 1.0,
       tankSpeed: 1.10,          // +10% tank speed
-      productionSpeed: 1.05,    // +5% faster production
+      productionSpeed: 1.15,    // +15% faster production (spec 003)
       incomeBonus: 0,
       allArmor: 1.0,
       airDamage: 1.0,
@@ -133,6 +134,7 @@ export const NATIONS = {
     color: 0x33aa33,
     side: 'allied',
     description: 'Defensive mastery with strong armor and naval tradition',
+    passiveDesc: 'Fortified Positions: Defensive buildings +25% HP, +15% range',
     bonuses: {
       infantryDamage: 1.0,
       tankDamage: 1.0,
@@ -143,7 +145,9 @@ export const NATIONS = {
       airDamage: 1.0,
       airSpeed: 1.0,
       navalHP: 1.15,            // +15% naval HP
-      costReduction: 1.0
+      costReduction: 1.0,
+      defensiveBuildingHP: 1.25,    // +25% HP for ditch/turret/aaturret/bunker
+      defensiveBuildingRange: 1.15  // +15% range for defensive buildings
     }
   },
   france: {
@@ -151,6 +155,7 @@ export const NATIONS = {
     color: 0x6666ff,
     side: 'allied',
     description: 'Economic powerhouse with cost-efficient production',
+    passiveDesc: 'Entrenched Doctrine: Stationary infantry +20% damage after 3s',
     bonuses: {
       infantryDamage: 1.0,
       tankDamage: 1.0,
@@ -161,7 +166,8 @@ export const NATIONS = {
       airDamage: 1.0,
       airSpeed: 1.0,
       navalHP: 1.0,
-      costReduction: 0.90       // 10% cheaper units
+      costReduction: 0.90,      // 10% cheaper units
+      stationaryInfantryDamage: 1.20  // +20% damage when infantry stationary 3+ seconds
     }
   },
   japan: {
@@ -169,6 +175,7 @@ export const NATIONS = {
     color: 0xff3333,
     side: 'enemy',
     description: 'Air and naval supremacy with fast strike capability',
+    passiveDesc: 'Bushido Code: All units +10% damage when below 50% HP',
     bonuses: {
       infantryDamage: 1.0,
       tankDamage: 1.0,
@@ -179,7 +186,8 @@ export const NATIONS = {
       airDamage: 1.20,          // +20% air damage
       airSpeed: 1.15,           // +15% air speed
       navalHP: 1.20,            // +20% naval HP
-      costReduction: 1.0
+      costReduction: 1.0,
+      bushidoDamage: 1.10        // +10% damage when below 50% HP
     }
   },
   germany: {
@@ -187,13 +195,15 @@ export const NATIONS = {
     color: 0x666666,
     side: 'enemy',
     description: 'Armored blitzkrieg with devastating tank warfare',
+    passiveDesc: 'Blitzkrieg Doctrine: Vehicles +10% speed, +1 armor',
     bonuses: {
       infantryDamage: 1.0,
       tankDamage: 1.15,         // +15% tank damage
-      tankSpeed: 1.15,          // +15% tank speed
+      tankSpeed: 1.10,          // +10% tank speed (spec 003: was 15%, now 10%)
       productionSpeed: 1.0,
       incomeBonus: 0,
-      allArmor: 1.20,           // +20% armor effectiveness
+      allArmor: 1.0,            // (spec 003: changed from 1.20 multiplier to +1 flat)
+      vehicleArmorFlat: 1,      // +1 flat armor to all vehicles (spec 003)
       airDamage: 1.0,
       airSpeed: 1.0,
       navalHP: 1.0,
@@ -205,17 +215,19 @@ export const NATIONS = {
     color: 0xcc6633,
     side: 'enemy',
     description: 'Rapid mobilization with overwhelming numbers',
+    passiveDesc: 'Imperial Engineering: Buildings -10% cost, +10% build speed',
     bonuses: {
       infantryDamage: 1.10,     // +10% infantry damage
       tankDamage: 1.0,
       tankSpeed: 1.0,
-      productionSpeed: 1.20,    // +20% faster production
+      productionSpeed: 1.10,    // +10% faster production (spec 003: was 20%, now 10%)
       incomeBonus: 2,           // +2 SP/s base income
       allArmor: 1.0,
       airDamage: 1.0,
       airSpeed: 1.0,
       navalHP: 1.0,
-      costReduction: 1.0
+      costReduction: 1.0,
+      buildingCostReduction: 0.90  // 10% cheaper buildings (spec 003)
     }
   }
 };
@@ -654,7 +666,7 @@ export const GAME_CONFIG = {
   mapSize: 128,
   worldScale: 2,
   startingSP: 600,
-  startingMU: 100,
+  startingMU: 0,
   baseIncome: 12,
   baseMUIncome: 5,
   tickRate: 1,
@@ -663,6 +675,22 @@ export const GAME_CONFIG = {
 };
 
 export const AI_DIFFICULTY = {
+  kids: {
+    label: 'Kids',
+    resourceBonus: -0.5,
+    attackThresholdMultiplier: 3.0,
+    strategicInterval: 30,
+    tacticalInterval: 15,
+    microInterval: 10,
+    buildOrderVariety: false,
+    multiPronged: false,
+    scouting: false,
+    countersPlayer: false,
+    targetPriority: false,
+    aiDamageMult: 0.1,
+    playerDamageMult: 5.0,
+    playerArmorBonus: 10
+  },
   easy: {
     label: 'Easy',
     resourceBonus: 0,

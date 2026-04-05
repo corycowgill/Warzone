@@ -36,6 +36,7 @@ import { LoadingScreen } from '../ui/LoadingScreen.js';
 import { SettingsUI } from '../ui/SettingsUI.js';
 import { PerformanceMonitor } from '../ui/PerformanceMonitor.js';
 import { SpatialGrid } from '../systems/SpatialGrid.js';
+import { EntityManager } from './EntityManager.js';
 import { SeededRandom } from './SeededRandom.js';
 import { StateHash } from './StateHash.js';
 import { ResearchSystem } from '../systems/ResearchSystem.js';
@@ -55,6 +56,8 @@ export class Game {
     this.rng = new SeededRandom(SeededRandom.generateSeed());
     // Performance: spatial grid for O(1) neighbor queries instead of O(n²)
     this.spatialGrid = new SpatialGrid(12);
+    // Performance: EntityManager with spatial hash for team-indexed + spatial queries
+    this.entityManager = new EntityManager(256, 16);
     // Performance: cached entity lists by team (updated on add/remove instead of filter() per frame)
     this._cachedUnits = { player: [], enemy: [] };
     this._cachedBuildings = { player: [], enemy: [] };
@@ -224,6 +227,7 @@ export class Game {
       this.entities = [];
       this.projectiles = [];
       this._rebuildCaches();
+      if (this.entityManager) this.entityManager.clear();
       if (this.aiController && this.aiController.dispose) this.aiController.dispose();
       this.aiController = null;
       if (this.aiController2 && this.aiController2.dispose) this.aiController2.dispose();
@@ -704,10 +708,10 @@ export class Game {
   createBuilding(type, team, position) {
     const building = BuildingFactory.create(type, team, position, this);
     if (building) {
-      // Set nation for production speed bonuses
+      // Set nation for production speed bonuses + defensive building bonuses
       const nationKey = this.teams[team]?.nation;
       if (nationKey) {
-        building.nation = nationKey;
+        building.applyNationBonuses(nationKey);
       }
 
       const y = this.terrain.getHeightAt(position.x, position.z);
@@ -729,6 +733,8 @@ export class Game {
     }
     // Performance: update cached entity lists
     this._addToCache(entity);
+    // Performance: register with EntityManager spatial hash
+    if (this.entityManager) this.entityManager.add(entity);
   }
 
   _addToCache(entity) {
@@ -765,6 +771,8 @@ export class Game {
     if (idx !== -1) this.entities.splice(idx, 1);
     // Performance: update cached entity lists
     this._removeFromCache(entity);
+    // Performance: deregister from EntityManager spatial hash
+    if (this.entityManager) this.entityManager.remove(entity);
     if (entity.mesh) {
       this.sceneManager.scene.remove(entity.mesh);
     }
@@ -860,14 +868,17 @@ export class Game {
   }
 
   getEntitiesByTeam(team) {
+    if (this.entityManager) return this.entityManager.getEntitiesByTeam(team);
     return this._cachedEntitiesByTeam[team] || [];
   }
 
   getUnits(team) {
+    if (this.entityManager) return this.entityManager.getUnits(team);
     return this._cachedUnits[team] || [];
   }
 
   getBuildings(team) {
+    if (this.entityManager) return this.entityManager.getBuildings(team);
     return this._cachedBuildings[team] || [];
   }
 
@@ -888,6 +899,9 @@ export class Game {
       const e = this.entities[i];
       if (e.alive && e.mesh) this.spatialGrid.insert(e);
     }
+
+    // Performance: update EntityManager spatial hash positions for moving units
+    if (this.entityManager) this.entityManager.updatePositions();
 
     // Update entities
     for (let i = this.entities.length - 1; i >= 0; i--) {
@@ -1350,6 +1364,7 @@ export class Game {
     this.entities = [];
     this.projectiles = [];
     this._rebuildCaches();
+    if (this.entityManager) this.entityManager.clear();
     if (this.aiController && this.aiController.dispose) this.aiController.dispose();
     this.aiController = null;
     if (this.aiController2 && this.aiController2.dispose) this.aiController2.dispose();

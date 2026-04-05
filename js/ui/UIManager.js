@@ -1,4 +1,4 @@
-import { NATIONS, CHALLENGE_SCENARIOS } from '../core/Constants.js';
+import { NATIONS, NATION_ABILITIES, CHALLENGE_SCENARIOS } from '../core/Constants.js';
 import { HUD } from './HUD.js';
 import { GameOverScreen } from './GameOverScreen.js';
 import { CreditsScreen } from './CreditsScreen.js';
@@ -570,6 +570,21 @@ export class UIManager {
   showNationSelect() {
     this.hideAll();
     this.nationSelectEl?.classList.remove('hidden');
+
+    // Populate nation card descriptions from Constants
+    document.querySelectorAll('.nation-card').forEach(card => {
+      const nationKey = card.dataset.nation;
+      const nationData = NATIONS[nationKey];
+      const abilityData = NATION_ABILITIES[nationKey];
+      const passiveEl = card.querySelector('.nation-passive');
+      const abilityEl = card.querySelector('.nation-ability');
+      if (passiveEl && nationData && nationData.passiveDesc) {
+        passiveEl.textContent = nationData.passiveDesc;
+      }
+      if (abilityEl && abilityData) {
+        abilityEl.textContent = `${abilityData.name}: ${abilityData.description}`;
+      }
+    });
 
     // Show/hide enemy nation selection based on mode
     const enemyPanel = document.querySelector('.enemy-panel');
