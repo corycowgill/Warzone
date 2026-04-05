@@ -86,6 +86,65 @@ Source: [https://threejs.org/](https://threejs.org/)
 
 ---
 
+## Development Team
+
+### AI Agents — Claude Opus 4.6
+
+| Role | Agent |
+|------|-------|
+| **Ability System** | Designed and implemented all active/passive unit and building abilities |
+| **Accessibility** | Ensured playability across diverse hardware and input methods |
+| **Animator** | Produced all character and building animations |
+| **Anti-Cheat** | Detection and prevention of unfair play |
+| **Asset Pipeline** | Import, processing, and delivery of all art and audio assets |
+| **Backend Services** | Server-side services — accounts, leaderboards, persistence |
+| **Balance Data** | Quantitative game health — unit stats, win rates, patch notes |
+| **Build & CI** | Compilation, packaging, and delivery pipeline |
+| **Build & Tech Tree** | Construction, production queuing, and tech prerequisites |
+| **Campaign Scripting** | Single-player mission triggers, objectives, and scripted sequences |
+| **Cinematic & Narrative** | In-engine story delivery — cutscenes, dialogue, subtitles |
+| **Codebase Archaeology** | Analyzed the prototype to build shared knowledge for all agents |
+| **Combat** | Damage calculation, combat resolution, attack mechanics |
+| **Concept Artist** | Defined the visual language — faction identity, style guides |
+| **Economy** | Resource gathering, income, and economic feedback loop |
+| **Environment Artist** | Terrain textures, structures, props, environmental dressing |
+| **Fog of War** | Visibility system — what each player can and cannot see |
+| **Game Systems Designer** | Faction design, unit roles, balance targets, game feel |
+| **HUD** | In-game heads-up display — selection, command card, resources |
+| **Lobby & Matchmaking** | Pre-game experience — finding opponents and setting up matches |
+| **Localization** | Internationalization pipeline — string tables, locale switching |
+| **Map Editor** | Scenario editor — terrain painting, object placement, triggers |
+| **Map & Terrain** | Terrain system, tile types, resource nodes |
+| **Menus & Settings** | Main menu, settings, profile screens |
+| **Minimap** | Tactical overview — unit dots, camera pan, pings, alerts |
+| **Multiplayer Map Designer** | Competitive map layouts, resource placement, chokepoints |
+| **Music** | Adaptive soundtrack — faction themes, combat intensity |
+| **Narrative Designer** | Story, lore, unit voice lines, tooltips |
+| **Networking & Sync** | Multiplayer simulation — deterministic lockstep, desync detection |
+| **Pathfinding** | Unit navigation — A*, flow fields, formation movement |
+| **Performance Profiling** | CPU, GPU, memory performance across target hardware |
+| **Physics & Collision** | Collision detection, projectile physics, terrain interaction |
+| **Platform Integration** | Storefronts, launchers, OS services |
+| **Production** | Project coordination — milestone tracking, dependency management |
+| **QA & Testing** | Automated test infrastructure — regression, determinism, benchmarks |
+| **Rendering** | Visual output pipeline — shaders, LOD, fog-of-war visuals, post-processing |
+| **Replay** | Recording, storage, and playback of game replays |
+| **Sound Engine** | Runtime audio — spatial audio, voice lines, ambient sound, mixing |
+| **Strategic AI** | High-level computer opponent — build orders, army composition, scouting |
+| **Technical Artist** | Art/engine bridge — polygon budgets, rigging, shader library |
+| **UI Artist** | Visual design of all interface elements — icons, menus, loading screens |
+| **Unit AI** | Tactical micro — threat assessment, kiting, focus fire, retreat |
+| **Unit Behavior** | Unit state machines, command queuing, targeting, formations |
+| **Unit & Character Artist** | 3D models for units, heroes, and creatures |
+| **VFX Artist** | Real-time visual effects — explosions, spells, projectiles |
+| **Voice Director** | Voice over production — casting, session notes, VO QA |
+
+### Human
+
+**Cory Cowgill** — Humble Human Director
+
+---
+
 ## License Notice
 
 This game uses assets under the following licenses:
