@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Building } from '../entities/Building.js';
 import { BUILDING_STATS } from '../core/Constants.js';
+import { assetManager } from '../rendering/AssetManager.js';
 
 export class Airfield extends Building {
     constructor(team, position, game) {
@@ -13,6 +14,16 @@ export class Airfield extends Building {
     }
 
     createMesh() {
+        const model = assetManager.getTeamTintedModel('bld_airfield', this.team);
+        if (model) {
+            const group = new THREE.Group();
+            group.add(model);
+            return group;
+        }
+        return this._createProceduralMesh();
+    }
+
+    _createProceduralMesh() {
         const group = new THREE.Group();
         const teamColor = this.team === 'player' ? 0x3366ff : 0xff3333;
         const darkTeamColor = this.team === 'player' ? 0x224499 : 0xaa2222;

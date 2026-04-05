@@ -79,8 +79,8 @@ export class CameraController {
 
     // Edge panning
     if (!this.isPanning) {
-      if (this.mousePos.x < this.edgePanSize) dx -= 1;
-      if (this.mousePos.x > window.innerWidth - this.edgePanSize) dx += 1;
+      if (this.mousePos.x < this.edgePanSize) dx += 1;
+      if (this.mousePos.x > window.innerWidth - this.edgePanSize) dx -= 1;
       if (this.mousePos.y < this.edgePanSize) dz += 1;
       if (this.mousePos.y > window.innerHeight - this.edgePanSize) dz -= 1;
     }
@@ -92,7 +92,7 @@ export class CameraController {
     const moveZ = (dx * sin + dz * cos) * this.moveSpeed * delta;
 
     this.target.x += moveX;
-    this.target.z -= moveZ;
+    this.target.z += moveZ;
 
     // Clamp to bounds
     this.target.x = Math.max(this.bounds.minX, Math.min(this.bounds.maxX, this.target.x));

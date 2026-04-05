@@ -1,7 +1,48 @@
 {
   "permissions": {
     "allow": [
-      "Bash(node:*)"
-    ]
+      "Bash(node:*)",
+      "Bash(netstat -ano)",
+      "Bash(taskkill:*)",
+      "Bash(start:*)",
+      "Bash(ls /mnt/c/Users/coryc/warzone/js/*/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8000/)",
+      "Bash(pkill -f \"node server.cjs\")",
+      "Bash(netstat -tlnp)",
+      "Bash(find /mnt/c/Users/coryc/warzone/specs -name \"*.md\" -exec wc -l {} \\\\;)",
+      "Bash(ls -la /mnt/c/Users/coryc/warzone/*.css)",
+      "Bash(cp .claude/worktrees/agent-a200c29f/js/ai/AIController.js js/ai/AIController.js)",
+      "Bash(cp .claude/worktrees/agent-a200c29f/js/core/Constants.js js/core/Constants.js)",
+      "Bash(cp .claude/worktrees/agent-a200c29f/js/ui/UIManager.js js/ui/UIManager.js)",
+      "Bash(cp .claude/worktrees/agent-a200c29f/index.html index.html)",
+      "Read(//mnt/c/Users/coryc/warzone/.claude/worktrees/agent-ac470938/**)",
+      "Bash(grep -c \"getTeamTintedModel\" js/units/*.js)",
+      "WebFetch(domain:claude.com)",
+      "Skill(update-config)",
+      "Bash(gh api:*)",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebSearch",
+      "Bash(curl:*)",
+      "Read(//root/.claude/**)",
+      "Read(//root/.claude/plugins/**)",
+      "Bash(wc -l /mnt/c/Users/coryc/warzone/js/**/*.js)",
+      "Bash(find /mnt/c/Users/coryc/warzone/specs -type f -exec wc -l {} +)",
+      "Bash(git stash:*)",
+      "Bash(git checkout:*)",
+      "Bash(cp -r /mnt/c/Users/coryc/warzone/.claude/worktrees/agent-a5ce5cf9/js/campaign /mnt/c/Users/coryc/warzone/js/campaign)",
+      "Bash(cp -r /mnt/c/Users/coryc/warzone/.claude/worktrees/agent-a043c2f6/js/networking /mnt/c/Users/coryc/warzone/js/networking)",
+      "Bash(cp -r /mnt/c/Users/coryc/warzone/.claude/worktrees/agent-a433ba58/js/replay /mnt/c/Users/coryc/warzone/js/replay)",
+      "Bash(cp -r /mnt/c/Users/coryc/warzone/.claude/worktrees/agent-a686b415/js/editor /mnt/c/Users/coryc/warzone/js/editor)",
+      "Bash(ls /mnt/c/Users/coryc/warzone/js/ui/Achievements* /mnt/c/Users/coryc/warzone/js/ui/Loading* /mnt/c/Users/coryc/warzone/js/ui/Performance* /mnt/c/Users/coryc/warzone/js/ui/Settings*)",
+      "Bash(ls /mnt/c/Users/coryc/warzone/js/core/Achievement* /mnt/c/Users/coryc/warzone/js/core/Settings* /mnt/c/Users/coryc/warzone/js/core/Save*)",
+      "Bash(ls /mnt/c/Users/coryc/warzone/js/rendering/Instanced* /mnt/c/Users/coryc/warzone/js/rendering/LOD* /mnt/c/Users/coryc/warzone/js/rendering/Sky* /mnt/c/Users/coryc/warzone/js/rendering/Terrain*)",
+      "Bash(ls:*)",
+      "Bash(python3 -c ':*)",
+      "Bash(grep -l \"_hasGLBModel\" /mnt/c/Users/coryc/warzone/js/units/*.js)",
+      "Bash(find js/ -name '*.js' -exec node -c {} \\\\;)",
+      "Bash(grep -E \"postMessage|Blob|Worker\" /mnt/c/Users/coryc/warzone/js/**/*.js)"
+    ],
+    "defaultMode": "auto"
   }
 }

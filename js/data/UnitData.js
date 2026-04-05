@@ -1,0 +1,4 @@
+// Unit-related data constants extracted from Constants.js
+// UNIT_STATS, UNIT_ABILITIES, UNIT_COUNTERS, DAMAGE_MODIFIERS, VETERANCY, FACTION_UNITS
+
+export { UNIT_STATS, UNIT_ABILITIES, UNIT_COUNTERS, DAMAGE_MODIFIERS, VETERANCY, FACTION_UNITS } from '../core/Constants.js';

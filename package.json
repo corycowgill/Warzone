@@ -1,0 +1,23 @@
+{
+  "name": "warzone-rts",
+  "version": "1.0.0",
+  "description": "3D Military RTS Game",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "start:mp": "node server-multiplayer.cjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui"
+  },
+  "dependencies": {
+    "@gltf-transform/core": "^4.3.0",
+    "three": "^0.183.2",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^3.2.4",
+    "vitest": "^3.2.4"
+  }
+}

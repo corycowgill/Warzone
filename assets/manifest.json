@@ -1,0 +1,102 @@
+{
+  "current": {
+    "unit_infantry": "assets/models/units/soldier.glb",
+    "unit_engineer": "assets/models/units/xbot.glb",
+    "unit_tank": "assets/models/units/tank.glb",
+    "unit_heavytank": "assets/models/units/tank.glb",
+    "unit_scoutcar": "assets/models/units/scout-vehicle.glb",
+    "unit_apc": "assets/models/units/apc.glb",
+    "unit_aahalftrack": "assets/models/units/humvee.glb",
+    "unit_spg": "assets/models/units/cannon-mobile.glb",
+    "unit_mortarteam": "assets/models/units/cannon.glb",
+    "unit_commander": "assets/models/units/mini-arena/character-soldier.glb",
+    "unit_drone": "assets/models/units/drone.glb",
+    "unit_plane": "assets/models/units/fighter-jet.glb",
+    "unit_bomber": "assets/models/units/craft-cargo.glb",
+    "unit_battleship": "assets/models/units/battleship.glb",
+    "unit_destroyer": "assets/models/units/destroyer.glb",
+    "unit_submarine": "assets/models/units/submarine.glb",
+    "unit_patrolboat": "assets/models/units/patrol-boat.glb",
+    "unit_carrier": "assets/models/units/warship.glb",
+    "bld_headquarters": "assets/models/buildings/fortress.glb",
+    "bld_barracks": "assets/models/buildings/barracks.glb",
+    "bld_warfactory": "assets/models/units/space-kit/hangar_largeB.glb",
+    "bld_shipyard": "assets/models/buildings/dock.glb",
+    "bld_airfield": "assets/models/units/space-kit/hangar_largeA.glb",
+    "bld_turret": "assets/models/buildings/tower-defense/weapon-turret.glb",
+    "bld_aaturret": "assets/models/buildings/tower-defense/weapon-cannon.glb",
+    "bld_bunker": "assets/models/buildings/tower-defense/tower-square-build-f.glb",
+    "bld_wall": "assets/models/buildings/stone-wall.glb",
+    "bld_supplydepot": "assets/models/buildings/storage.glb",
+    "bld_supplyexchange": "assets/models/buildings/shipping-port.glb",
+    "bld_resourcedepot": "assets/models/units/space-kit/hangar_smallA.glb",
+    "bld_techlab": "assets/models/units/space-kit/structure_detailed.glb",
+    "bld_superweapon": "assets/models/buildings/tower-defense/tower-round-build-f.glb",
+    "bld_munitionscache": "assets/models/buildings/barrel.glb",
+    "bld_ditch": "assets/models/buildings/fence-fortified.glb",
+    "bld_shippingport": "assets/models/buildings/shipping-port.glb",
+    "bld_watchtower": "assets/models/buildings/watch-tower.glb"
+  },
+  "upgrades": [
+    {
+      "key": "unit_tank (upgrade)",
+      "description": "Dedicated WWII-style low poly tank",
+      "sources": [
+        "https://mreliptik.itch.io/free-lowpoly-tank-3d-model (CC0, GLTF/FBX)",
+        "https://poly.pizza/bundle/Low-Poly-Military-Vehicles-lSgBuYh48X (CC-BY, 9 vehicles by Zsky)"
+      ],
+      "destPath": "assets/models/units/tank.glb",
+      "notes": "Current tank.glb is adequate. Upgrade for more WWII-authentic look."
+    },
+    {
+      "key": "unit_heavytank (dedicated model)",
+      "description": "Larger, heavier tank distinct from regular tank",
+      "sources": [
+        "https://poly.pizza/search/heavy+tank (CC-BY)",
+        "https://sketchfab.com/search?q=low+poly+heavy+tank&type=models (Various CC)"
+      ],
+      "destPath": "assets/models/units/heavy-tank.glb",
+      "notes": "Currently reuses tank.glb at larger scale. A dedicated model would be better."
+    },
+    {
+      "key": "unit_bomber (WWII bomber)",
+      "description": "WWII-style bomber aircraft instead of cargo craft",
+      "sources": [
+        "https://poly.pizza/search/bomber (CC-BY)",
+        "https://sketchfab.com/search?q=low+poly+bomber&type=models (Various CC)"
+      ],
+      "destPath": "assets/models/units/bomber.glb",
+      "notes": "Current craft-cargo.glb is from Kenney space kit. Replace with propeller bomber."
+    },
+    {
+      "key": "unit_plane (WWII fighter)",
+      "description": "WWII-style propeller fighter instead of modern jet",
+      "sources": [
+        "https://poly.pizza/search/fighter+plane (CC-BY)",
+        "https://sketchfab.com/search?q=low+poly+ww2+fighter&type=models (Various CC)"
+      ],
+      "destPath": "assets/models/units/ww2-fighter.glb",
+      "notes": "Current fighter-jet.glb is a modern jet. WWII theme needs propeller aircraft."
+    },
+    {
+      "key": "bld_headquarters (military HQ)",
+      "description": "Large military command center / base building",
+      "sources": [
+        "https://ithappystudios.com/free/military-free/ (Free, GLTF/FBX, 26 military assets)",
+        "https://poly.pizza/search/military+base (CC-BY)"
+      ],
+      "destPath": "assets/models/buildings/military-hq.glb",
+      "notes": "Current fortress.glb works but a dedicated military HQ would be better."
+    },
+    {
+      "key": "bld_barracks (military barracks)",
+      "description": "Quonset hut or military barracks building",
+      "sources": [
+        "https://ithappystudios.com/free/military-free/ (Free, includes barracks)",
+        "https://poly.pizza/search/barracks (CC-BY)"
+      ],
+      "destPath": "assets/models/buildings/military-barracks.glb",
+      "notes": "Current barracks.glb is decent. Upgrade for more authentic WWII look."
+    }
+  ]
+}

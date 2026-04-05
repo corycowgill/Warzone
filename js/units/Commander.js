@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Unit } from '../entities/Unit.js';
 import { COMMANDER_CONFIG } from '../core/Constants.js';
+import { assetManager } from '../rendering/AssetManager.js';
 
 /**
  * GD-111: Commander/Hero Unit
@@ -74,6 +75,18 @@ export class Commander extends Unit {
     }
 
     createMesh() {
+        const model = assetManager.getTeamTintedModel('unit_commander', this.team);
+        if (model) {
+            const group = new THREE.Group();
+            group.add(model);
+            this._hasGLBModel = true;
+            return group;
+        }
+        this._hasGLBModel = false;
+        return this._createProceduralMesh();
+    }
+
+    _createProceduralMesh() {
         const group = new THREE.Group();
         const teamColor = this.team === 'player' ? 0x3366ff : 0xff3333;
         const darkTeamColor = this.team === 'player' ? 0x224499 : 0xaa2222;

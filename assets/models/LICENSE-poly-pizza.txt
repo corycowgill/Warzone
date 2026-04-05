@@ -1,0 +1,78 @@
+Poly Pizza 3D Models - License & Attribution
+=============================================
+
+All models below were downloaded from Poly Pizza (https://poly.pizza)
+and are used under their respective Creative Commons licenses.
+
+== Zsky Military Vehicles Bundle (CC-BY 3.0) ==
+Source: https://poly.pizza/bundle/Low-Poly-Military-Vehicles-lSgBuYh48X
+Author: Zsky (https://poly.pizza/u/Zsky)
+License: CC-BY 3.0
+
+Files:
+  units/poly-pizza/helicopter-zsky.glb    - Helicopter
+  units/poly-pizza/truck-zsky.glb         - Truck
+  units/poly-pizza/military-boat-zsky.glb - Military Boat
+  units/poly-pizza/motorbike-zsky.glb     - Military Motorbike
+  units/poly-pizza/tank-zsky.glb          - Tank
+  units/poly-pizza/jeep-zsky.glb          - Jeep
+  units/poly-pizza/ambulance-zsky.glb     - Ambulance Car
+  units/poly-pizza/light-tank-zsky.glb    - Light Tank
+
+== Quaternius Models (CC0 1.0 - Public Domain) ==
+Author: Quaternius (https://poly.pizza/u/Quaternius)
+License: CC0 1.0
+
+Files:
+  units/poly-pizza/swat-quaternius.glb              - SWAT Soldier
+    Source: https://poly.pizza/m/Btfn3G5Xv4
+  units/poly-pizza/ship-quaternius.glb              - Ship
+    Source: https://poly.pizza/m/mEQj2wZ3GC
+  buildings/poly-pizza/sack-trench-quaternius.glb   - Sack Trench Small
+    Source: https://poly.pizza/m/iHyRewQQcN
+
+== KolosStudios Models (CC-BY 3.0) ==
+Author: KolosStudios (https://poly.pizza/u/KolosStudios)
+License: CC-BY 3.0
+
+Files:
+  units/poly-pizza/soldier-kolos.glb       - Soldier
+    Source: https://poly.pizza/m/XT8jgwSesV
+  buildings/poly-pizza/barrier-kolos.glb   - Barrier
+    Source: https://poly.pizza/m/SCaRjzjzSk
+
+== Poly by Google Models (CC-BY 3.0) ==
+Author: Poly by Google
+License: CC-BY 3.0
+
+Files:
+  units/poly-pizza/submarine-google.glb   - Submarine
+    Source: https://poly.pizza/m/8PgPdFGg3MO
+  units/poly-pizza/airplane-google.glb    - Airplane
+    Source: https://poly.pizza/m/8ciDd9k8wha
+  units/poly-pizza/jet-google.glb         - Jet
+    Source: https://poly.pizza/m/bgUY8zN2Bq9
+
+== madtrollstudio Models (CC-BY 3.0) ==
+Author: madtrollstudio
+License: CC-BY 3.0
+
+Files:
+  units/poly-pizza/military-man.glb       - Military man
+    Source: https://poly.pizza/m/3AiqeNLKkP
+
+== angelo raffaele Catalano Models (CC-BY 3.0) ==
+Author: angelo raffaele Catalano
+License: CC-BY 3.0
+
+Files:
+  units/poly-pizza/battleship-catalano.glb - Low Poly Battleship
+    Source: https://poly.pizza/m/cqV6mUkn7Ow
+
+== Thomas de Rivaz Models (CC-BY 3.0) ==
+Author: Thomas de Rivaz
+License: CC-BY 3.0
+
+Files:
+  units/poly-pizza/simple-battleship.glb  - Simple Battleship
+    Source: https://poly.pizza/m/aYAmfkUYZjg

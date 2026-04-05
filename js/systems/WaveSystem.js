@@ -99,7 +99,7 @@ export class WaveSystem {
       let unitType = 'infantry';
 
       // Determine type based on ratios
-      const roll = Math.random();
+      const roll = this.game.rng.next();
       if (config.navalRatio && roll < config.navalRatio && this.game.terrain) {
         // Naval units spawn in water
         unitType = config.types.includes('battleship') ? 'battleship' : 'patrolboat';
@@ -119,25 +119,25 @@ export class WaveSystem {
       if (isNaval) {
         // Find water position on map edge
         spawnX = mapSize - 10;
-        spawnZ = mapSize * 0.3 + Math.random() * mapSize * 0.4;
+        spawnZ = mapSize * 0.3 + this.game.rng.next() * mapSize * 0.4;
         // Only spawn if water exists there
         if (this.game.terrain && !this.game.terrain.isWater(spawnX, spawnZ)) {
           unitType = 'infantry'; // fallback
-          spawnX = mapSize - 20 - Math.random() * 20;
-          spawnZ = mapSize * 0.2 + Math.random() * mapSize * 0.6;
+          spawnX = mapSize - 20 - this.game.rng.next() * 20;
+          spawnZ = mapSize * 0.2 + this.game.rng.next() * mapSize * 0.6;
         }
       } else {
         // Land/air: spawn from right edge
-        spawnX = mapSize - 20 - Math.random() * 30;
-        spawnZ = mapSize * 0.15 + Math.random() * mapSize * 0.7;
+        spawnX = mapSize - 20 - this.game.rng.next() * 30;
+        spawnZ = mapSize * 0.15 + this.game.rng.next() * mapSize * 0.7;
 
         // Ensure walkable for land
         if (unitType !== 'drone' && unitType !== 'bomber' && this.game.terrain) {
           if (!this.game.terrain.isWalkable(spawnX, spawnZ) || this.game.terrain.isWater(spawnX, spawnZ)) {
             // Try alternative positions
             for (let attempt = 0; attempt < 5; attempt++) {
-              spawnX = mapSize - 30 - Math.random() * 40;
-              spawnZ = mapSize * 0.2 + Math.random() * mapSize * 0.6;
+              spawnX = mapSize - 30 - this.game.rng.next() * 40;
+              spawnZ = mapSize * 0.2 + this.game.rng.next() * mapSize * 0.6;
               if (this.game.terrain.isWalkable(spawnX, spawnZ) && !this.game.terrain.isWater(spawnX, spawnZ)) break;
             }
           }
@@ -168,8 +168,8 @@ export class WaveSystem {
         const playerHQ = this.game.getHQ('player');
         if (playerHQ) {
           const targetPos = playerHQ.getPosition().clone();
-          targetPos.x += (Math.random() - 0.5) * 30;
-          targetPos.z += (Math.random() - 0.5) * 30;
+          targetPos.x += (this.game.rng.next() - 0.5) * 30;
+          targetPos.z += (this.game.rng.next() - 0.5) * 30;
           unit.moveTo(targetPos);
           unit._attackMove = true;
         }

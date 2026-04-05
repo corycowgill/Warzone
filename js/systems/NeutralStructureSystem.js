@@ -23,7 +23,7 @@ export class NeutralStructureSystem {
 
   placeStructures() {
     const mapSize = GAME_CONFIG.mapSize * GAME_CONFIG.worldScale;
-    const count = STRUCTURE_COUNT_MIN + Math.floor(Math.random() * (STRUCTURE_COUNT_MAX - STRUCTURE_COUNT_MIN + 1));
+    const count = STRUCTURE_COUNT_MIN + Math.floor(this.game.rng.next() * (STRUCTURE_COUNT_MAX - STRUCTURE_COUNT_MIN + 1));
     const margin = 60;
     const minDist = 40; // minimum distance between structures
 
@@ -37,8 +37,8 @@ export class NeutralStructureSystem {
 
       do {
         // Bias toward center of map (contested area)
-        x = mapSize * 0.2 + Math.random() * mapSize * 0.6;
-        z = mapSize * 0.15 + Math.random() * mapSize * 0.7;
+        x = mapSize * 0.2 + this.game.rng.next() * mapSize * 0.6;
+        z = mapSize * 0.15 + this.game.rng.next() * mapSize * 0.7;
         attempts++;
 
         // Check terrain
@@ -232,7 +232,7 @@ export class NeutralStructureSystem {
     this.game.sceneManager.scene.add(group);
 
     const structure = {
-      id: Date.now() + Math.floor(Math.random() * 100000),
+      id: Date.now() + Math.floor(this.game.rng.next() * 100000),
       structureType: type,
       config,
       team: 'neutral',
@@ -247,7 +247,7 @@ export class NeutralStructureSystem {
       alive: true,
       captureProgress: 0,
       capturingTeam: null,
-      _beaconPhase: Math.random() * Math.PI * 2
+      _beaconPhase: this.game.rng.next() * Math.PI * 2
     };
 
     this.structures.push(structure);

@@ -69,8 +69,8 @@ export class PostProcessing {
 
     // Vignette pass
     this.vignettePass = new ShaderPass(VignetteShader);
-    this.vignettePass.uniforms.offset.value = 1.0;
-    this.vignettePass.uniforms.darkness.value = 1.1;
+    this.vignettePass.uniforms.offset.value = 1.3;    // Push vignette further to edges
+    this.vignettePass.uniforms.darkness.value = 0.5;   // Much lighter vignette
     this.composer.addPass(this.vignettePass);
 
     // Handle resize

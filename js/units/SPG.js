@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Unit } from '../entities/Unit.js';
 import { UNIT_STATS, UNIT_ABILITIES } from '../core/Constants.js';
+import { assetManager } from '../rendering/AssetManager.js';
 
 export class SPG extends Unit {
     constructor(team, position) {
@@ -41,6 +42,18 @@ export class SPG extends Unit {
     }
 
     createMesh() {
+        const model = assetManager.getTeamTintedModel('unit_spg', this.team);
+        if (model) {
+            const group = new THREE.Group();
+            group.add(model);
+            this._hasGLBModel = true;
+            return group;
+        }
+        this._hasGLBModel = false;
+        return this._createProceduralMesh();
+    }
+
+    _createProceduralMesh() {
         const group = new THREE.Group();
         const teamColor = this.team === 'player' ? 0x3366ff : 0xff3333;
         const darkTeamColor = this.team === 'player' ? 0x1a3366 : 0x661a1a;

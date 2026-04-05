@@ -78,6 +78,10 @@ export class AIController {
     // GD-128: Exchange cooldown
     this._exchangeCooldown = 0;
 
+    // When true, strategic and tactical layers are handled by the Web Worker
+    // via AIWorkerBridge. Only micro and scouting run on the main thread.
+    this._workerManaged = false;
+
     // Choose initial strategy
     this.chooseStrategy();
 
@@ -114,7 +118,7 @@ export class AIController {
     const strategies = ['rush', 'boom', 'turtle', 'air', 'balanced'];
     const weights = [0.2, 0.2, 0.15, 0.2, 0.25];
 
-    let r = Math.random();
+    let r = this.game.rng.next();
     let cumulative = 0;
     for (let i = 0; i < strategies.length; i++) {
       cumulative += weights[i];
@@ -139,11 +143,16 @@ export class AIController {
     let waterCells = 0;
     const totalSamples = 100;
     for (let i = 0; i < totalSamples; i++) {
-      const x = Math.random() * mapSize * GAME_CONFIG.worldScale;
-      const z = Math.random() * mapSize * GAME_CONFIG.worldScale;
+      const x = this.game.rng.next() * mapSize * GAME_CONFIG.worldScale;
+      const z = this.game.rng.next() * mapSize * GAME_CONFIG.worldScale;
       if (this.game.terrain.isWater(x, z)) waterCells++;
     }
     return waterCells > totalSamples * 0.15; // >15% water
+  }
+
+  /** Enable/disable worker-managed mode (strategic + tactical offloaded to Web Worker) */
+  setWorkerManaged(flag) {
+    this._workerManaged = !!flag;
   }
 
   update(delta) {
@@ -155,28 +164,31 @@ export class AIController {
       if (this._exchangeCooldown < 0) this._exchangeCooldown = 0;
     }
 
-    // Strategic layer
-    this.strategicTimer += delta;
-    if (this.strategicTimer >= this.strategicInterval) {
-      this.strategicTimer = 0;
-      this.updateStrategy();
+    // When worker-managed, skip strategic and tactical layers (handled by AIWorkerBridge)
+    if (!this._workerManaged) {
+      // Strategic layer
+      this.strategicTimer += delta;
+      if (this.strategicTimer >= this.strategicInterval) {
+        this.strategicTimer = 0;
+        this.updateStrategy();
+      }
+
+      // Tactical layer
+      this.tacticalTimer += delta;
+      if (this.tacticalTimer >= this.tacticalInterval) {
+        this.tacticalTimer = 0;
+        this.executeTactics();
+      }
     }
 
-    // Tactical layer
-    this.tacticalTimer += delta;
-    if (this.tacticalTimer >= this.tacticalInterval) {
-      this.tacticalTimer = 0;
-      this.executeTactics();
-    }
-
-    // Micro layer
+    // Micro layer (always runs on main thread — latency-sensitive)
     this.microTimer += delta;
     if (this.microTimer >= this.microInterval) {
       this.microTimer = 0;
       this.executeMicro();
     }
 
-    // Scouting layer
+    // Scouting layer (always runs on main thread — needs pathfinding)
     if (this.config.scouting) {
       this.scoutTimer += delta;
       if (this.scoutTimer >= this.scoutInterval) {
@@ -407,7 +419,7 @@ export class AIController {
       for (const domain of Object.keys(TECH_BRANCHES)) {
         if (state.branches[domain]) continue; // already chosen
         const branch = TECH_BRANCHES[domain];
-        const branchKey = Math.random() < 0.5 ? 'branchA' : 'branchB';
+        const branchKey = this.game.rng.next() < 0.5 ? 'branchA' : 'branchB';
         const chosen = branch[branchKey];
         if (sp >= chosen.cost && (!chosen.muCost || mu >= chosen.muCost)) {
           if (this.game.startBranchResearch(this.team, domain, branchKey)) {
@@ -504,8 +516,8 @@ export class AIController {
     if (!hq) return;
 
     const hqPos = hq.getPosition();
-    const angle = Math.random() * Math.PI * 2;
-    const radius = 20 + Math.random() * 15;
+    const angle = this.game.rng.next() * Math.PI * 2;
+    const radius = 20 + this.game.rng.next() * 15;
 
     const buildPos = new THREE.Vector3(
       hqPos.x + Math.cos(angle) * radius,
@@ -667,7 +679,7 @@ export class AIController {
         const bias = this.personality.unitBias;
         // If the building can produce a biased unit, consider switching
         for (const [biasType, weight] of Object.entries(bias)) {
-          if (weight > 1.0 && building.produces.includes(biasType) && Math.random() < (weight - 1.0)) {
+          if (weight > 1.0 && building.produces.includes(biasType) && this.game.rng.next() < (weight - 1.0)) {
             unitType = biasType;
             break;
           }
@@ -690,10 +702,10 @@ export class AIController {
     const mortars = myUnits.filter(u => u.type === 'mortar').length;
     const engineers = myUnits.filter(u => u.type === 'engineer').length;
     // GD-089: Build 1-2 engineers for repair and capture
-    if (engineers < 1 && infantry > 2 && Math.random() < 0.3) return 'engineer';
-    if (engineers < 2 && infantry > 6 && Math.random() < 0.15) return 'engineer';
+    if (engineers < 1 && infantry > 2 && this.game.rng.next() < 0.3) return 'engineer';
+    if (engineers < 2 && infantry > 6 && this.game.rng.next() < 0.15) return 'engineer';
     // Mix in mortars occasionally for building damage
-    if (mortars < 2 && infantry > 3 && Math.random() < 0.3) return 'mortar';
+    if (mortars < 2 && infantry > 3 && this.game.rng.next() < 0.3) return 'mortar';
     return 'infantry';
   }
 
@@ -718,13 +730,13 @@ export class AIController {
 
     // T3 units if we have tech lab
     if (hasTechLab) {
-      if (heavyTanks < 2 && Math.random() < 0.3) return 'heavytank';
-      if (spgs < 1 && Math.random() < 0.2) return 'spg';
+      if (heavyTanks < 2 && this.game.rng.next() < 0.3) return 'heavytank';
+      if (spgs < 1 && this.game.rng.next() < 0.2) return 'spg';
     }
 
     // APCs if we have lots of infantry
     const infantryCount = myUnits.filter(u => u.type === 'infantry').length;
-    if (apcs < 1 && infantryCount > 6 && Math.random() < 0.2) return 'apc';
+    if (apcs < 1 && infantryCount > 6 && this.game.rng.next() < 0.2) return 'apc';
 
     return 'tank';
   }
@@ -736,7 +748,7 @@ export class AIController {
 
     // Check for tech lab for bombers
     const hasTechLab = this.game.getBuildings(this.team).some(b => b.type === 'techlab' && b.alive);
-    if (hasTechLab && bombers < 1 && Math.random() < 0.3) return 'bomber';
+    if (hasTechLab && bombers < 1 && this.game.rng.next() < 0.3) return 'bomber';
 
     // Strategy-based air choices
     if (this.strategy === 'air') {
@@ -772,7 +784,7 @@ export class AIController {
       const bias = this._counterProductionBias;
       // Check if the building can produce any biased unit
       for (const [biasType, weight] of Object.entries(bias)) {
-        if (weight > 1.0 && building.canProduce(biasType) && Math.random() < (weight - 1.0) * 0.5) {
+        if (weight > 1.0 && building.canProduce(biasType) && this.game.rng.next() < (weight - 1.0) * 0.5) {
           // Verify tech requirements
           if (this.game.productionSystem && this.game.productionSystem.hasTechRequirements(this.team, biasType)) {
             return biasType;
@@ -921,9 +933,9 @@ export class AIController {
     } else if (flankForce.length >= 2) {
       // Attack primary from a different angle
       const flankOffset = new THREE.Vector3(
-        (Math.random() > 0.5 ? 1 : -1) * 30,
+        (this.game.rng.next() > 0.5 ? 1 : -1) * 30,
         0,
-        (Math.random() > 0.5 ? 1 : -1) * 30
+        (this.game.rng.next() > 0.5 ? 1 : -1) * 30
       );
       const flankTarget = primaryTarget.clone().add(flankOffset);
       this.sendUnitsToTarget(flankForce, flankTarget);
@@ -933,21 +945,26 @@ export class AIController {
   sendUnitsToTarget(units, targetPos) {
     for (const unit of units) {
       const offset = new THREE.Vector3(
-        (Math.random() - 0.5) * 20,
+        (this.game.rng.next() - 0.5) * 20,
         0,
-        (Math.random() - 0.5) * 20
+        (this.game.rng.next() - 0.5) * 20
       );
       const attackPos = targetPos.clone().add(offset);
 
       if (unit.domain === 'land' && this.game.pathfinding) {
-        const path = this.game.pathfinding.findPathForDomain(
-          unit.getPosition(), attackPos, unit.domain
-        );
-        if (path && path.length > 1) {
-          unit.followPath(path);
-        } else {
-          unit.moveTo(attackPos);
-        }
+        const unitRef = unit;
+        const startPos = unit.getPosition();
+        unit.moveTo(attackPos);
+        unit._pathPending = true;
+        this.game.pathfinding.findPathAsync(startPos, attackPos, unit.domain).then(path => {
+          unitRef._pathPending = false;
+          if (!unitRef.alive) return;
+          if (path && path.length > 1) {
+            unitRef.followPath(path);
+          } else if (path && path.length === 1) {
+            unitRef.moveTo(path[0]);
+          }
+        });
       } else {
         unit.moveTo(attackPos);
       }
@@ -972,20 +989,25 @@ export class AIController {
     // Scout toward enemy side of map
     const mapSize = GAME_CONFIG.mapSize * GAME_CONFIG.worldScale;
     const scoutTarget = new THREE.Vector3(
-      mapSize * 0.7 + Math.random() * mapSize * 0.2,
+      mapSize * 0.7 + this.game.rng.next() * mapSize * 0.2,
       0,
-      mapSize * (0.2 + Math.random() * 0.6)
+      mapSize * (0.2 + this.game.rng.next() * 0.6)
     );
 
     if (scout.domain === 'land' && this.game.pathfinding) {
-      const path = this.game.pathfinding.findPathForDomain(
-        scout.getPosition(), scoutTarget, scout.domain
-      );
-      if (path && path.length > 1) {
-        scout.followPath(path);
-      } else {
-        scout.moveTo(scoutTarget);
-      }
+      const scoutRef = scout;
+      const startPos = scout.getPosition();
+      scout.moveTo(scoutTarget);
+      scout._pathPending = true;
+      this.game.pathfinding.findPathAsync(startPos, scoutTarget, scout.domain).then(path => {
+        scoutRef._pathPending = false;
+        if (!scoutRef.alive) return;
+        if (path && path.length > 1) {
+          scoutRef.followPath(path);
+        } else if (path && path.length === 1) {
+          scoutRef.moveTo(path[0]);
+        }
+      });
     } else {
       scout.moveTo(scoutTarget);
     }
@@ -1074,7 +1096,7 @@ export class AIController {
     }
 
     // Priority 2: Attempt capture of enemy buildings below 50% HP
-    if (Math.random() < 0.3) {
+    if (this.game.rng.next() < 0.3) {
       const enemyBuildings = this.game.getBuildings(this.enemyTeam);
       const capturable = enemyBuildings.find(b =>
         b.alive && b.health < b.maxHealth * 0.5
@@ -1095,8 +1117,8 @@ export class AIController {
     const hq = this.game.getHQ(this.team);
     if (hq && unit.distanceTo(hq) > 40) {
       const hqPos = hq.getPosition().clone();
-      hqPos.x += (Math.random() - 0.5) * 20;
-      hqPos.z += (Math.random() - 0.5) * 20;
+      hqPos.x += (this.game.rng.next() - 0.5) * 20;
+      hqPos.z += (this.game.rng.next() - 0.5) * 20;
       unit.moveTo(hqPos);
     }
   }
@@ -1265,8 +1287,8 @@ export class AIController {
     }
 
     if (retreatPos) {
-      retreatPos.x += (Math.random() - 0.5) * 10;
-      retreatPos.z += (Math.random() - 0.5) * 10;
+      retreatPos.x += (this.game.rng.next() - 0.5) * 10;
+      retreatPos.z += (this.game.rng.next() - 0.5) * 10;
       unit.moveTo(retreatPos);
       unit.attackTarget = null;
     }
@@ -1489,8 +1511,8 @@ export class AIController {
         if (enemyHQ) {
           const hqPos = enemyHQ.getPosition();
           const flarePos = hqPos.clone();
-          flarePos.x += (Math.random() - 0.5) * 40;
-          flarePos.z += (Math.random() - 0.5) * 40;
+          flarePos.x += (this.game.rng.next() - 0.5) * 40;
+          flarePos.z += (this.game.rng.next() - 0.5) * 40;
           if (unit.getPosition().distanceTo(flarePos) <= (unit.ability.range || 20) * 3) {
             this.game.combatSystem.executeAbility(unit, flarePos, null);
           }
@@ -1600,8 +1622,8 @@ export class AIController {
       if (distToMyHQ < distToEnemyHQ * 1.3) {
         // Build a supply depot near this node
         const buildPos = node.position.clone();
-        buildPos.x += (Math.random() - 0.5) * 6;
-        buildPos.z += (Math.random() - 0.5) * 6;
+        buildPos.x += (this.game.rng.next() - 0.5) * 6;
+        buildPos.z += (this.game.rng.next() - 0.5) * 6;
         buildPos.x = Math.max(15, Math.min(mapSize - 15, buildPos.x));
         buildPos.z = Math.max(15, Math.min(mapSize - 15, buildPos.z));
         if (this.game.terrain && this.game.terrain.isWalkable(buildPos.x, buildPos.z)) {

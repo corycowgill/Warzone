@@ -1,0 +1,31 @@
+#!/bin/bash
+# Poly Pizza Model Download Helper
+# Poly Pizza provides direct GLB downloads for CC-BY models
+
+ASSETS_DIR="$(cd "$(dirname "$0")/.." && pwd)/assets/models"
+
+echo "=== Poly Pizza Model Downloads ==="
+echo ""
+echo "Visit these URLs to download GLB files directly:"
+echo ""
+echo "BATTLESHIP:"
+echo "  https://poly.pizza/m/cqV6mUkn7Ow"
+echo "  Save to: $ASSETS_DIR/units/battleship-polypizza.glb"
+echo ""
+echo "MILITARY VEHICLES BUNDLE (9 models):"
+echo "  https://poly.pizza/bundle/Low-Poly-Military-Vehicles-lSgBuYh48X"
+echo "  Download all, save to: $ASSETS_DIR/units/"
+echo ""
+echo "INDIVIDUAL SEARCHES (browse and download best match):"
+echo "  Tanks:      https://poly.pizza/search/tank"
+echo "  Soldiers:   https://poly.pizza/search/soldier"
+echo "  Military:   https://poly.pizza/search/military"
+echo "  Warship:    https://poly.pizza/search/warship"
+echo "  Submarine:  https://poly.pizza/search/submarine"
+echo "  Airplane:   https://poly.pizza/search/airplane"
+echo "  Jeep:       https://poly.pizza/search/jeep"
+echo "  Bunker:     https://poly.pizza/search/bunker"
+echo "  Barracks:   https://poly.pizza/search/barracks"
+echo "  Helicopter: https://poly.pizza/search/helicopter"
+echo ""
+echo "Poly Pizza tip: Click any model → 'Download' button → choose GLTF format"

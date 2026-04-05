@@ -35,7 +35,35 @@ export class FogOfWar {
     // Track hidden enemy meshes
     this._hiddenEnemies = new Set();
 
+    // Web Worker for grid computation (falls back to sync if worker unavailable)
+    this._worker = null;
+    this._workerBusy = false;
+    this._initWorker();
+
     this.createFogOverlay();
+  }
+
+  _initWorker() {
+    try {
+      this._worker = new Worker('js/workers/FogWorker.js');
+      this._worker.onmessage = (e) => {
+        if (e.data.type === 'fogResult') {
+          // Apply worker results to grid and texture
+          this.grid = new Uint8Array(e.data.grid);
+          this._textureData.set(new Uint8Array(e.data.textureData));
+          this.fogTexture.needsUpdate = true;
+          this.updateEntityVisibility();
+          this._workerBusy = false;
+        }
+      };
+      this._worker.onerror = () => {
+        console.warn('FogOfWar: worker failed, falling back to sync');
+        this._worker = null;
+      };
+    } catch (err) {
+      console.warn('FogOfWar: worker unavailable, using sync fallback');
+      this._worker = null;
+    }
   }
 
   createFogOverlay() {
@@ -84,9 +112,32 @@ export class FogOfWar {
    * Called each frame during PLAYING state.
    * @param {number} [dt] - delta time in seconds (optional, defaults to 0.016)
    */
+  // Throttle counter — only run full grid update every N calls (10Hz at 30Hz sim rate)
+  _throttleCounter = 0;
+  _throttleInterval = 3;
+
   update(dt) {
+    // Throttle: run full fog computation every 3 ticks (10Hz) instead of every tick (30Hz)
+    this._throttleCounter++;
+    if (this._throttleCounter < this._throttleInterval) {
+      // Still update entity visibility toggling on skipped frames
+      this.updateEntityVisibility();
+      return;
+    }
+    this._throttleCounter = 0;
+
     const delta = dt || 0.016;
 
+    // Update combat reveal timers (must run on main thread — reads entity state)
+    this.updateCombatReveals(delta);
+
+    // Try worker path first
+    if (this._worker && !this._workerBusy) {
+      this._dispatchToWorker();
+      return;
+    }
+
+    // Sync fallback (original computation)
     // Step 1: Demote all currently visible (2) cells to explored (1)
     const grid = this.grid;
     const len = grid.length;
@@ -254,6 +305,65 @@ export class FogOfWar {
 
     // Step 4: Show/hide enemy entities based on visibility
     this.updateEntityVisibility();
+  }
+
+  /**
+   * Dispatch fog grid computation to the Web Worker.
+   * Serializes entity positions and zone data, sends to worker.
+   */
+  _dispatchToWorker() {
+    this._workerBusy = true;
+
+    const terrain = this.game.terrain;
+    const friendlyEntities = [];
+    const enemyEntities = [];
+
+    for (const e of this.game.entities) {
+      if (!e.alive) continue;
+      const pos = e.getPosition();
+      if (e.team === this.team) {
+        let vision = e.isUnit ? (e.vision || 10) : e.isBuilding ? 12 : 8;
+        if (e.isUnit && e._watchtowerVision) vision += e._watchtowerVision;
+        if (e.isUnit && this.game.sceneManager?.getVisionMultiplier) {
+          vision = Math.floor(vision * this.game.sceneManager.getVisionMultiplier(e.type));
+        }
+        if (this.game.weatherSystem) {
+          vision = Math.floor(vision * this.game.weatherSystem.getVisionMultiplier());
+        }
+        const inForest = terrain?.isInForest ? terrain.isInForest(pos.x, pos.z) : false;
+        friendlyEntities.push({ x: pos.x, z: pos.z, vision, inForest });
+      } else {
+        enemyEntities.push({
+          x: pos.x, z: pos.z,
+          sonarRevealed: e._sonarRevealed || 0,
+          combatRevealed: (e._combatRevealTimer && e._combatRevealTimer > 0) ? 1 : 0
+        });
+      }
+    }
+
+    const flareZones = this.game._flareZones?.map(f => ({ x: f.position.x, z: f.position.z, radius: f.radius })) || null;
+    const smokeZones = this.game._smokeZones?.map(s => ({ x: s.position.x, z: s.position.z, radius: s.radius })) || null;
+
+    // Copy grid to send (will be transferred)
+    const prevGrid = new Uint8Array(this.grid);
+    const forestGrid = terrain?._forestGrid ? new Uint8Array(terrain._forestGrid) : null;
+
+    const msg = {
+      type: 'computeFog',
+      gridSize: this.mapSize,
+      cellSize: this.cellSize,
+      prevGrid,
+      friendlyEntities,
+      enemyEntities,
+      forestGrid,
+      flareZones,
+      smokeZones
+    };
+
+    // Transfer buffers for zero-copy
+    const transfers = [prevGrid.buffer];
+    if (forestGrid) transfers.push(forestGrid.buffer);
+    this._worker.postMessage(msg, transfers);
   }
 
   /**
@@ -459,6 +569,11 @@ export class FogOfWar {
    * Clean up on game end/restart.
    */
   dispose() {
+    // Terminate worker
+    if (this._worker) {
+      this._worker.terminate();
+      this._worker = null;
+    }
     if (this.fogMesh) {
       this.game.sceneManager.scene.remove(this.fogMesh);
       this.fogMesh.geometry.dispose();
