@@ -132,9 +132,15 @@ export class GameOverScreen {
     // Set result heading
     const resultTitle = isSurvival ? 'GAME OVER' : (won ? 'VICTORY!' : 'DEFEAT!');
     const resultColor = won ? '#00ff44' : '#ff3333';
-    const resultSubtitle = isSurvival
-      ? `Survived ${waveInfo ? waveInfo.wave : 0} waves`
-      : (won ? 'Enemy headquarters destroyed' : 'Your headquarters has been destroyed');
+    // Use the victory reason set by GameModeSystem if available
+    let resultSubtitle;
+    if (isSurvival) {
+      resultSubtitle = `Survived ${waveInfo ? waveInfo.wave : 0} waves`;
+    } else if (this.game.victoryReason) {
+      resultSubtitle = this.game.victoryReason;
+    } else {
+      resultSubtitle = won ? 'Enemy headquarters destroyed' : 'Your headquarters has been destroyed';
+    }
     const borderColor = isSurvival ? '#ffcc00' : (won ? '#00ff44' : '#ff3333');
 
     if (!this.contentEl) {
@@ -202,6 +208,20 @@ export class GameOverScreen {
 
             <div style="color: #888;">Bonus SP Earned:</div>
             <div style="color: #00ff88; text-align: right;">${this.game.waveSystem?.bonusSPAwarded || 0}</div>
+            ` : ''}
+            ${this.game.gameMode === 'timed' ? `
+            <div style="color: #888;">Your Score:</div>
+            <div style="color: #00ff88; text-align: right; font-weight: bold;">${this.game.getTimedScore?.('player') || 0}</div>
+
+            <div style="color: #888;">Enemy Score:</div>
+            <div style="color: #ff6644; text-align: right; font-weight: bold;">${this.game.getTimedScore?.('enemy') || 0}</div>
+            ` : ''}
+            ${this.game.gameMode === 'domination' && this.game._dominationScores ? `
+            <div style="color: #888;">Your Control Score:</div>
+            <div style="color: #00ff88; text-align: right; font-weight: bold;">${Math.floor(this.game._dominationScores.player)}</div>
+
+            <div style="color: #888;">Enemy Control Score:</div>
+            <div style="color: #ff6644; text-align: right; font-weight: bold;">${Math.floor(this.game._dominationScores.enemy)}</div>
             ` : ''}
           </div>
         </div>

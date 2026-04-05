@@ -81,7 +81,7 @@ export class ChallengeSystem {
 
   _updateAutoResolve() {
     // GD-139: Check if enemy has no production buildings - show auto-resolve
-    if (this.game.gameMode === 'annihilation' && this.game.mode !== 'SPECTATE' && !this._challenge) {
+    if ((this.game.gameMode === 'annihilation' || this.game.gameMode === 'hq_destruction') && this.game.mode !== 'SPECTATE' && !this._challenge) {
       const enemyProd = this.game.getBuildings('enemy').filter(b =>
         b.produces && b.produces.length > 0 && b.alive
       );

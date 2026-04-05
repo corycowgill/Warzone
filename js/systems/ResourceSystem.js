@@ -144,11 +144,18 @@ export class ResourceSystem {
 
   addIncome(team, amount) {
     this.game.teams[team].sp += amount;
+    // Track total resources gathered for timed victory scoring
+    if (amount > 0 && this.game.stats[team]) {
+      this.game.stats[team].resourcesGathered = (this.game.stats[team].resourcesGathered || 0) + amount;
+    }
   }
 
   addMUIncome(team, amount) {
     if (this.game.teams[team].mu == null) this.game.teams[team].mu = 0;
     this.game.teams[team].mu += amount;
+    if (amount > 0 && this.game.stats[team]) {
+      this.game.stats[team].resourcesGathered = (this.game.stats[team].resourcesGathered || 0) + amount;
+    }
   }
 
   getBalance(team) {

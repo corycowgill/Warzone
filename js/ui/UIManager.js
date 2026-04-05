@@ -1,4 +1,4 @@
-import { NATIONS, NATION_ABILITIES, CHALLENGE_SCENARIOS } from '../core/Constants.js';
+import { NATIONS, NATION_ABILITIES, CHALLENGE_SCENARIOS, VICTORY_CONDITIONS } from '../core/Constants.js';
 import { HUD } from './HUD.js';
 import { GameOverScreen } from './GameOverScreen.js';
 import { CreditsScreen } from './CreditsScreen.js';
@@ -21,7 +21,7 @@ export class UIManager {
     this.selectedEnemyNation = null;
     this.selectedDifficulty = 'normal';
     this.selectedMap = 'continental';
-    this.selectedGameMode = 'annihilation';
+    this.selectedGameMode = 'hq_destruction';
     this.selectedBiome = 'temperate';
 
     // Multiplayer lobby state
@@ -280,9 +280,10 @@ export class UIManager {
 
     // Game mode selection
     const gamemodeDescs = {
-      annihilation: 'Destroy all enemy buildings and units to win.',
-      timed: '10-minute match. Most units + buildings remaining wins.',
-      king_of_hill: 'Control the center of the map for 120 seconds to win.',
+      hq_destruction: 'Destroy the enemy Headquarters to win.',
+      annihilation: 'Destroy all enemy units and buildings to win.',
+      timed: '15-minute match. Highest score when time runs out wins.',
+      domination: 'Control 3 points on the map. First to 300 score wins.',
       survival: 'Survive waves of enemies! Waves every 90s, escalating difficulty.'
     };
     document.querySelectorAll('.gamemode-btn').forEach(btn => {
@@ -1032,7 +1033,7 @@ export class UIManager {
     this.selectedEnemyNation = null;
     this.selectedDifficulty = 'normal';
     this.selectedMap = 'continental';
-    this.selectedGameMode = 'annihilation';
+    this.selectedGameMode = 'hq_destruction';
     document.querySelectorAll('.nation-card').forEach(c => c.classList.remove('selected'));
 
     // Reset button visual states to defaults
@@ -1053,7 +1054,7 @@ export class UIManager {
     };
     resetBtnGroup('.difficulty-btn', 'data-difficulty', 'normal');
     resetBtnGroup('.map-btn', 'data-map', 'continental');
-    resetBtnGroup('.gamemode-btn', 'data-gamemode', 'annihilation');
+    resetBtnGroup('.gamemode-btn', 'data-gamemode', 'hq_destruction');
 
     const startBtn = document.getElementById('btn-start-game');
     if (startBtn) startBtn.disabled = true;

@@ -674,6 +674,13 @@ export const GAME_CONFIG = {
   maxUnitsPerTeam: 50
 };
 
+export const VICTORY_CONDITIONS = {
+  hq_destruction: { name: 'HQ Destruction', description: 'Destroy the enemy Headquarters to win.' },
+  annihilation: { name: 'Annihilation', description: 'Destroy all enemy units and buildings to win.' },
+  timed: { name: 'Timed (15 min)', description: 'Highest score when time runs out wins.', timeLimit: 900 },
+  domination: { name: 'Domination', description: 'Control points to reach 300 score first.', targetScore: 300, controlRadius: 15, pointCount: 3 }
+};
+
 export const AI_DIFFICULTY = {
   kids: {
     label: 'Kids',

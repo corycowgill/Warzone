@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { EventBus } from './EventBus.js';
-import { GAME_CONFIG, NATIONS, BUILDING_STATS, UNIT_STATS, SALVAGE_CONFIG, RESOURCE_NODE_CONFIG, CONSTRUCTION_CONFIG, COMMANDER_CONFIG, AI_DIFFICULTY } from './Constants.js';
+import { GAME_CONFIG, NATIONS, BUILDING_STATS, UNIT_STATS, SALVAGE_CONFIG, RESOURCE_NODE_CONFIG, CONSTRUCTION_CONFIG, COMMANDER_CONFIG, AI_DIFFICULTY, VICTORY_CONDITIONS } from './Constants.js';
 import { SceneManager } from '../rendering/SceneManager.js';
 import { CameraController } from '../rendering/CameraController.js';
 import { EffectsManager } from '../rendering/EffectsManager.js';
@@ -86,9 +86,15 @@ export class Game {
     // Game timer and stats
     this.gameElapsed = 0;
     this.stats = {
-      player: { unitsProduced: 0, unitsLost: 0, buildingsDestroyed: 0, damageDealt: 0 },
-      enemy: { unitsProduced: 0, unitsLost: 0, buildingsDestroyed: 0, damageDealt: 0 }
+      player: { unitsProduced: 0, unitsLost: 0, buildingsDestroyed: 0, damageDealt: 0, resourcesGathered: 0, enemyUnitsKilled: 0, enemyBuildingsDestroyed: 0 },
+      enemy: { unitsProduced: 0, unitsLost: 0, buildingsDestroyed: 0, damageDealt: 0, resourcesGathered: 0, enemyUnitsKilled: 0, enemyBuildingsDestroyed: 0 }
     };
+    // Victory condition reason (set by GameModeSystem when game ends)
+    this.victoryReason = null;
+    // Domination state
+    this._dominationPoints = null;
+    this._dominationScores = null;
+    this._dominationMeshes = null;
 
     // Research state per team (managed by ResearchSystem, initialized in startGame)
 
@@ -226,7 +232,7 @@ export class Game {
       this.rng = new SeededRandom(gameSeed);
       this._gameSeed = gameSeed; // store for replay/save
       this.mode = config.mode;
-      this.gameMode = config.gameMode || 'annihilation'; // annihilation, timed, king_of_hill
+      this.gameMode = config.gameMode || 'hq_destruction'; // hq_destruction, annihilation, timed, domination, survival
       this.teams.player.nation = config.playerNation;
       this.teams.enemy.nation = config.enemyNation;
       this.teams.player.sp = GAME_CONFIG.startingSP;
@@ -415,6 +421,9 @@ export class Game {
       this._onUnitDestroyed = (data) => {
         if (data.entity && this.stats[data.entity.team]) {
           this.stats[data.entity.team].unitsLost++;
+          // Credit kill to the other team
+          const otherTeam = data.entity.team === 'player' ? 'enemy' : 'player';
+          if (this.stats[otherTeam]) this.stats[otherTeam].enemyUnitsKilled++;
         }
       };
       this.eventBus.on('unit:destroyed', this._onUnitDestroyed);
@@ -423,7 +432,10 @@ export class Game {
         if (data.entity) {
           // Credit to the other team
           const otherTeam = data.entity.team === 'player' ? 'enemy' : 'player';
-          if (this.stats[otherTeam]) this.stats[otherTeam].buildingsDestroyed++;
+          if (this.stats[otherTeam]) {
+            this.stats[otherTeam].buildingsDestroyed++;
+            this.stats[otherTeam].enemyBuildingsDestroyed++;
+          }
         }
       };
       this.eventBus.on('building:destroyed', this._onBuildingDestroyed);
@@ -583,6 +595,46 @@ export class Game {
       ring.position.set(center, 0.3, center);
       this.sceneManager.scene.add(ring);
       this._hillRing = ring;
+    }
+
+    // Domination: place 3 control points on the map
+    if (this.gameMode === 'domination') {
+      const center = mapSize / 2;
+      const vcfg = VICTORY_CONDITIONS.domination;
+      this._dominationScores = { player: 0, enemy: 0 };
+      this._dominationPoints = [
+        { x: center, z: center, owner: null, label: 'Center' },
+        { x: center, z: center - mapSize * 0.3, owner: null, label: 'North' },
+        { x: center, z: center + mapSize * 0.3, owner: null, label: 'South' }
+      ];
+      this._dominationMeshes = [];
+      const controlRadius = vcfg.controlRadius || 15;
+      for (const pt of this._dominationPoints) {
+        const y = this.terrain ? this.terrain.getHeightAt(pt.x, pt.z) : 0;
+        const group = new THREE.Group();
+
+        // Ring on the ground
+        const ringGeo = new THREE.RingGeometry(controlRadius - 1, controlRadius, 48);
+        const ringMat = new THREE.MeshBasicMaterial({
+          color: 0x888888, side: THREE.DoubleSide, transparent: true, opacity: 0.4
+        });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.set(pt.x, y + 0.3, pt.z);
+        group.add(ring);
+
+        // Pillar beacon
+        const pillarGeo = new THREE.CylinderGeometry(1, 1.5, 8, 8);
+        const pillarMat = new THREE.MeshPhongMaterial({
+          color: 0x888888, emissive: 0x333333, transparent: true, opacity: 0.8
+        });
+        const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+        pillar.position.set(pt.x, y + 4, pt.z);
+        group.add(pillar);
+
+        this.sceneManager.scene.add(group);
+        this._dominationMeshes.push({ group, ring, ringMat, pillar, pillarMat });
+      }
     }
   }
 
@@ -980,6 +1032,16 @@ export class Game {
 
   getHQ(team) {
     return this.entities.find(e => e.isBuilding && e.type === 'headquarters' && e.team === team && e.alive);
+  }
+
+  /**
+   * Calculate timed victory score for a team.
+   * Score = (enemy units killed * 10) + (enemy buildings destroyed * 50) + total resources gathered
+   */
+  getTimedScore(team) {
+    const s = this.stats[team];
+    if (!s) return 0;
+    return (s.enemyUnitsKilled || 0) * 10 + (s.enemyBuildingsDestroyed || 0) * 50 + (s.resourcesGathered || 0);
   }
 
   update(delta) {
@@ -1549,9 +1611,23 @@ export class Game {
     const speedBtn = document.getElementById('speed-toggle-btn');
     if (speedBtn) speedBtn.classList.add('hidden');
     this.stats = {
-      player: { unitsProduced: 0, unitsLost: 0, buildingsDestroyed: 0, damageDealt: 0 },
-      enemy: { unitsProduced: 0, unitsLost: 0, buildingsDestroyed: 0, damageDealt: 0 }
+      player: { unitsProduced: 0, unitsLost: 0, buildingsDestroyed: 0, damageDealt: 0, resourcesGathered: 0, enemyUnitsKilled: 0, enemyBuildingsDestroyed: 0 },
+      enemy: { unitsProduced: 0, unitsLost: 0, buildingsDestroyed: 0, damageDealt: 0, resourcesGathered: 0, enemyUnitsKilled: 0, enemyBuildingsDestroyed: 0 }
     };
+    this.victoryReason = null;
+    // Clean up domination meshes
+    if (this._dominationMeshes) {
+      for (const dm of this._dominationMeshes) {
+        if (dm.group) this.sceneManager.scene.remove(dm.group);
+        dm.ring?.geometry?.dispose();
+        dm.ringMat?.dispose();
+        dm.pillar?.geometry?.dispose();
+        dm.pillarMat?.dispose();
+      }
+      this._dominationMeshes = null;
+    }
+    this._dominationPoints = null;
+    this._dominationScores = null;
     if (this.fogOfWar) {
       this.fogOfWar.dispose();
       this.fogOfWar = null;

@@ -1,4 +1,4 @@
-import { UNIT_STATS, BUILDING_STATS, GAME_CONFIG, RESEARCH_UPGRADES, TECH_BRANCHES, FACTION_UNITS } from '../core/Constants.js';
+import { UNIT_STATS, BUILDING_STATS, GAME_CONFIG, RESEARCH_UPGRADES, TECH_BRANCHES, FACTION_UNITS, VICTORY_CONDITIONS } from '../core/Constants.js';
 import { BuildPanel } from './BuildPanel.js';
 import { CommandCard } from './CommandCard.js';
 import { ProductionPanel } from './ProductionPanel.js';
@@ -372,10 +372,38 @@ export class HUD {
       let timerText = `${minutes}:${seconds.toString().padStart(2, '0')}`;
 
       if (this.game.gameMode === 'timed') {
-        const remaining = Math.max(0, 600 - totalSeconds);
+        const vcfg = VICTORY_CONDITIONS.timed;
+        const timeLimit = vcfg ? vcfg.timeLimit : 900;
+        const remaining = Math.max(0, timeLimit - totalSeconds);
         const rm = Math.floor(remaining / 60);
         const rs = remaining % 60;
-        timerText = `${rm}:${rs.toString().padStart(2, '0')} left`;
+        const pScore = this.game.getTimedScore('player');
+        const eScore = this.game.getTimedScore('enemy');
+        const scoreColor = pScore >= eScore ? '#88ff88' : '#ff8888';
+        timerText = `<span style="color:#ffcc00">${rm}:${rs.toString().padStart(2, '0')}</span> left | Score: <span style="color:${scoreColor}">${pScore}</span> vs <span style="color:${pScore >= eScore ? '#ff8888' : '#88ff88'}">${eScore}</span>`;
+      }
+
+      if (this.game.gameMode === 'domination' && this.game._dominationScores) {
+        const vcfg = VICTORY_CONDITIONS.domination;
+        const target = vcfg ? vcfg.targetScore : 300;
+        const ps = Math.floor(this.game._dominationScores.player);
+        const es = Math.floor(this.game._dominationScores.enemy);
+        const points = this.game._dominationPoints || [];
+        const pOwned = points.filter(p => p.owner === 'player').length;
+        const eOwned = points.filter(p => p.owner === 'enemy').length;
+        const contested = points.filter(p => p.owner === 'contested').length;
+        let pointIcons = '';
+        for (const pt of points) {
+          const c = pt.owner === 'player' ? '#00ff44' : pt.owner === 'enemy' ? '#ff3333' : pt.owner === 'contested' ? '#ffcc00' : '#666';
+          pointIcons += `<span style="color:${c};font-size:14px;margin:0 2px;">&#9679;</span>`;
+        }
+        timerText = `${pointIcons} <span style="color:#00ff44">${ps}</span>/<span style="color:#ffcc00">${target}</span> vs <span style="color:#ff3333">${es}</span>/<span style="color:#ffcc00">${target}</span>`;
+      }
+
+      if (this.game.gameMode === 'annihilation') {
+        const eUnits = this.game.getUnits('enemy').length;
+        const eBuildings = this.game.getBuildings('enemy').length;
+        timerText += ` | <span style="color:#ff8844">Enemy: ${eUnits}u ${eBuildings}b</span>`;
       }
 
       if (this.game.gameMode === 'king_of_hill' && this.game._hillControl) {
