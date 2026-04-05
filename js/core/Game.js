@@ -870,6 +870,10 @@ export class Game {
   addEntity(entity) {
     this.entities.push(entity);
     if (entity.mesh) {
+      // Apply toon shading to procedural meshes (GLB models are already converted in AssetManager)
+      if (assetManager.toonEnabled) {
+        assetManager.applyToonShading(entity.mesh);
+      }
       this.sceneManager.scene.add(entity.mesh);
     }
     if (entity.isBuilding && entity.type === 'wall' && this.pathfinding) {

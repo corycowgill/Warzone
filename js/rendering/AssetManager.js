@@ -3,6 +3,20 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as skeletonClone } from 'three/addons/utils/SkeletonUtils.js';
 
 /**
+ * Create a 3-step cel-shading gradient ramp texture for MeshToonMaterial.
+ * Returns a shared texture (call once, reuse everywhere).
+ */
+function createToonGradientMap() {
+  // 4-pixel wide ramp: dark shadow, mid tone, bright highlight, full bright
+  const colors = new Uint8Array([40, 100, 180, 255]);
+  const gradientMap = new THREE.DataTexture(colors, colors.length, 1, THREE.RedFormat);
+  gradientMap.minFilter = THREE.NearestFilter;
+  gradientMap.magFilter = THREE.NearestFilter;
+  gradientMap.needsUpdate = true;
+  return gradientMap;
+}
+
+/**
  * AssetManager - Loads and caches GLTF/GLB models for environment (trees, etc).
  */
 export class AssetManager {
@@ -12,6 +26,8 @@ export class AssetManager {
     this.pending = new Map();     // key -> Promise
     this.ready = false;
     this.errors = [];
+    this.toonGradientMap = createToonGradientMap();
+    this.toonEnabled = true; // Global toggle for toon shading
   }
 
   static MANIFEST = {
@@ -208,6 +224,9 @@ export class AssetManager {
       return null;
     }
 
+    // Apply toon shading to environment models (trees, props, etc.)
+    this.applyToonShading(clone);
+
     return clone;
   }
 
@@ -316,6 +335,55 @@ export class AssetManager {
       }
     });
 
+    // Convert to toon materials for cel-shaded look
+    this.applyToonShading(clone);
+
+    return clone;
+  }
+
+  /**
+   * Convert a MeshStandardMaterial (or any material) to MeshToonMaterial
+   * for cel-shaded look. Preserves color, map, emissive, and transparency.
+   */
+  _toToonMaterial(mat) {
+    if (!mat || mat.isMeshToonMaterial) return mat;
+
+    const toon = new THREE.MeshToonMaterial({
+      color: mat.color ? mat.color.clone() : new THREE.Color(0xffffff),
+      map: mat.map || null,
+      gradientMap: this.toonGradientMap,
+      emissive: mat.emissive ? mat.emissive.clone() : new THREE.Color(0x000000),
+      emissiveIntensity: mat.emissiveIntensity || 0,
+      emissiveMap: mat.emissiveMap || null,
+      normalMap: mat.normalMap || null,
+      side: mat.side !== undefined ? mat.side : THREE.FrontSide,
+      transparent: mat.transparent || false,
+      opacity: mat.opacity !== undefined ? mat.opacity : 1.0,
+      alphaTest: mat.alphaTest || 0,
+    });
+
+    // Preserve name for debugging
+    toon.name = mat.name || '';
+    // Copy userData if present
+    if (mat.userData) toon.userData = mat.userData;
+
+    return toon;
+  }
+
+  /**
+   * Apply toon shading to all meshes in a model clone.
+   */
+  applyToonShading(clone) {
+    if (!this.toonEnabled || !clone) return clone;
+    clone.traverse((child) => {
+      if (child.isMesh && child.material) {
+        if (Array.isArray(child.material)) {
+          child.material = child.material.map(m => this._toToonMaterial(m));
+        } else {
+          child.material = this._toToonMaterial(child.material);
+        }
+      }
+    });
     return clone;
   }
 

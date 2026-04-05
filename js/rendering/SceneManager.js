@@ -22,12 +22,12 @@ export class SceneManager {
     this.camera.lookAt(50, 0, 80);
 
     // Lighting
-    // Strong ambient light to ensure nothing is too dark
-    this.ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+    // Ambient light — slightly reduced for better toon shadow contrast
+    this.ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
     this.scene.add(this.ambientLight);
 
-    // Main sun light
-    this.dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+    // Main sun light — boosted slightly so toon gradient bands are visible
+    this.dirLight = new THREE.DirectionalLight(0xffffff, 1.8);
     this.dirLight.position.set(100, 200, 100);
     this.dirLight.castShadow = true;
     this.dirLight.shadow.mapSize.width = 2048;
