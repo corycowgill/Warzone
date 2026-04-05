@@ -40,13 +40,18 @@ export class ProductionSystem {
       : buildPos.clone().add(new THREE.Vector3(0, 0, 10));
 
     // Offset spawn position slightly toward rally (3 units out from building center)
+    // Plus random spread so units don't stack on top of each other
     const dir = rallyPos.clone().sub(buildPos);
     if (dir.lengthSq() > 0.01) {
       dir.normalize().multiplyScalar(3);
     } else {
       dir.set(0, 0, 3);
     }
+    const spawnSpreadX = (Math.random() - 0.5) * 8; // ±4 units
+    const spawnSpreadZ = (Math.random() - 0.5) * 8;
     const spawnPos = buildPos.clone().add(dir);
+    spawnPos.x += spawnSpreadX;
+    spawnPos.z += spawnSpreadZ;
     spawnPos.y = 0;
 
     const unit = this.game.createUnit(unitType, building.team, spawnPos);
@@ -63,8 +68,15 @@ export class ProductionSystem {
       }
     }
 
-    // Issue move command to rally point (unit walks there after spawning)
+    // Issue move command to rally point or nearby scatter position
     if (unit && building.rallyPoint) {
+      // Stagger rally destination so units form a loose cluster, not a stack
+      const rallySpreadX = (Math.random() - 0.5) * 6; // ±3 units
+      const rallySpreadZ = (Math.random() - 0.5) * 6;
+      const staggeredRally = rallyPos.clone();
+      staggeredRally.x += rallySpreadX;
+      staggeredRally.z += rallySpreadZ;
+
       // Check if there's an enemy near the rally point - if so, attack-move
       let enemyNearRally = false;
       const enemies = this.game.entities.filter(
@@ -78,10 +90,19 @@ export class ProductionSystem {
         }
       }
 
-      unit.moveTo(rallyPos);
+      unit.moveTo(staggeredRally);
       if (enemyNearRally) {
         unit._attackMove = true;
       }
+    } else if (unit) {
+      // No rally point — scatter away from building so units don't pile up
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 4 + Math.random() * 3; // 4-7 units away
+      const scatterTarget = spawnPos.clone();
+      scatterTarget.x += Math.cos(angle) * dist;
+      scatterTarget.z += Math.sin(angle) * dist;
+      scatterTarget.y = 0;
+      unit.moveTo(scatterTarget);
     }
 
     // Clear production from building
