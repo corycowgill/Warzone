@@ -1,0 +1,10 @@
+services:
+  - type: web
+    runtime: node
+    name: warzone
+    plan: free
+    buildCommand: npm install --production
+    startCommand: node server-multiplayer.cjs
+    envVars:
+      - key: NODE_ENV
+        value: production

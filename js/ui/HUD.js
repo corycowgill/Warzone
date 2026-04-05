@@ -31,6 +31,11 @@ export class HUD {
     this._controlGroupBar = null;
     this._createControlGroupBar();
 
+    // Voice chat indicator
+    this._voiceIndicator = document.getElementById('voice-indicator');
+    this._voiceMicIcon = document.getElementById('voice-mic-icon');
+    this._voiceOpponentSpeaking = document.getElementById('voice-opponent-speaking');
+
     this.setupEventListeners();
   }
 
@@ -145,6 +150,15 @@ export class HUD {
     this.game.eventBus.on('building:destroyed', (data) => {
       if (data.entity.team === 'player') {
         this.showNotification(`${this.formatName(data.entity.type)} lost!`, '#ff4444');
+      }
+    });
+
+    // Voice indicator click to toggle mute
+    this._voiceIndicator?.addEventListener('click', () => {
+      const vc = this.game.voiceChat;
+      if (vc && vc.isActive) {
+        vc.toggleMute();
+        this._updateVoiceIndicator();
       }
     });
 
@@ -283,6 +297,8 @@ export class HUD {
     this.visible = true;
     this.hudEl?.classList.remove('hidden');
     this.updateResourceDisplay();
+    // Show voice indicator if voice chat is active
+    this._updateVoiceIndicator();
   }
 
   hide() {
@@ -309,6 +325,8 @@ export class HUD {
     if (this.game.selectionManager) {
       this._updateControlGroupBadges(this.game.selectionManager.controlGroups);
     }
+    // Voice chat indicator
+    this._updateVoiceIndicator();
   }
 
   // ============================
@@ -457,6 +475,32 @@ export class HUD {
   // ============================
   // Helpers
   // ============================
+  _updateVoiceIndicator() {
+    const vc = this.game.voiceChat;
+    if (!this._voiceIndicator) return;
+
+    if (!vc || !vc.isActive) {
+      this._voiceIndicator.classList.add('hidden');
+      return;
+    }
+
+    this._voiceIndicator.classList.remove('hidden');
+
+    // Mute state
+    const muted = vc.isMuted;
+    this._voiceIndicator.classList.toggle('voice-muted', muted);
+    if (this._voiceMicIcon) {
+      this._voiceMicIcon.textContent = muted ? 'MIC OFF' : 'MIC';
+    }
+
+    // Opponent speaking indicator
+    if (this._voiceOpponentSpeaking) {
+      const speaking = vc.isSpeaking;
+      this._voiceOpponentSpeaking.classList.toggle('hidden', !speaking);
+      this._voiceOpponentSpeaking.classList.toggle('voice-speaking', speaking);
+    }
+  }
+
   getMilitaryScore(team) {
     let score = 0;
     const units = this.game.getUnits(team);

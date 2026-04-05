@@ -35,6 +35,11 @@ export class NetworkManager {
     this._onReconnected = null;
     this._onError = null;
 
+    // WebRTC signaling callbacks
+    this._onWebRTCOffer = null;
+    this._onWebRTCAnswer = null;
+    this._onWebRTCIce = null;
+
     // Ping/latency
     this._pingTimer = null;
     this._pingStart = 0;
@@ -281,6 +286,34 @@ export class NetworkManager {
   }
 
   // -------------------------------------------------------------------------
+  // WebRTC signaling
+  // -------------------------------------------------------------------------
+
+  /**
+   * Send a WebRTC SDP offer to the remote peer (relayed via server).
+   * @param {Object} sdp - RTCSessionDescription as JSON
+   */
+  sendWebRTCOffer(sdp) {
+    this._send({ type: 'webrtc_offer', payload: sdp });
+  }
+
+  /**
+   * Send a WebRTC SDP answer to the remote peer (relayed via server).
+   * @param {Object} sdp - RTCSessionDescription as JSON
+   */
+  sendWebRTCAnswer(sdp) {
+    this._send({ type: 'webrtc_answer', payload: sdp });
+  }
+
+  /**
+   * Send a WebRTC ICE candidate to the remote peer (relayed via server).
+   * @param {Object} candidate - RTCIceCandidate as JSON
+   */
+  sendWebRTCIce(candidate) {
+    this._send({ type: 'webrtc_ice', payload: candidate });
+  }
+
+  // -------------------------------------------------------------------------
   // Event registration
   // -------------------------------------------------------------------------
 
@@ -299,6 +332,9 @@ export class NetworkManager {
   onGameOver(callback) { this._onGameOver = callback; }
   onPlayerReconnected(callback) { this._onPlayerReconnected = callback; }
   onReconnected(callback) { this._onReconnected = callback; }
+  onWebRTCOffer(callback) { this._onWebRTCOffer = callback; }
+  onWebRTCAnswer(callback) { this._onWebRTCAnswer = callback; }
+  onWebRTCIce(callback) { this._onWebRTCIce = callback; }
 
   // -------------------------------------------------------------------------
   // Ping / latency
@@ -409,6 +445,18 @@ export class NetworkManager {
       case 'pong':
         this.roundTrip = performance.now() - this._pingStart;
         this.latency = Math.round(this.roundTrip / 2);
+        break;
+
+      case 'webrtc_offer':
+        if (this._onWebRTCOffer) this._onWebRTCOffer(msg.payload);
+        break;
+
+      case 'webrtc_answer':
+        if (this._onWebRTCAnswer) this._onWebRTCAnswer(msg.payload);
+        break;
+
+      case 'webrtc_ice':
+        if (this._onWebRTCIce) this._onWebRTCIce(msg.payload);
         break;
 
       case 'error':

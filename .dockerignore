@@ -1,0 +1,8 @@
+node_modules
+.git
+.claude
+.env
+*.md
+docs/
+PROMPT_*.md
+.dockerignore

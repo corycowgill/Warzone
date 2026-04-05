@@ -116,6 +116,7 @@
         <!-- Ready + Countdown -->
         <div class="mp-ready-section">
           <button id="mp-ready-btn" class="menu-btn">Ready</button>
+          <button id="mp-voice-btn" class="menu-btn voice-btn" title="Toggle microphone for voice chat">MIC</button>
           <div id="mp-countdown" class="mp-countdown hidden"></div>
         </div>
 
@@ -327,6 +328,12 @@
 
     <!-- Hover Tooltip (Cycle 15) -->
     <div id="entity-tooltip"></div>
+
+    <!-- Voice Chat Indicator -->
+    <div id="voice-indicator" class="voice-indicator hidden" title="Click to toggle mic">
+      <span id="voice-mic-icon">MIC</span>
+      <span id="voice-opponent-speaking" class="hidden">SPEAKING</span>
+    </div>
 
     <!-- Minimap (bottom-right) -->
     <div id="minimap-container">

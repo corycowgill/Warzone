@@ -639,6 +639,72 @@ body {
   background: rgba(0, 100, 40, 0.5);
 }
 
+/* Voice Chat - Lobby Button */
+.voice-btn {
+  width: auto;
+  min-width: 60px;
+  padding: 10px 16px;
+  font-size: 14px;
+  display: inline-block;
+  margin-left: 8px;
+  vertical-align: middle;
+  border: 2px solid #4a6a4a;
+  transition: border-color 0.2s, box-shadow 0.2s, opacity 0.2s;
+}
+
+.voice-btn.voice-active {
+  border-color: #00ff41;
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.4);
+  color: #00ff41;
+}
+
+.voice-btn.voice-muted {
+  border-color: #ff4444;
+  opacity: 0.6;
+  color: #ff6666;
+}
+
+/* Voice Chat - In-game Indicator */
+.voice-indicator {
+  position: fixed;
+  top: 44px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid #4a6a4a;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-family: monospace;
+  font-size: 12px;
+  color: #00ff41;
+  cursor: pointer;
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  user-select: none;
+}
+
+.voice-indicator.voice-muted {
+  color: #ff6666;
+  border-color: #ff4444;
+}
+
+.voice-indicator.voice-muted #voice-mic-icon {
+  color: #ff6666;
+}
+
+/* Speaking indicator with pulsing glow */
+.voice-speaking {
+  animation: voice-pulse 0.8s ease-in-out infinite;
+  color: #ffcc00 !important;
+  text-shadow: 0 0 6px rgba(255, 204, 0, 0.6);
+}
+
+@keyframes voice-pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1.0; text-shadow: 0 0 12px rgba(255, 204, 0, 0.9); }
+}
+
 /* ============================================
    HUD
    ============================================ */

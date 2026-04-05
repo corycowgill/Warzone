@@ -46,6 +46,7 @@ import { GameModeSystem } from '../systems/GameModeSystem.js';
 import { ChallengeSystem } from '../systems/ChallengeSystem.js';
 import { TutorialSystem } from '../systems/TutorialSystem.js';
 import { LockstepManager } from '../networking/LockstepManager.js';
+import { VoiceChat } from '../networking/VoiceChat.js';
 
 export class Game {
   constructor() {
@@ -494,6 +495,24 @@ export class Game {
       // Enable lockstep after all systems are initialized
       if (this.isMultiplayer && this.lockstepManager) {
         this.lockstepManager.enable(this.playerSlot);
+      }
+
+      // Start WebRTC voice chat for multiplayer
+      if (this.isMultiplayer && this.networkManager) {
+        this.voiceChat = new VoiceChat(this.networkManager);
+
+        // Wire signaling callbacks
+        this.networkManager.onWebRTCOffer((sdp) => this.voiceChat?.handleOffer(sdp));
+        this.networkManager.onWebRTCAnswer((sdp) => this.voiceChat?.handleAnswer(sdp));
+        this.networkManager.onWebRTCIce((candidate) => this.voiceChat?.handleIceCandidate(candidate));
+
+        // Initiator is player in slot 0
+        this.voiceChat.start(this.playerSlot === 0).then(() => {
+          // Apply lobby mute preference if set
+          if (this.uiManager?._voiceMuted && this.voiceChat && !this.voiceChat.isMuted) {
+            this.voiceChat.toggleMute();
+          }
+        });
       }
     } catch (err) {
       console.error('Failed to start game:', err);
@@ -1428,6 +1447,12 @@ export class Game {
     if (this.state === 'GAME_OVER') return;
     this.setState('GAME_OVER');
 
+    // Stop voice chat
+    if (this.voiceChat) {
+      this.voiceChat.stop();
+      this.voiceChat = null;
+    }
+
     // Disable lockstep
     if (this.lockstepManager) {
       this.lockstepManager.disable();
@@ -1664,6 +1689,12 @@ export class Game {
     }
     // Reset commander state
     this._commanderState = null;
+
+    // Clean up voice chat
+    if (this.voiceChat) {
+      this.voiceChat.stop();
+      this.voiceChat = null;
+    }
 
     // Clean up multiplayer lockstep
     if (this.lockstepManager) {

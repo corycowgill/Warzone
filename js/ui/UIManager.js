@@ -657,6 +657,24 @@ export class UIManager {
       nm.ready();
     });
 
+    // Voice chat mic toggle button in lobby
+    const voiceBtn = document.getElementById('mp-voice-btn');
+    if (voiceBtn) {
+      // Track lobby mic-mute preference (applied when VoiceChat starts)
+      this._voiceMuted = false;
+      voiceBtn.classList.add('voice-active');
+      voiceBtn.addEventListener('click', () => {
+        this._voiceMuted = !this._voiceMuted;
+        voiceBtn.classList.toggle('voice-active', !this._voiceMuted);
+        voiceBtn.classList.toggle('voice-muted', this._voiceMuted);
+        voiceBtn.textContent = this._voiceMuted ? 'MIC OFF' : 'MIC';
+        // If voice chat is already active (during game), toggle it live
+        if (this.game.voiceChat && this.game.voiceChat.isActive) {
+          this.game.voiceChat.toggleMute();
+        }
+      });
+    }
+
     // Chat
     const sendChat = () => {
       const input = document.getElementById('mp-chat-input');
