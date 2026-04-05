@@ -39,19 +39,21 @@ export class ProductionSystem {
       ? building.rallyPoint.clone()
       : buildPos.clone().add(new THREE.Vector3(0, 0, 10));
 
-    // Offset spawn position slightly toward rally (3 units out from building center)
-    // Plus random spread so units don't stack on top of each other
+    // Offset spawn position toward rally, spread in a ring to avoid stacking
     const dir = rallyPos.clone().sub(buildPos);
     if (dir.lengthSq() > 0.01) {
       dir.normalize().multiplyScalar(3);
     } else {
       dir.set(0, 0, 3);
     }
-    const spawnSpreadX = (Math.random() - 0.5) * 8; // ±4 units
-    const spawnSpreadZ = (Math.random() - 0.5) * 8;
+    // Use a rotating spawn angle so consecutive units don't overlap
+    if (!building._spawnAngleIndex) building._spawnAngleIndex = 0;
+    building._spawnAngleIndex++;
+    const spawnAngle = (building._spawnAngleIndex * 2.399) + Math.random() * 0.5; // golden angle + jitter
+    const spawnDist = 3 + Math.random() * 2;
     const spawnPos = buildPos.clone().add(dir);
-    spawnPos.x += spawnSpreadX;
-    spawnPos.z += spawnSpreadZ;
+    spawnPos.x += Math.cos(spawnAngle) * spawnDist;
+    spawnPos.z += Math.sin(spawnAngle) * spawnDist;
     spawnPos.y = 0;
 
     const unit = this.game.createUnit(unitType, building.team, spawnPos);

@@ -430,8 +430,16 @@ export const FORMATION_CONFIG = {
   types: ['box', 'line', 'wedge', 'circle', 'column'],
   defaultType: 'box',
   spacing: 4,
-  separationRadius: 3,
-  separationForce: 8,
+  separationRadius: 5,
+  separationForce: 12,
+  idleSeparationMultiplier: 2.5, // Stronger push when idle/stationary
+  // Per-unit-type collision radii (vehicles need more space than infantry)
+  unitRadius: {
+    infantry: 1.2, mortar: 1.2, engineer: 1.2, commander: 1.8,
+    tank: 2.5, heavytank: 3.0, scoutcar: 2.0, aahalftrack: 2.2, apc: 2.5, spg: 2.5,
+    drone: 2.0, plane: 3.0, bomber: 3.5,
+    battleship: 4.0, carrier: 5.0, submarine: 3.0, patrolboat: 2.5
+  },
 };
 
 // ============================================================

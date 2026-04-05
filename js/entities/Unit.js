@@ -696,18 +696,23 @@ export class Unit extends Entity {
 
         let sepX = 0, sepZ = 0;
         if (this.game && this.game.spatialGrid) {
-          const sepR = FORMATION_CONFIG.separationRadius;
-          const sepR2 = sepR * sepR;
-          const nearby = this.game.spatialGrid.query(pos.x, pos.z, sepR);
+          const baseSepR = FORMATION_CONFIG.separationRadius;
+          const myRadius = (FORMATION_CONFIG.unitRadius && FORMATION_CONFIG.unitRadius[this.type]) || 1.5;
+          const nearby = this.game.spatialGrid.query(pos.x, pos.z, baseSepR + myRadius);
           for (let ni = 0, nlen = nearby.length; ni < nlen; ni++) {
             const other = nearby[ni];
-            if (other === this || !other.isUnit || other.team !== this.team || !other.alive) continue;
+            if (other === this || !other.isUnit || !other.alive) continue;
+            // Separate from all units, not just same team (prevents cross-team stacking too)
             const odx = pos.x - other.mesh.position.x;
             const odz = pos.z - other.mesh.position.z;
             const d2 = odx * odx + odz * odz;
-            if (d2 > 0 && d2 < sepR2) {
+            const otherRadius = (FORMATION_CONFIG.unitRadius && FORMATION_CONFIG.unitRadius[other.type]) || 1.5;
+            const combinedR = myRadius + otherRadius;
+            if (d2 > 0 && d2 < combinedR * combinedR) {
               const d = Math.sqrt(d2);
-              const strength = (sepR - d) / sepR;
+              // Quadratic falloff — much stronger when very close
+              const overlap = 1 - (d / combinedR);
+              const strength = overlap * overlap;
               sepX += (odx / d) * strength;
               sepZ += (odz / d) * strength;
             }
@@ -823,6 +828,45 @@ export class Unit extends Entity {
             this.moveTarget = this._patrolPoints[this._patrolIndex].clone();
             this.isMoving = true;
             this._attackMove = true; // patrol engages enemies
+          }
+        }
+      }
+    }
+
+    // Idle separation: push overlapping units apart even when stationary
+    if (!this.moveTarget && !this.attackTarget && this.game && this.game.spatialGrid) {
+      const pos = this.mesh.position;
+      const myR = (FORMATION_CONFIG.unitRadius && FORMATION_CONFIG.unitRadius[this.type]) || 1.5;
+      const queryR = myR * 3;
+      const nearby = this.game.spatialGrid.query(pos.x, pos.z, queryR);
+      let pushX = 0, pushZ = 0;
+      for (let ni = 0, nlen = nearby.length; ni < nlen; ni++) {
+        const other = nearby[ni];
+        if (other === this || !other.isUnit || !other.alive) continue;
+        const otherR = (FORMATION_CONFIG.unitRadius && FORMATION_CONFIG.unitRadius[other.type]) || 1.5;
+        const combinedR = myR + otherR;
+        const odx = pos.x - other.mesh.position.x;
+        const odz = pos.z - other.mesh.position.z;
+        const d2 = odx * odx + odz * odz;
+        if (d2 > 0 && d2 < combinedR * combinedR) {
+          const d = Math.sqrt(d2);
+          const overlap = 1 - (d / combinedR);
+          pushX += (odx / d) * overlap * overlap;
+          pushZ += (odz / d) * overlap * overlap;
+        }
+      }
+      if (pushX !== 0 || pushZ !== 0) {
+        const idleForce = FORMATION_CONFIG.separationForce * (FORMATION_CONFIG.idleSeparationMultiplier || 2.5) * deltaTime;
+        pos.x += pushX * idleForce;
+        pos.z += pushZ * idleForce;
+        // Keep on terrain
+        if (this.domain === 'land' && this.game.terrain) {
+          // Don't push into water
+          if (this.game.terrain.isWater(pos.x, pos.z)) {
+            pos.x -= pushX * idleForce;
+            pos.z -= pushZ * idleForce;
+          } else {
+            pos.y = this.game.terrain.getHeightAt(pos.x, pos.z);
           }
         }
       }
