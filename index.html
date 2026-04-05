@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>WARZONE</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/settings.css">
@@ -31,6 +31,7 @@
         <button id="btn-multiplayer" class="menu-btn">Multiplayer</button>
         <button id="btn-2player" class="menu-btn menu-btn-secondary" style="margin-top:8px;">Hot Seat (2P)</button>
         <button id="btn-spectate" class="menu-btn menu-btn-secondary">Watch AI Battle</button>
+        <button id="btn-spectate-quick" class="menu-btn menu-btn-featured mobile-spectate-btn hidden">Watch AI Battle</button>
         <button id="btn-challenges" class="menu-btn menu-btn-secondary">Challenges</button>
         <div class="menu-divider"></div>
         <button id="btn-map-editor" class="menu-btn menu-btn-secondary">Map Editor</button>
@@ -334,6 +335,9 @@
       <span id="voice-mic-icon">MIC</span>
       <span id="voice-opponent-speaking" class="hidden">SPEAKING</span>
     </div>
+
+    <!-- Speed Toggle (spectate mode) -->
+    <button id="speed-toggle-btn" class="hidden" style="position:fixed;bottom:220px;right:10px;z-index:101;background:rgba(0,0,0,0.8);border:1px solid #00ff41;color:#00ff41;padding:8px 14px;border-radius:4px;font-family:monospace;font-size:14px;font-weight:bold;cursor:pointer;">1x</button>
 
     <!-- Minimap (bottom-right) -->
     <div id="minimap-container">

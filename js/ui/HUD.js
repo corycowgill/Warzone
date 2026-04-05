@@ -299,6 +299,13 @@ export class HUD {
     this.updateResourceDisplay();
     // Show voice indicator if voice chat is active
     this._updateVoiceIndicator();
+
+    // In spectate mode on mobile, add a class to body for CSS-driven hiding
+    if (this.game.isSpectating) {
+      document.body.classList.add('spectate-mode');
+    } else {
+      document.body.classList.remove('spectate-mode');
+    }
   }
 
   hide() {

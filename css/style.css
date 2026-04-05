@@ -1453,3 +1453,150 @@ body {
   color: #ff8888;
   font-size: 10px;
 }
+
+/* ============================================
+   MOBILE SPECTATE BUTTON (always hidden on desktop unless shown by JS)
+   ============================================ */
+.mobile-spectate-btn {
+  width: 260px;
+  font-size: 20px !important;
+  padding: 18px 32px !important;
+  min-height: 56px;
+}
+
+/* ============================================
+   MOBILE RESPONSIVE STYLES
+   ============================================ */
+@media (max-width: 768px) {
+  /* Main menu adjustments */
+  .menu-content {
+    padding: 30px 20px;
+    width: 95%;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .menu-title {
+    font-size: 36px;
+    letter-spacing: 8px;
+  }
+
+  .menu-subtitle {
+    font-size: 12px;
+    letter-spacing: 3px;
+    margin-bottom: 24px;
+  }
+
+  .menu-buttons {
+    gap: 10px;
+  }
+
+  .menu-btn {
+    width: 220px;
+    min-height: 44px;
+    padding: 12px 20px;
+    font-size: 14px;
+  }
+
+  .menu-btn-featured {
+    font-size: 16px !important;
+    padding: 14px 20px !important;
+  }
+
+  /* Make quick spectate button very prominent on mobile */
+  .mobile-spectate-btn {
+    width: 240px;
+    font-size: 18px !important;
+    padding: 16px 24px !important;
+    min-height: 52px;
+    order: -1;
+  }
+
+  /* Hide less useful buttons on mobile */
+  body.is-mobile #btn-multiplayer,
+  body.is-mobile #btn-2player,
+  body.is-mobile #btn-map-editor,
+  body.is-mobile #btn-replays,
+  body.is-mobile #btn-history {
+    display: none;
+  }
+
+  /* Nation select */
+  .nation-select-content {
+    padding: 20px 15px;
+    max-height: 95vh;
+    overflow-y: auto;
+  }
+
+  .nation-panels {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  /* HUD resource bar */
+  #resource-bar {
+    height: 28px;
+    gap: 10px;
+    padding: 0 8px;
+    font-size: 10px;
+  }
+
+  .resource-label {
+    font-size: 9px;
+    letter-spacing: 1px;
+  }
+
+  .resource-value {
+    font-size: 11px;
+    min-width: 28px;
+  }
+
+  /* Minimap smaller */
+  #minimap-container {
+    width: 120px !important;
+    height: 120px !important;
+  }
+
+  #minimap-canvas {
+    width: 120px !important;
+    height: 120px !important;
+  }
+
+  /* Selection panel */
+  #selection-panel {
+    width: 200px;
+    min-height: 60px;
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+
+  /* Production panel */
+  #production-panel {
+    max-width: 160px;
+  }
+}
+
+/* ============================================
+   SPECTATE MODE (mobile + desktop)
+   ============================================ */
+body.spectate-mode #selection-panel,
+body.spectate-mode #command-card,
+body.spectate-mode #build-menu,
+body.spectate-mode #control-group-bar,
+body.spectate-mode #prod-overview-panel,
+body.spectate-mode #production-panel,
+body.spectate-mode #voice-indicator {
+  display: none !important;
+}
+
+/* On mobile spectate, also hide extra resource bar buttons */
+@media (max-width: 768px) {
+  body.spectate-mode #btn-help,
+  body.spectate-mode #btn-techtree {
+    display: none !important;
+  }
+
+  body.spectate-mode #resource-bar {
+    gap: 8px;
+  }
+}

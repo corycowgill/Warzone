@@ -107,6 +107,11 @@ export class UIManager {
       this.showNationSelect();
     });
 
+    // Quick spectate button (mobile-featured, skips nation select)
+    document.getElementById('btn-spectate-quick')?.addEventListener('click', () => {
+      this.startAIBattle();
+    });
+
     // Nation selection - allied cards
     const alliedCards = document.querySelectorAll('.nation-card[data-side="allied"], .nation-card[data-nation="america"], .nation-card[data-nation="britain"], .nation-card[data-nation="france"]');
     alliedCards.forEach(card => {
@@ -460,6 +465,25 @@ export class UIManager {
       mapSeed: mapSeed,
       gameMode: this.selectedGameMode,
       biome: this.selectedBiome
+    });
+  }
+
+  startAIBattle() {
+    // Quick-start AI vs AI spectator match (skips nation select)
+    const alliedNations = Object.keys(NATIONS).filter(n => NATIONS[n].side === 'allied');
+    const enemyNations = Object.keys(NATIONS).filter(n => NATIONS[n].side === 'enemy');
+    const playerNation = alliedNations[Math.floor(Math.random() * alliedNations.length)];
+    const enemyNation = enemyNations[Math.floor(Math.random() * enemyNations.length)];
+
+    this.game.startGame({
+      mode: 'SPECTATE',
+      playerNation: playerNation,
+      enemyNation: enemyNation,
+      difficulty: 'normal',
+      mapTemplate: 'continental',
+      gameMode: 'annihilation',
+      biome: 'temperate',
+      spectateAI: true
     });
   }
 
@@ -946,6 +970,10 @@ export class UIManager {
     overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
   }
 
+  static get isMobile() {
+    return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (window.innerWidth < 768);
+  }
+
   showMainMenu() {
     this.hideAll();
     this.mainMenuEl?.classList.remove('hidden');
@@ -954,6 +982,16 @@ export class UIManager {
     this.selectedPlayerNation = null;
     this.selectedEnemyNation = null;
     document.querySelectorAll('.nation-card').forEach(c => c.classList.remove('selected'));
+
+    // Mobile: show prominent quick-spectate button, add mobile class to body
+    const quickBtn = document.getElementById('btn-spectate-quick');
+    if (UIManager.isMobile) {
+      document.body.classList.add('is-mobile');
+      if (quickBtn) quickBtn.classList.remove('hidden');
+    } else {
+      document.body.classList.remove('is-mobile');
+      if (quickBtn) quickBtn.classList.add('hidden');
+    }
   }
 
   showNationSelect() {

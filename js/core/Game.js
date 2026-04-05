@@ -73,6 +73,8 @@ export class Game {
     this.activeTeam = 'player'; // For 2P hot-seat
     this.clock = new THREE.Clock();
     this.paused = false;
+    this.isSpectating = false;
+    this.gameSpeed = 1;
 
     // Multiplayer lockstep state
     this.isMultiplayer = false;
@@ -338,11 +340,22 @@ export class Game {
         this.aiController2 = new AIWorkerBridge(this, 'player', this.aiDifficulty);
       }
 
+      // Spectator mode flags
+      this.isSpectating = (this.mode === 'SPECTATE');
+      this.gameSpeed = 1; // 1x, 2x, 4x speed multiplier
+
       // Place initial buildings and units
       this.placeStartingEntities();
 
       // Show HUD first (so minimap canvas is available)
       this.uiManager.showHUD();
+
+      // Center camera for spectate mode
+      if (this.isSpectating) {
+        const center = (GAME_CONFIG.mapSize * GAME_CONFIG.worldScale) / 2;
+        this.cameraController.moveTo(center, center);
+        this._setupSpeedToggle();
+      }
 
       // Initialize minimap after HUD is shown
       this.minimap = new Minimap(this);
@@ -1226,6 +1239,11 @@ export class Game {
     // Cap frame delta to prevent huge jumps after tab-switch or breakpoint
     if (frameDelta > 0.25) frameDelta = 0.25;
 
+    // Spectate mode speed multiplier
+    if (this.isSpectating && this.gameSpeed > 1) {
+      frameDelta *= this.gameSpeed;
+    }
+
     if (this.state === 'PLAYING' && !this.paused) {
       if (this.isMultiplayer && this.lockstepManager?.enabled) {
         // Multiplayer: lockstep manager drives simulation ticks.
@@ -1480,6 +1498,20 @@ export class Game {
     return str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
   }
 
+  _setupSpeedToggle() {
+    const btn = document.getElementById('speed-toggle-btn');
+    if (!btn) return;
+    btn.classList.remove('hidden');
+    const speeds = [1, 2, 4];
+    let idx = 0;
+    btn.textContent = '1x';
+    btn.addEventListener('click', () => {
+      idx = (idx + 1) % speeds.length;
+      this.gameSpeed = speeds[idx];
+      btn.textContent = speeds[idx] + 'x';
+    });
+  }
+
   restart() {
     // Clean up
     this.entities.forEach(e => {
@@ -1512,6 +1544,10 @@ export class Game {
     if (this.challengeSystem) { this.challengeSystem.dispose(); this.challengeSystem = null; }
     if (this.tutorialSystem) { this.tutorialSystem.dispose(); this.tutorialSystem = null; }
     this._slowMotion = null;
+    this.isSpectating = false;
+    this.gameSpeed = 1;
+    const speedBtn = document.getElementById('speed-toggle-btn');
+    if (speedBtn) speedBtn.classList.add('hidden');
     this.stats = {
       player: { unitsProduced: 0, unitsLost: 0, buildingsDestroyed: 0, damageDealt: 0 },
       enemy: { unitsProduced: 0, unitsLost: 0, buildingsDestroyed: 0, damageDealt: 0 }
