@@ -45,6 +45,7 @@ import { MapEventSystem } from '../systems/MapEventSystem.js';
 import { GameModeSystem } from '../systems/GameModeSystem.js';
 import { ChallengeSystem } from '../systems/ChallengeSystem.js';
 import { TutorialSystem } from '../systems/TutorialSystem.js';
+import { LockstepManager } from '../networking/LockstepManager.js';
 
 export class Game {
   constructor() {
@@ -71,6 +72,13 @@ export class Game {
     this.activeTeam = 'player'; // For 2P hot-seat
     this.clock = new THREE.Clock();
     this.paused = false;
+
+    // Multiplayer lockstep state
+    this.isMultiplayer = false;
+    this.playerSlot = -1;
+    this.lockstepManager = null;
+    this._mpPaused = false; // Paused due to opponent disconnect
+    this._executingLockstepTurn = false; // Flag to prevent re-queuing during lockstep execution
 
     // Game timer and stats
     this.gameElapsed = 0;
@@ -140,8 +148,8 @@ export class Game {
         e.preventDefault();
         this.togglePause();
       }
-      // F5 = Quick Save, F9 = Quick Load
-      if (e.key === 'F5' && (this.state === 'PLAYING' || this.state === 'PAUSED')) {
+      // F5 = Quick Save, F9 = Quick Load (disabled in multiplayer)
+      if (e.key === 'F5' && (this.state === 'PLAYING' || this.state === 'PAUSED') && !this.isMultiplayer) {
         e.preventDefault();
         if (this.saveSystem) {
           const success = this.saveSystem.saveToLocal('quicksave');
@@ -150,7 +158,7 @@ export class Game {
           }
         }
       }
-      if (e.key === 'F9' && (this.state === 'PLAYING' || this.state === 'PAUSED')) {
+      if (e.key === 'F9' && (this.state === 'PLAYING' || this.state === 'PAUSED') && !this.isMultiplayer) {
         e.preventDefault();
         if (this.saveSystem) {
           this.saveSystem.loadGame('quicksave').catch(err => {
@@ -252,8 +260,12 @@ export class Game {
 
       const mapSize = GAME_CONFIG.mapSize * GAME_CONFIG.worldScale;
       this.cameraController = new CameraController(this.sceneManager.camera, this.sceneManager.renderer.domElement);
-      // Position camera over player base
-      this.cameraController.moveTo(50, mapSize / 2);
+      // Position camera over local player's base
+      if (this.isMultiplayer && this.playerSlot === 1) {
+        this.cameraController.moveTo(mapSize - 60, mapSize / 2);
+      } else {
+        this.cameraController.moveTo(50, mapSize / 2);
+      }
 
       this.effectsManager = new EffectsManager(this);
 
@@ -275,7 +287,49 @@ export class Game {
       this.researchSystem = new ResearchSystem(this);
       this.unitFactory = new UnitFactory(this);
 
-      if (this.mode === '1P' && this.gameMode !== 'survival' && this.gameMode !== 'tutorial') {
+      // Multiplayer setup
+      this.isMultiplayer = !!config.multiplayer;
+      this.playerSlot = config.playerSlot ?? -1;
+      this._mpPaused = false;
+
+      if (this.isMultiplayer) {
+        // In multiplayer, seed is already set from config.seed above (line 222).
+        // Both players must use the same seed for deterministic simulation.
+
+        // No AI in multiplayer (both players are human)
+        this.aiController = null;
+        this.aiController2 = null;
+
+        // Create lockstep manager
+        if (this.networkManager) {
+          this.lockstepManager = new LockstepManager(this, this.networkManager);
+
+          // Hook up network callbacks for multiplayer events
+          // Note: onTurnReceived is wired by lockstepManager.enable()
+
+          this.networkManager.onGamePaused((reason) => {
+            this._mpPaused = true;
+            if (this.uiManager?.hud) {
+              this.uiManager.hud.showNotification(
+                reason || 'Opponent disconnected - waiting for reconnection...',
+                '#ffcc00'
+              );
+            }
+          });
+
+          this.networkManager.onGameResumed(() => {
+            this._mpPaused = false;
+            if (this.uiManager?.hud) {
+              this.uiManager.hud.showNotification('Opponent reconnected!', '#00ff88');
+            }
+          });
+
+          this.networkManager.onGameOver((msg) => {
+            const won = msg.winner === this.playerSlot;
+            this._handleMultiplayerGameOver(won, msg.reason);
+          });
+        }
+      } else if (this.mode === '1P' && this.gameMode !== 'survival' && this.gameMode !== 'tutorial') {
         this.aiController = new AIWorkerBridge(this, 'enemy', this.aiDifficulty);
       } else if (this.mode === 'SPECTATE') {
         // Both teams controlled by AI
@@ -292,9 +346,10 @@ export class Game {
       // Initialize minimap after HUD is shown
       this.minimap = new Minimap(this);
 
-      // Initialize Fog of War for the player team (disabled in spectate mode)
+      // Initialize Fog of War for the local team (disabled in spectate mode)
       if (this.mode !== 'SPECTATE') {
-        this.fogOfWar = new FogOfWar(this, 'player');
+        const fogTeam = this.isMultiplayer ? this.getLocalTeam() : 'player';
+        this.fogOfWar = new FogOfWar(this, fogTeam);
       }
 
       // Initialize nation ability system
@@ -435,6 +490,11 @@ export class Game {
       }
 
       this.setState('PLAYING');
+
+      // Enable lockstep after all systems are initialized
+      if (this.isMultiplayer && this.lockstepManager) {
+        this.lockstepManager.enable(this.playerSlot);
+      }
     } catch (err) {
       console.error('Failed to start game:', err);
       // Show error visually
@@ -1099,21 +1159,25 @@ export class Game {
     // Check win/lose (skip for active challenges and tutorial - they handle their own flow)
     if (!this.challengeSystem?.active && this.gameMode !== 'tutorial' && this.gameModeSystem) this.gameModeSystem.update(delta);
 
-    // Autosave
-    if (this.saveSystem) {
+    // Autosave (disabled in multiplayer)
+    if (this.saveSystem && !this.isMultiplayer) {
       this.saveSystem.updateAutosave(delta);
     }
 
-    // State hash for desync detection (every 30 ticks = ~1 second)
-    this._hashTickCounter = (this._hashTickCounter || 0) + 1;
-    if (this._hashTickCounter >= 30) {
-      this._hashTickCounter = 0;
-      this._lastStateHash = StateHash.compute(this);
+    // State hash for desync detection (single-player tracking; MP hashing is done by LockstepManager)
+    if (!this.isMultiplayer) {
+      this._hashTickCounter = (this._hashTickCounter || 0) + 1;
+      if (this._hashTickCounter >= 30) {
+        this._hashTickCounter = 0;
+        this._lastStateHash = StateHash.compute(this);
+      }
     }
   }
 
   togglePause() {
     if (this.state !== 'PLAYING' && this.state !== 'PAUSED') return;
+    // No manual pause in multiplayer
+    if (this.isMultiplayer) return;
     if (this.paused) {
       this.paused = false;
       this.setState('PLAYING');
@@ -1144,17 +1208,26 @@ export class Game {
     if (frameDelta > 0.25) frameDelta = 0.25;
 
     if (this.state === 'PLAYING' && !this.paused) {
-      // Fixed timestep simulation
-      this._accumulator += frameDelta;
-      let steps = 0;
-      while (this._accumulator >= Game.SIM_DT && steps < Game.MAX_SIM_STEPS) {
-        this.update(Game.SIM_DT);
-        this._accumulator -= Game.SIM_DT;
-        steps++;
-      }
-      // If we hit the step cap, drain remaining accumulator to prevent spiral of death
-      if (steps >= Game.MAX_SIM_STEPS) {
-        this._accumulator = 0;
+      if (this.isMultiplayer && this.lockstepManager?.enabled) {
+        // Multiplayer: lockstep manager drives simulation ticks.
+        // It calls this.update(fixedDelta) internally when turns are confirmed.
+        // Pause if opponent disconnected.
+        if (!this._mpPaused) {
+          this.lockstepManager.update(frameDelta);
+        }
+      } else {
+        // Single-player: fixed timestep simulation
+        this._accumulator += frameDelta;
+        let steps = 0;
+        while (this._accumulator >= Game.SIM_DT && steps < Game.MAX_SIM_STEPS) {
+          this.update(Game.SIM_DT);
+          this._accumulator -= Game.SIM_DT;
+          steps++;
+        }
+        // If we hit the step cap, drain remaining accumulator to prevent spiral of death
+        if (steps >= Game.MAX_SIM_STEPS) {
+          this._accumulator = 0;
+        }
       }
 
       // Render-phase updates (run every frame, not at fixed rate)
@@ -1338,6 +1411,45 @@ export class Game {
   get _challenge() { return this.challengeSystem?._challenge || null; }
   checkGameOver() { this.gameModeSystem?.checkGameOver(); }
   saveMatchHistory(won) { this.gameModeSystem?.saveMatchHistory(won); }
+
+  /**
+   * Returns the team string for the local player in multiplayer.
+   * Slot 0 = 'player', slot 1 = 'enemy'.
+   */
+  getLocalTeam() {
+    if (!this.isMultiplayer) return 'player';
+    return this.playerSlot === 0 ? 'player' : 'enemy';
+  }
+
+  /**
+   * Handle multiplayer game over event from the server.
+   */
+  _handleMultiplayerGameOver(won, reason) {
+    if (this.state === 'GAME_OVER') return;
+    this.setState('GAME_OVER');
+
+    // Disable lockstep
+    if (this.lockstepManager) {
+      this.lockstepManager.disable();
+    }
+
+    const title = won ? 'VICTORY' : 'DEFEAT';
+    const subtitle = reason === 'surrender'
+      ? (won ? 'Opponent surrendered!' : 'You surrendered.')
+      : (won ? 'Enemy forces eliminated!' : 'Your forces have been eliminated.');
+
+    if (this.uiManager) {
+      this.uiManager.showGameOver(won, subtitle);
+    }
+  }
+
+  /**
+   * Surrender in a multiplayer game.
+   */
+  surrenderMultiplayer() {
+    if (!this.isMultiplayer || !this.networkManager) return;
+    this.networkManager.surrender();
+  }
 
   capitalize(str) {
     return str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
@@ -1552,6 +1664,16 @@ export class Game {
     }
     // Reset commander state
     this._commanderState = null;
+
+    // Clean up multiplayer lockstep
+    if (this.lockstepManager) {
+      this.lockstepManager.disable();
+      this.lockstepManager = null;
+    }
+    this.isMultiplayer = false;
+    this.playerSlot = -1;
+    this._mpPaused = false;
+    this._executingLockstepTurn = false;
 
     // Clean up commander ability system
     if (this.commanderAbilitySystem) { this.commanderAbilitySystem.dispose(); this.commanderAbilitySystem = null; }

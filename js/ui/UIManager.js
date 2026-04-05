@@ -8,6 +8,7 @@ export class UIManager {
     this.game = game;
     this.mainMenuEl = document.getElementById('main-menu');
     this.nationSelectEl = document.getElementById('nation-select');
+    this.multiplayerScreenEl = document.getElementById('multiplayer-screen');
     this.hudEl = document.getElementById('hud');
     this.gameOverEl = document.getElementById('game-over');
     this.pauseOverlay = document.getElementById('pause-overlay');
@@ -22,6 +23,12 @@ export class UIManager {
     this.selectedMap = 'continental';
     this.selectedGameMode = 'annihilation';
     this.selectedBiome = 'temperate';
+
+    // Multiplayer lobby state
+    this._mpReady = [false, false];
+    this._mpNations = [null, null];
+    this._mpIsHost = false;
+    this._mpRoomCode = null;
 
     this.setupEventListeners();
   }
@@ -60,11 +67,11 @@ export class UIManager {
     });
 
     document.getElementById('btn-multiplayer')?.addEventListener('click', () => {
-      if (this.game.networkManager) {
-        this.game.networkManager.showLobby();
-      } else {
+      if (!this.game.networkManager) {
         this._showComingSoon('Multiplayer is loading...');
+        return;
       }
+      this.showMultiplayerScreen();
     });
 
     document.getElementById('btn-map-editor')?.addEventListener('click', () => {
@@ -486,6 +493,7 @@ export class UIManager {
   hideAll() {
     this.mainMenuEl?.classList.add('hidden');
     this.nationSelectEl?.classList.add('hidden');
+    this.multiplayerScreenEl?.classList.add('hidden');
     this.hudEl?.classList.add('hidden');
     this.gameOverEl?.classList.add('hidden');
     this.pauseOverlay?.classList.add('hidden');
@@ -542,6 +550,369 @@ export class UIManager {
       });
       listEl.appendChild(card);
     }
+  }
+
+  // =========================================================
+  // Multiplayer Lobby
+  // =========================================================
+
+  showMultiplayerScreen() {
+    this.hideAll();
+    this.multiplayerScreenEl?.classList.remove('hidden');
+
+    // Reset to browse view
+    const browseView = document.getElementById('mp-browse-view');
+    const lobbyView = document.getElementById('mp-lobby-view');
+    browseView?.classList.remove('hidden');
+    lobbyView?.classList.add('hidden');
+    this._setMpStatus('');
+
+    // Wire up buttons if not already done
+    if (!this._mpWired) {
+      this._mpWired = true;
+      this._wireMultiplayerUI();
+    }
+  }
+
+  _wireMultiplayerUI() {
+    const nm = this.game.networkManager;
+
+    // Back button
+    document.getElementById('mp-back-btn')?.addEventListener('click', () => {
+      if (nm) nm.disconnect();
+      this.showMainMenu();
+    });
+
+    // Create Game
+    document.getElementById('mp-create-btn')?.addEventListener('click', async () => {
+      if (!nm) return;
+      this._setMpStatus('Connecting...');
+      try {
+        await nm.connect();
+        this._setMpStatus('Creating room...');
+        const data = await nm.createRoom({ playerName: 'Player' });
+        this._showLobby(data.room.code, true, data.room);
+      } catch (e) {
+        this._setMpStatus('Error: ' + (e.message || 'Connection failed'));
+      }
+    });
+
+    // Join Game
+    document.getElementById('mp-join-btn')?.addEventListener('click', async () => {
+      if (!nm) return;
+      const code = document.getElementById('mp-join-code')?.value.trim().toUpperCase();
+      if (!code) {
+        this._setMpStatus('Enter a room code');
+        return;
+      }
+      this._setMpStatus('Connecting...');
+      try {
+        await nm.connect();
+        this._setMpStatus('Joining room...');
+        const data = await nm.joinRoom(code, { playerName: 'Player' });
+        this._showLobby(data.room.code, false, data.room);
+      } catch (e) {
+        this._setMpStatus('Error: ' + (e.message || 'Could not join'));
+      }
+    });
+
+    // Browse Games
+    document.getElementById('mp-browse-btn')?.addEventListener('click', async () => {
+      if (!nm) return;
+      this._setMpStatus('Fetching rooms...');
+      try {
+        await nm.connect();
+        const rooms = await nm.listRooms();
+        this._showRoomList(rooms);
+      } catch (e) {
+        this._setMpStatus('Error: ' + (e.message || 'Could not fetch rooms'));
+      }
+    });
+
+    // Room code copy
+    document.getElementById('mp-room-code')?.addEventListener('click', () => {
+      const code = this._mpRoomCode;
+      if (code && navigator.clipboard) {
+        navigator.clipboard.writeText(code).then(() => {
+          this._addSystemChatMessage('Room code copied to clipboard');
+        });
+      }
+    });
+
+    // Nation buttons in lobby
+    document.querySelectorAll('.mp-nation-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const nation = btn.dataset.mpNation;
+        if (!nation || !nm) return;
+        nm.setNation(nation);
+        // Visual feedback
+        document.querySelectorAll('.mp-nation-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+      });
+    });
+
+    // Ready button
+    document.getElementById('mp-ready-btn')?.addEventListener('click', () => {
+      if (!nm) return;
+      nm.ready();
+    });
+
+    // Chat
+    const sendChat = () => {
+      const input = document.getElementById('mp-chat-input');
+      const text = input?.value.trim();
+      if (text && nm) {
+        nm.sendChat(text);
+        input.value = '';
+      }
+    };
+    document.getElementById('mp-chat-send')?.addEventListener('click', sendChat);
+    document.getElementById('mp-chat-input')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') sendChat();
+    });
+
+    // Leave button
+    document.getElementById('mp-leave-btn')?.addEventListener('click', () => {
+      if (nm) nm.disconnect();
+      this.showMultiplayerScreen();
+    });
+
+    // Enter key on room code input
+    document.getElementById('mp-join-code')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('mp-join-btn')?.click();
+    });
+
+    // Register network callbacks
+    this._registerNetworkCallbacks();
+  }
+
+  _registerNetworkCallbacks() {
+    const nm = this.game.networkManager;
+    if (!nm) return;
+
+    nm.onPlayerJoined((msg) => {
+      this.updateLobbyPlayer(msg.slot, msg.nation, false);
+      this._addSystemChatMessage(`${msg.name || 'Player'} joined`);
+    });
+
+    nm.onPlayerLeft((msg) => {
+      this.updateLobbyPlayer(msg.slot, null, false);
+      this._mpReady[msg.slot] = false;
+      const nationEl = document.getElementById(`mp-nation-${msg.slot}`);
+      if (nationEl) {
+        nationEl.textContent = 'Waiting for player...';
+        nationEl.classList.remove('has-nation');
+      }
+      this._addSystemChatMessage(`${msg.name || 'Player'} left`);
+    });
+
+    nm.onNationChanged((msg) => {
+      this._mpNations[msg.slot] = msg.nation;
+      this.updateLobbyPlayer(msg.slot, msg.nation, this._mpReady[msg.slot]);
+    });
+
+    nm.onCountdown((seconds) => {
+      const el = document.getElementById('mp-countdown');
+      if (el) {
+        el.classList.remove('hidden');
+        el.textContent = seconds;
+      }
+      const readyBtn = document.getElementById('mp-ready-btn');
+      if (readyBtn) readyBtn.disabled = true;
+    });
+
+    nm.onGameStart((msg) => {
+      // msg = { type: 'game_start', options: { mapTemplate, gameMode, mapSeed }, players: [{ name, nation }, { name, nation }] }
+      const mySlot = nm.slot;
+      const opponentSlot = mySlot === 0 ? 1 : 0;
+      const myNation = msg.players[mySlot]?.nation;
+      const opponentNation = msg.players[opponentSlot]?.nation;
+
+      this.hideAll();
+      this.game.startGame({
+        mode: 'MULTIPLAYER',
+        playerNation: myNation,
+        enemyNation: opponentNation,
+        difficulty: 'normal',
+        mapTemplate: msg.options.mapTemplate || 'continental',
+        mapSeed: msg.options.mapSeed,
+        gameMode: msg.options.gameMode || 'annihilation',
+        seed: msg.options.mapSeed,
+        multiplayer: true,
+        roomCode: nm.roomCode,
+        playerSlot: mySlot,
+        opponentNation: opponentNation
+      });
+    });
+
+    nm.onChat((msg) => {
+      this.addChatMessage(msg.name, msg.text);
+    });
+
+    nm.onGamePaused((reason) => {
+      this._addSystemChatMessage('Game paused: ' + reason);
+    });
+
+    nm.onGameResumed(() => {
+      this._addSystemChatMessage('Game resumed');
+    });
+
+    nm.onGameOver((msg) => {
+      const won = msg.winner === nm.slot;
+      this.showGameOver(won);
+    });
+
+    nm.onError((err) => {
+      const message = err?.message || 'Unknown error';
+      this._setMpStatus('Error: ' + message);
+      this._addSystemChatMessage('Error: ' + message);
+    });
+
+    nm.onDisconnect(() => {
+      this._setMpStatus('Disconnected from server');
+    });
+  }
+
+  _showLobby(roomCode, isHost, roomData) {
+    this._mpRoomCode = roomCode;
+    this._mpIsHost = isHost;
+    this._mpReady = [false, false];
+
+    const browseView = document.getElementById('mp-browse-view');
+    const lobbyView = document.getElementById('mp-lobby-view');
+    browseView?.classList.add('hidden');
+    lobbyView?.classList.remove('hidden');
+
+    // Set room code
+    const codeEl = document.getElementById('mp-room-code');
+    if (codeEl) codeEl.textContent = roomCode;
+
+    // Clear chat
+    const chatEl = document.getElementById('mp-chat-messages');
+    if (chatEl) chatEl.innerHTML = '';
+
+    // Reset countdown
+    const countdownEl = document.getElementById('mp-countdown');
+    if (countdownEl) {
+      countdownEl.classList.add('hidden');
+      countdownEl.textContent = '';
+    }
+
+    // Reset ready button
+    const readyBtn = document.getElementById('mp-ready-btn');
+    if (readyBtn) readyBtn.disabled = false;
+
+    // Reset nation buttons
+    document.querySelectorAll('.mp-nation-btn').forEach(b => b.classList.remove('selected'));
+
+    // Populate slots from room data
+    if (roomData && roomData.players) {
+      roomData.players.forEach((p, i) => {
+        if (p) {
+          this.updateLobbyPlayer(i, p.nation, false);
+        } else {
+          this.updateLobbyPlayer(i, null, false);
+        }
+      });
+    }
+
+    this._addSystemChatMessage(`Room ${roomCode} - ${isHost ? 'You are the host' : 'You joined'}`);
+  }
+
+  updateLobbyPlayer(slot, nation, ready) {
+    if (slot < 0 || slot > 1) return;
+    this._mpNations[slot] = nation;
+    this._mpReady[slot] = ready;
+
+    const nationEl = document.getElementById(`mp-nation-${slot}`);
+    const readyEl = document.getElementById(`mp-ready-${slot}`);
+
+    if (nationEl) {
+      if (nation) {
+        const capitalized = nation.charAt(0).toUpperCase() + nation.slice(1);
+        nationEl.textContent = capitalized;
+        nationEl.classList.add('has-nation');
+      } else {
+        nationEl.textContent = slot === 0 ? 'No nation selected' : 'Waiting for player...';
+        nationEl.classList.remove('has-nation');
+      }
+    }
+
+    if (readyEl) {
+      readyEl.textContent = ready ? 'READY' : 'NOT READY';
+      readyEl.classList.toggle('is-ready', ready);
+    }
+  }
+
+  addChatMessage(from, text) {
+    const container = document.getElementById('mp-chat-messages');
+    if (!container) return;
+    const msg = document.createElement('div');
+    msg.className = 'mp-chat-msg';
+    msg.innerHTML = `<span class="mp-chat-msg-name">${this._escapeHtml(from)}:</span> <span class="mp-chat-msg-text">${this._escapeHtml(text)}</span>`;
+    container.appendChild(msg);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  _addSystemChatMessage(text) {
+    const container = document.getElementById('mp-chat-messages');
+    if (!container) return;
+    const msg = document.createElement('div');
+    msg.className = 'mp-chat-msg';
+    msg.innerHTML = `<span class="mp-chat-msg-system">${this._escapeHtml(text)}</span>`;
+    container.appendChild(msg);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  _setMpStatus(text) {
+    const el = document.getElementById('mp-status');
+    if (el) el.textContent = text;
+  }
+
+  _showRoomList(rooms) {
+    const listEl = document.getElementById('mp-room-list');
+    if (!listEl) return;
+
+    listEl.innerHTML = '';
+    if (!rooms || rooms.length === 0) {
+      listEl.innerHTML = '<div style="color:#556;padding:12px;font-size:13px;">No games available. Create one!</div>';
+      listEl.classList.remove('hidden');
+      this._setMpStatus('');
+      return;
+    }
+
+    for (const room of rooms) {
+      const item = document.createElement('div');
+      item.className = 'mp-room-item';
+      item.innerHTML = `
+        <div>
+          <span class="mp-room-item-name">${this._escapeHtml(room.name || room.code)}</span>
+          <span class="mp-room-item-info" style="margin-left:10px;">${room.playerCount}/2 players</span>
+        </div>
+        <span class="mp-room-item-info">${room.code}</span>
+      `;
+      item.addEventListener('click', async () => {
+        const nm = this.game.networkManager;
+        if (!nm) return;
+        this._setMpStatus('Joining...');
+        try {
+          const data = await nm.joinRoom(room.code, { playerName: 'Player' });
+          this._showLobby(data.room.code, false, data.room);
+        } catch (e) {
+          this._setMpStatus('Error: ' + (e.message || 'Could not join'));
+        }
+      });
+      listEl.appendChild(item);
+    }
+
+    listEl.classList.remove('hidden');
+    this._setMpStatus(`${rooms.length} game(s) found`);
+  }
+
+  _escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
   }
 
   _showComingSoon(message) {

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { LockstepManager } from '../networking/LockstepManager.js';
 
 export class InputManager {
   constructor(game) {
@@ -54,7 +55,26 @@ export class InputManager {
     canvas.addEventListener('mouseup', (e) => {
       if (e.button === 0) {
         if (this.game.mode !== 'SPECTATE') {
-          if (!this.isDragging) {
+          // Attack-move on left-click (A + left-click is standard RTS convention)
+          if (!this.isDragging && this.game.commandSystem.attackMoveMode) {
+            const selected = this.game.selectionManager.getSelected();
+            const ownTeam = this.game.isMultiplayer ? this.game.getLocalTeam() : (this.game.mode === '2P' ? this.game.activeTeam : 'player');
+            const selectedUnits = selected.filter(u => u.isUnit && u.team === ownTeam);
+            if (selectedUnits.length > 0) {
+              const worldPos = this.getWorldPosition(e.clientX, e.clientY);
+              if (worldPos) {
+                if (this.game.isMultiplayer && this.game.lockstepManager?.enabled) {
+                  this.game.lockstepManager.queueCommand(
+                    LockstepManager.attackMoveCommand(selectedUnits.map(u => u.id), worldPos)
+                  );
+                } else {
+                  this.game.commandSystem.attackMoveUnits(selectedUnits, worldPos);
+                }
+              }
+            }
+            this.game.commandSystem.attackMoveMode = false;
+            document.body.style.cursor = 'default';
+          } else if (!this.isDragging) {
             this.game.selectionManager.handleClick(e);
             if (this.game.soundManager) {
               const selected = this.game.selectionManager.getSelected();

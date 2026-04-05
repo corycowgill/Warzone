@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { UNIT_STATS, UNIT_ABILITIES, FORMATION_CONFIG } from '../core/Constants.js';
+import { LockstepManager } from '../networking/LockstepManager.js';
 
 export class CommandSystem {
   constructor(game) {
@@ -13,22 +14,51 @@ export class CommandSystem {
     this.formationType = FORMATION_CONFIG.defaultType;
   }
 
+  /**
+   * Check if we're in multiplayer lockstep mode.
+   * If so, commands should be queued through the lockstep manager
+   * instead of executed directly.
+   */
+  get _isMP() {
+    return this.game.isMultiplayer && this.game.lockstepManager?.enabled;
+  }
+
+  /**
+   * Queue a command through lockstep instead of executing directly.
+   */
+  _queueLockstep(cmd) {
+    if (this.game.lockstepManager) {
+      this.game.lockstepManager.queueCommand(cmd);
+    }
+  }
+
   handleRightClick(event) {
     if (this.game.state !== 'PLAYING') return;
 
     const selected = this.game.selectionManager.getSelected();
     if (selected.length === 0) return;
 
-    // Get the selected units only (not buildings)
-    const selectedUnits = selected.filter(e => e.isUnit);
+    // In multiplayer, only allow commands for the local player's team
+    const ownTeam = this.game.isMultiplayer
+      ? this.game.getLocalTeam()
+      : (this.game.mode === '2P' ? this.game.activeTeam : 'player');
+
+    // Get the selected units only (not buildings), filtered to own team
+    const selectedUnits = selected.filter(e => e.isUnit && e.team === ownTeam);
     if (selectedUnits.length === 0) {
       // Handle rally point setting for selected buildings
-      const selectedBuildings = selected.filter(e => e.isBuilding);
+      const selectedBuildings = selected.filter(e => e.isBuilding && e.team === ownTeam);
       if (selectedBuildings.length > 0) {
         const worldPos = this.game.inputManager.getWorldPosition(event.clientX, event.clientY);
         if (worldPos) {
-          for (const building of selectedBuildings) {
-            building.setRallyPoint(worldPos);
+          if (this._isMP) {
+            for (const building of selectedBuildings) {
+              this._queueLockstep(LockstepManager.setRallyCommand(building.id, worldPos));
+            }
+          } else {
+            for (const building of selectedBuildings) {
+              building.setRallyPoint(worldPos);
+            }
           }
         }
       }
@@ -43,7 +73,6 @@ export class CommandSystem {
     this.raycaster.setFromCamera(mouse, camera);
 
     // Check for enemy or neutral entity under cursor
-    const ownTeam = this.game.mode === '2P' ? this.game.activeTeam : 'player';
     const enemyTeam = ownTeam === 'player' ? 'enemy' : 'player';
     const enemyEntities = [
       ...this.game.getEntitiesByTeam(enemyTeam),
@@ -114,74 +143,115 @@ export class CommandSystem {
             if (target) break;
           }
           if (target) {
-            const infantry = selectedUnits.filter(u => u.type === 'infantry');
-            let garrisoned = 0;
-            if (target.isBuilding && target.garrisonUnit) {
-              // Bunker garrison
-              for (const unit of infantry) {
-                if (target.garrisonUnit(unit)) garrisoned++;
+            if (this._isMP) {
+              const infantry = selectedUnits.filter(u => u.type === 'infantry');
+              if (infantry.length > 0) {
+                this._queueLockstep(LockstepManager.garrisonCommand(
+                  infantry.map(u => u.id), target.id
+                ));
+                if (this.game.soundManager) this.game.soundManager.play('move');
+                return;
               }
-            } else if (target.isUnit && target.type === 'apc' && target.garrison) {
-              // APC garrison
-              for (const unit of infantry) {
-                if (target.garrison(unit)) garrisoned++;
+            } else {
+              const infantry = selectedUnits.filter(u => u.type === 'infantry');
+              let garrisoned = 0;
+              if (target.isBuilding && target.garrisonUnit) {
+                for (const unit of infantry) {
+                  if (target.garrisonUnit(unit)) garrisoned++;
+                }
+              } else if (target.isUnit && target.type === 'apc' && target.garrison) {
+                for (const unit of infantry) {
+                  if (target.garrison(unit)) garrisoned++;
+                }
               }
-            }
-            if (garrisoned > 0) {
-              this.game.eventBus.emit('command:garrison', { target, count: garrisoned });
-              if (this.game.soundManager) this.game.soundManager.play('move');
-              return;
+              if (garrisoned > 0) {
+                this.game.eventBus.emit('command:garrison', { target, count: garrisoned });
+                if (this.game.soundManager) this.game.soundManager.play('move');
+                return;
+              }
             }
           }
         }
       }
     }
 
+    const unitIds = selectedUnits.map(u => u.id);
+
     if (clickedEnemy) {
       // Attack command
-      this.attackTarget(selectedUnits, clickedEnemy);
+      if (this._isMP) {
+        this._queueLockstep(LockstepManager.attackCommand(unitIds, clickedEnemy.id));
+        if (this.game.soundManager) this.game.soundManager.play('acknowledge', { unitType: selectedUnits[0]?.type });
+      } else {
+        this.attackTarget(selectedUnits, clickedEnemy);
+      }
     } else if (this.patrolMode) {
-      // Patrol: set patrol between current position and clicked location
       const worldPos = this.game.inputManager.getWorldPosition(event.clientX, event.clientY);
       if (worldPos) {
-        for (const unit of selectedUnits) {
-          const currentPos = unit.getPosition();
-          unit.startPatrol([currentPos, worldPos]);
+        if (this._isMP) {
+          this._queueLockstep(LockstepManager.patrolCommand(unitIds, worldPos));
+        } else {
+          for (const unit of selectedUnits) {
+            const currentPos = unit.getPosition();
+            unit.startPatrol([currentPos, worldPos]);
+          }
+          this.game.eventBus.emit('command:patrol', { units: selectedUnits, position: worldPos });
         }
-        this.game.eventBus.emit('command:patrol', { units: selectedUnits, position: worldPos });
         if (this.game.soundManager) this.game.soundManager.play('move', { unitType: selectedUnits[0]?.type });
         this.patrolMode = false;
         document.body.style.cursor = 'default';
       }
     } else if (this.attackMoveMode) {
-      // Attack-move: move to location but engage enemies along the way
       const worldPos = this.game.inputManager.getWorldPosition(event.clientX, event.clientY);
       if (worldPos) {
-        this.attackMoveUnits(selectedUnits, worldPos);
+        if (this._isMP) {
+          this._queueLockstep(LockstepManager.attackMoveCommand(unitIds, worldPos));
+        } else {
+          this.attackMoveUnits(selectedUnits, worldPos);
+        }
       }
       this.attackMoveMode = false;
       document.body.style.cursor = 'default';
     } else if (event.shiftKey) {
-      // Shift-click: queue waypoint
       const worldPos = this.game.inputManager.getWorldPosition(event.clientX, event.clientY);
       if (worldPos) {
-        this.queueWaypoint(selectedUnits, worldPos);
+        if (this._isMP) {
+          this._queueLockstep({
+            type: 'WAYPOINT',
+            entityIds: unitIds,
+            target: { x: worldPos.x, y: worldPos.y || 0, z: worldPos.z },
+          });
+        } else {
+          this.queueWaypoint(selectedUnits, worldPos);
+        }
       }
     } else {
-      // Move command
       const worldPos = this.game.inputManager.getWorldPosition(event.clientX, event.clientY);
       if (worldPos) {
-        this.moveUnits(selectedUnits, worldPos);
+        if (this._isMP) {
+          this._queueLockstep(LockstepManager.moveCommand(unitIds, worldPos));
+          // Play sound immediately for responsiveness
+          if (this.game.soundManager) this.game.soundManager.play('move', { unitType: selectedUnits[0]?.type });
+          if (this.game.effectsManager) this.game.effectsManager.createMoveMarker(worldPos, 'move');
+        } else {
+          this.moveUnits(selectedUnits, worldPos);
+        }
       }
     }
 
     // Also handle rally point for any selected buildings
-    const selectedBuildings = selected.filter(e => e.isBuilding);
+    const selectedBuildings = selected.filter(e => e.isBuilding && e.team === ownTeam);
     if (selectedBuildings.length > 0) {
       const worldPos = this.game.inputManager.getWorldPosition(event.clientX, event.clientY);
       if (worldPos) {
-        for (const building of selectedBuildings) {
-          building.setRallyPoint(worldPos);
+        if (this._isMP) {
+          for (const building of selectedBuildings) {
+            this._queueLockstep(LockstepManager.setRallyCommand(building.id, worldPos));
+          }
+        } else {
+          for (const building of selectedBuildings) {
+            building.setRallyPoint(worldPos);
+          }
         }
       }
     }
@@ -289,18 +359,21 @@ export class CommandSystem {
       unit.formationSpeed = groupSpeed;
 
       if ((unit.domain === 'land' || unit.domain === 'naval') && this.game.pathfinding) {
-        const path = this.game.pathfinding.findPathForDomain(
-          unit.getPosition(),
-          targetPos,
-          unit.domain
-        );
-        if (path && path.length > 1) {
-          unit.followPath(path);
-        } else if (path && path.length === 1) {
-          unit.moveTo(path[0]);
-        } else {
-          unit.moveTo(targetPos);
-        }
+        // Use async pathfinding (auto-falls back to sync for short distances)
+        const unitRef = unit;
+        const startPos = unit.getPosition();
+        // Start moving toward target immediately (will be corrected when path arrives)
+        unit.moveTo(targetPos);
+        unit._pathPending = true;
+        this.game.pathfinding.findPathAsync(startPos, targetPos, unit.domain).then(path => {
+          unitRef._pathPending = false;
+          if (!unitRef.alive) return;
+          if (path && path.length > 1) {
+            unitRef.followPath(path);
+          } else if (path && path.length === 1) {
+            unitRef.moveTo(path[0]);
+          }
+        });
       } else {
         unit.moveTo(targetPos);
       }
@@ -365,42 +438,71 @@ export class CommandSystem {
       case 's':
         // Stop all selected units (only if units are selected)
         if (selected.length > 0) {
-          for (const entity of selected) {
-            if (entity.isUnit) {
-              entity.stop();
+          const stopUnits = selected.filter(e => e.isUnit);
+          if (stopUnits.length > 0) {
+            if (this._isMP) {
+              this._queueLockstep(LockstepManager.stopCommand(stopUnits.map(u => u.id)));
+            } else {
+              for (const entity of stopUnits) {
+                entity.stop();
+              }
             }
+            this.game.eventBus.emit('command:stop', { units: stopUnits });
           }
-          this.game.eventBus.emit('command:stop', { units: selected.filter(e => e.isUnit) });
         }
         break;
 
       case 'd':
         // Hold position (stop moving but keep attacking)
-        for (const entity of selected) {
-          if (entity.isUnit) {
-            entity.moveTarget = null;
-            entity.waypoints = [];
-            entity.isMoving = false;
+        {
+          const holdUnits = selected.filter(e => e.isUnit);
+          if (holdUnits.length > 0) {
+            if (this._isMP) {
+              this._queueLockstep({ type: 'HOLD', entityIds: holdUnits.map(u => u.id) });
+            } else {
+              for (const entity of holdUnits) {
+                entity.moveTarget = null;
+                entity.waypoints = [];
+                entity.isMoving = false;
+              }
+            }
           }
         }
         break;
 
       case 'delete':
-        // Delete selected units (debug/testing)
-        for (const entity of selected) {
-          entity.alive = false;
+        // Delete selected units (debug/testing) - disabled in multiplayer
+        if (!this._isMP) {
+          for (const entity of selected) {
+            entity.alive = false;
+          }
+          this.game.selectionManager.clearSelection();
+        } else {
+          const deleteUnits = selected.filter(e => e.team === this.game.getLocalTeam());
+          if (deleteUnits.length > 0) {
+            this._queueLockstep({ type: 'DELETE', entityIds: deleteUnits.map(e => e.id) });
+          }
+          this.game.selectionManager.clearSelection();
         }
-        this.game.selectionManager.clearSelection();
         break;
 
       case 'v': {
         // Cycle unit stance (aggressive -> defensive -> hold fire)
         const stanceUnits = selected.filter(e => e.isUnit);
         if (stanceUnits.length > 0) {
-          const newStance = stanceUnits[0].cycleStance();
-          // Sync all selected to same stance
-          for (let si = 1; si < stanceUnits.length; si++) {
-            stanceUnits[si].stance = newStance;
+          // Determine the next stance locally (for UI feedback)
+          const stances = ['aggressive', 'defensive', 'holdfire'];
+          const currentStance = stanceUnits[0].stance || 'aggressive';
+          const idx = stances.indexOf(currentStance);
+          const newStance = stances[(idx + 1) % stances.length];
+
+          if (this._isMP) {
+            this._queueLockstep(LockstepManager.stanceCommand(stanceUnits.map(u => u.id), newStance));
+          } else {
+            stanceUnits[0].cycleStance();
+            for (let si = 1; si < stanceUnits.length; si++) {
+              stanceUnits[si].stance = newStance;
+            }
           }
           const stanceLabels = { aggressive: 'Aggressive', defensive: 'Defensive', holdfire: 'Hold Fire' };
           this.game.eventBus.emit('command:stance', { stance: newStance });
@@ -412,10 +514,14 @@ export class CommandSystem {
       case 'u': {
         // Unload APC
         const apcs = selected.filter(e => e.isUnit && e.type === 'apc' && e.garrisoned && e.garrisoned.length > 0);
-        for (const apc of apcs) {
-          apc.ejectAll();
-        }
         if (apcs.length > 0) {
+          if (this._isMP) {
+            this._queueLockstep({ type: 'UNLOAD', entityIds: apcs.map(a => a.id) });
+          } else {
+            for (const apc of apcs) {
+              apc.ejectAll();
+            }
+          }
           if (this.game.soundManager) this.game.soundManager.play('move');
         }
         break;
@@ -462,13 +568,19 @@ export class CommandSystem {
           const firstAbility = abilityUnits[0].ability;
           if (firstAbility.type === 'toggle') {
             // Toggle abilities (like siege_mode) execute immediately
-            for (const unit of abilityUnits) {
-              if (unit.canUseAbility()) {
-                this.game.combatSystem.executeAbility(unit);
+            if (this._isMP) {
+              this._queueLockstep(LockstepManager.abilityCommand(
+                abilityUnits.map(u => u.id), 0, null
+              ));
+            } else {
+              for (const unit of abilityUnits) {
+                if (unit.canUseAbility()) {
+                  this.game.combatSystem.executeAbility(unit);
+                }
               }
             }
           } else {
-            // Targeted abilities enter targeting mode
+            // Targeted abilities enter targeting mode (click handler will queue)
             this.abilityTargetMode = true;
             document.body.style.cursor = 'crosshair';
             this.game.eventBus.emit('notification', { message: `Click to use ${firstAbility.name}`, color: '#ffcc00' });
@@ -492,7 +604,7 @@ export class CommandSystem {
 
       case ',': {
         // Select all idle military units
-        const ownTeam = this.game.mode === '2P' ? this.game.activeTeam : 'player';
+        const ownTeam = this.game.isMultiplayer ? this.game.getLocalTeam() : (this.game.mode === '2P' ? this.game.activeTeam : 'player');
         const idleUnits = this.game.getUnits(ownTeam).filter(u =>
           u.alive && !u.moveTarget && !u.attackTarget && !u.isMoving
         );
@@ -508,7 +620,7 @@ export class CommandSystem {
 
       case '.': {
         // Select all military units
-        const ownTeam2 = this.game.mode === '2P' ? this.game.activeTeam : 'player';
+        const ownTeam2 = this.game.isMultiplayer ? this.game.getLocalTeam() : (this.game.mode === '2P' ? this.game.activeTeam : 'player');
         const allUnits = this.game.getUnits(ownTeam2).filter(u => u.alive);
         if (allUnits.length > 0) {
           this.game.selectionManager.selectEntities(allUnits);
@@ -536,22 +648,27 @@ export class CommandSystem {
         // GD-125: Tactical Retreat - retreat selected units to nearest friendly building
         const retreatUnits = selected.filter(e => e.isUnit);
         if (retreatUnits.length > 0) {
-          const ownTeam = this.game.mode === '2P' ? this.game.activeTeam : 'player';
-          const friendlyBuildings = this.game.getBuildings(ownTeam);
+          const retreatTeam = this.game.isMultiplayer
+            ? this.game.getLocalTeam()
+            : (this.game.mode === '2P' ? this.game.activeTeam : 'player');
+          const friendlyBuildings = this.game.getBuildings(retreatTeam);
           if (friendlyBuildings.length > 0) {
-            for (const unit of retreatUnits) {
-              // Find nearest friendly building
-              let nearestBuilding = null;
-              let nearestDist = Infinity;
-              for (const building of friendlyBuildings) {
-                const dist = unit.distanceTo(building);
-                if (dist < nearestDist) {
-                  nearestDist = dist;
-                  nearestBuilding = building;
+            if (this._isMP) {
+              this._queueLockstep(LockstepManager.retreatCommand(retreatUnits.map(u => u.id)));
+            } else {
+              for (const unit of retreatUnits) {
+                let nearestBuilding = null;
+                let nearestDist = Infinity;
+                for (const building of friendlyBuildings) {
+                  const dist = unit.distanceTo(building);
+                  if (dist < nearestDist) {
+                    nearestDist = dist;
+                    nearestBuilding = building;
+                  }
                 }
-              }
-              if (nearestBuilding) {
-                unit.startRetreat(nearestBuilding.getPosition());
+                if (nearestBuilding) {
+                  unit.startRetreat(nearestBuilding.getPosition());
+                }
               }
             }
             this.game.eventBus.emit('command:retreat', { units: retreatUnits });
@@ -584,7 +701,13 @@ export class CommandSystem {
                 this.game.eventBus.emit('notification', { message: `Click to use ${ability.name}`, color: '#ffcc00' });
               } else {
                 // Self-cast / no target needed
-                cmd.useAbility(abilityIndex, cmd.getPosition());
+                if (this._isMP) {
+                  this._queueLockstep(LockstepManager.abilityCommand(
+                    [cmd.id], abilityIndex, cmd.getPosition()
+                  ));
+                } else {
+                  cmd.useAbility(abilityIndex, cmd.getPosition());
+                }
               }
             } else {
               const cd = Math.ceil(cmd.commanderCooldowns[abilityIndex]);
@@ -606,7 +729,7 @@ export class CommandSystem {
   }
 
   cycleProductionBuildings() {
-    const ownTeam = this.game.mode === '2P' ? this.game.activeTeam : 'player';
+    const ownTeam = this.game.isMultiplayer ? this.game.getLocalTeam() : (this.game.mode === '2P' ? this.game.activeTeam : 'player');
     const buildings = this.game.getBuildings(ownTeam).filter(b => b.produces.length > 0);
     if (buildings.length === 0) return;
 

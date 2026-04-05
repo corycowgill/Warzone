@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { UNIT_STATS, BUILDING_STATS, TECH_TREE, NATIONS, GAME_CONFIG, CONSTRUCTION_CONFIG, BUILDING_LIMITS } from '../core/Constants.js';
+import { LockstepManager } from '../networking/LockstepManager.js';
 
 export class ProductionSystem {
   constructor(game) {
@@ -96,6 +97,18 @@ export class ProductionSystem {
 
   requestProduction(building, unitType) {
     if (!building || !building.alive) return false;
+
+    // In multiplayer lockstep, queue the produce command instead of executing directly.
+    // Skip if we're already executing a lockstep turn (to avoid re-queuing).
+    if (this.game.isMultiplayer && this.game.lockstepManager?.enabled && !this.game._executingLockstepTurn) {
+      // Validate locally for instant feedback
+      if (!this._canRequestProduction(building, unitType)) return false;
+      // Queue through lockstep - actual execution happens on confirmed turn
+      this.game.lockstepManager.queueCommand(
+        LockstepManager.produceCommand(building.id, unitType)
+      );
+      return true;
+    }
 
     // Validate building can produce this unit type
     if (!building.canProduce(unitType)) {
@@ -207,6 +220,65 @@ export class ProductionSystem {
     return true;
   }
 
+  /**
+   * Validation-only check for unit production (used by multiplayer lockstep).
+   * Returns true if the unit CAN be produced; does not spend resources or queue it.
+   */
+  _canRequestProduction(building, unitType) {
+    if (!building || !building.alive) return false;
+    if (!building.canProduce(unitType)) {
+      this.game.eventBus.emit('production:error', { message: `${building.type} cannot produce ${unitType}` });
+      return false;
+    }
+    const totalQueued = (building.currentProduction ? 1 : 0) + building.productionQueue.length;
+    if (totalQueued >= 5) {
+      this.game.eventBus.emit('production:error', { message: 'Production queue full (max 5)' });
+      if (this.game.soundManager) this.game.soundManager.play('error');
+      return false;
+    }
+    if (!this.hasTechRequirements(building.team, unitType)) {
+      if (this.game.soundManager) this.game.soundManager.play('error');
+      return false;
+    }
+    const currentUnits = this.game.getUnits(building.team).length;
+    if (currentUnits >= GAME_CONFIG.maxUnitsPerTeam) {
+      this.game.eventBus.emit('production:error', { message: 'Population cap reached!', reason: 'popcap' });
+      if (this.game.soundManager) this.game.soundManager.play('error');
+      return false;
+    }
+    const stats = UNIT_STATS[unitType];
+    if (!stats) return false;
+    let cost = stats.cost;
+    const nationKey = this.game.teams[building.team]?.nation;
+    if (nationKey) {
+      const nationData = NATIONS[nationKey];
+      if (nationData?.bonuses?.costReduction) cost = Math.round(cost * nationData.bonuses.costReduction);
+    }
+    if (this.game.nationAbilitySystem) {
+      cost = Math.round(cost * this.game.nationAbilitySystem.getCostMultiplier(building.team));
+    }
+    if (!this.game.resourceSystem.canAfford(building.team, cost)) {
+      this.game.eventBus.emit('production:error', { message: `Not enough SP (need ${cost})`, reason: 'cost' });
+      if (this.game.soundManager) this.game.soundManager.play('error');
+      return false;
+    }
+    const muCost = unitType === 'commander' ? 200 : (stats.muCost || 0);
+    if (muCost > 0 && !this.game.resourceSystem.canAffordMU(building.team, muCost)) {
+      this.game.eventBus.emit('production:error', { message: `Not enough MU (need ${muCost})`, reason: 'cost' });
+      if (this.game.soundManager) this.game.soundManager.play('error');
+      return false;
+    }
+    if (unitType === 'commander') {
+      const hasCommander = this.game.entities.some(e => e.isUnit && e.type === 'commander' && e.team === building.team && e.alive);
+      if (hasCommander) {
+        this.game.eventBus.emit('production:error', { message: 'Commander already exists!' });
+        if (this.game.soundManager) this.game.soundManager.play('error');
+        return false;
+      }
+    }
+    return true;
+  }
+
   requestBuilding(type, team, position) {
     const stats = BUILDING_STATS[type];
     if (!stats) return false;
@@ -308,6 +380,70 @@ export class ProductionSystem {
     return building;
   }
 
+  /**
+   * Validation-only check for building placement (used by multiplayer lockstep).
+   * Returns true if the building CAN be placed; does not spend resources or create it.
+   */
+  canRequestBuilding(type, team, position) {
+    const stats = BUILDING_STATS[type];
+    if (!stats) return false;
+
+    let cost = stats.cost;
+    const nationKey = this.game.teams[team]?.nation;
+    if (nationKey) {
+      const nationData = NATIONS[nationKey];
+      if (nationData?.bonuses?.buildingCostReduction) {
+        cost = Math.round(cost * nationData.bonuses.buildingCostReduction);
+      }
+    }
+
+    if (!this.game.resourceSystem.canAfford(team, cost)) {
+      this.game.eventBus.emit('production:error', { message: `Not enough SP (need ${cost})`, reason: 'cost' });
+      if (this.game.soundManager) this.game.soundManager.play('error');
+      return false;
+    }
+
+    if (stats.requires && stats.requires.length > 0) {
+      const teamBuildings = this.game.getBuildings(team);
+      for (const req of stats.requires) {
+        if (!teamBuildings.some(b => b.type === req && b.alive)) {
+          this.game.eventBus.emit('production:error', { message: `Requires ${req.charAt(0).toUpperCase() + req.slice(1)} first` });
+          if (this.game.soundManager) this.game.soundManager.play('error');
+          return false;
+        }
+      }
+    }
+
+    const limit = BUILDING_LIMITS[type];
+    if (limit !== undefined) {
+      if (this.game.getBuildings(team).filter(b => b.type === type).length >= limit) {
+        this.game.eventBus.emit('production:error', { message: 'Building limit reached' });
+        if (this.game.soundManager) this.game.soundManager.play('error');
+        return false;
+      }
+    }
+
+    if (this.game.terrain && !this.game.terrain.isWalkable(position.x, position.z)) {
+      this.game.eventBus.emit('production:error', { message: 'Cannot build here' });
+      if (this.game.soundManager) this.game.soundManager.play('error');
+      return false;
+    }
+
+    const allBuildings = this.game.entities.filter(e => e.isBuilding && e.alive);
+    const buildSize = (stats.size || 2) * 5;
+    for (const existing of allBuildings) {
+      const dist = existing.getPosition().distanceTo(position);
+      const existingSize = (BUILDING_STATS[existing.type]?.size || 2) * 5;
+      if (dist < (buildSize + existingSize) / 2) {
+        this.game.eventBus.emit('production:error', { message: 'Too close to another building' });
+        if (this.game.soundManager) this.game.soundManager.play('error');
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   // Check if a team has the required buildings for a unit type
   hasTechRequirements(team, unitType) {
     const techReq = TECH_TREE[unitType];
@@ -329,6 +465,15 @@ export class ProductionSystem {
    */
   cancelProduction(building, index) {
     if (!building || !building.alive) return false;
+
+    // In multiplayer, queue cancel through lockstep (skip if executing a lockstep turn)
+    if (this.game.isMultiplayer && this.game.lockstepManager?.enabled && !this.game._executingLockstepTurn) {
+      this.game.lockstepManager.queueCommand({
+        type: 'CANCEL_PRODUCE',
+        entityIds: [building.id],
+      });
+      return true;
+    }
 
     const cancelled = building.cancelQueueItem(index);
     if (!cancelled) return false;

@@ -54,6 +54,85 @@
     </div>
   </div>
 
+  <!-- Multiplayer Screen -->
+  <div id="multiplayer-screen" class="hidden">
+    <div class="mp-content">
+      <h2 class="mp-title">MULTIPLAYER</h2>
+
+      <!-- Browsing view (shown before joining a room) -->
+      <div id="mp-browse-view">
+        <div class="mp-actions">
+          <button id="mp-create-btn" class="menu-btn">Create Game</button>
+          <div class="mp-join-row">
+            <input id="mp-join-code" type="text" class="mp-input" placeholder="Room Code" maxlength="6" autocomplete="off" spellcheck="false">
+            <button id="mp-join-btn" class="menu-btn" style="width:auto;padding:14px 24px;">Join</button>
+          </div>
+          <button id="mp-browse-btn" class="menu-btn menu-btn-secondary">Browse Games</button>
+        </div>
+        <div id="mp-room-list" class="mp-room-list hidden"></div>
+        <div id="mp-status" class="mp-status"></div>
+        <button id="mp-back-btn" class="menu-btn menu-btn-secondary" style="margin-top:20px;">Back</button>
+      </div>
+
+      <!-- Lobby view (shown when in a room) -->
+      <div id="mp-lobby-view" class="hidden">
+        <div class="mp-room-header">
+          <span class="mp-room-label">ROOM CODE</span>
+          <span id="mp-room-code" class="mp-room-code" title="Click to copy">------</span>
+        </div>
+
+        <!-- Player Slots -->
+        <div class="mp-players">
+          <div class="mp-player-slot" id="mp-slot-0">
+            <div class="mp-slot-header">
+              <span class="mp-slot-label">Player 1 (Host)</span>
+              <span class="mp-slot-ready" id="mp-ready-0">NOT READY</span>
+            </div>
+            <div class="mp-slot-nation" id="mp-nation-0">No nation selected</div>
+          </div>
+          <div class="mp-vs">VS</div>
+          <div class="mp-player-slot" id="mp-slot-1">
+            <div class="mp-slot-header">
+              <span class="mp-slot-label">Player 2</span>
+              <span class="mp-slot-ready" id="mp-ready-1">NOT READY</span>
+            </div>
+            <div class="mp-slot-nation" id="mp-nation-1">Waiting for player...</div>
+          </div>
+        </div>
+
+        <!-- Nation Selector -->
+        <div class="mp-nation-select">
+          <h3 class="mp-section-title">Select Your Nation</h3>
+          <div class="mp-nation-grid">
+            <button class="mp-nation-btn" data-mp-nation="america"><span class="mp-flag" style="background-color:#3355ff;"></span>America</button>
+            <button class="mp-nation-btn" data-mp-nation="britain"><span class="mp-flag" style="background-color:#33aa33;"></span>Britain</button>
+            <button class="mp-nation-btn" data-mp-nation="france"><span class="mp-flag" style="background-color:#6666ff;"></span>France</button>
+            <button class="mp-nation-btn" data-mp-nation="japan"><span class="mp-flag" style="background-color:#ff3333;"></span>Japan</button>
+            <button class="mp-nation-btn" data-mp-nation="germany"><span class="mp-flag" style="background-color:#666666;"></span>Germany</button>
+            <button class="mp-nation-btn" data-mp-nation="austria"><span class="mp-flag" style="background-color:#cc6633;"></span>Austria</button>
+          </div>
+        </div>
+
+        <!-- Ready + Countdown -->
+        <div class="mp-ready-section">
+          <button id="mp-ready-btn" class="menu-btn">Ready</button>
+          <div id="mp-countdown" class="mp-countdown hidden"></div>
+        </div>
+
+        <!-- Chat -->
+        <div class="mp-chat">
+          <div id="mp-chat-messages" class="mp-chat-messages"></div>
+          <div class="mp-chat-input-row">
+            <input id="mp-chat-input" type="text" class="mp-input" placeholder="Type a message..." maxlength="500" autocomplete="off">
+            <button id="mp-chat-send" class="mp-chat-send-btn">Send</button>
+          </div>
+        </div>
+
+        <button id="mp-leave-btn" class="menu-btn menu-btn-secondary" style="margin-top:12px;">Leave Game</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Nation Select -->
   <div id="nation-select" class="hidden">
     <div class="nation-select-content">

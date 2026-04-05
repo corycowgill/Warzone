@@ -291,6 +291,355 @@ body {
 }
 
 /* ============================================
+   MULTIPLAYER SCREEN
+   ============================================ */
+#multiplayer-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a15 70%, #000 100%);
+}
+
+.mp-content {
+  text-align: center;
+  padding: 30px 40px;
+  background: rgba(15, 52, 96, 0.2);
+  border: 1px solid rgba(0, 255, 65, 0.15);
+  border-radius: 4px;
+  backdrop-filter: blur(5px);
+  max-width: 700px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.mp-title {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 8px;
+  color: #00ff41;
+  text-shadow: 0 0 15px rgba(0, 255, 65, 0.4);
+  margin-bottom: 24px;
+}
+
+.mp-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.mp-join-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+}
+
+.mp-input {
+  padding: 10px 14px;
+  background: rgba(22, 33, 62, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+  color: #ccc;
+  font-family: inherit;
+  font-size: 14px;
+  letter-spacing: 1px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.mp-input:focus {
+  border-color: #00ff41;
+}
+
+.mp-input::placeholder {
+  color: #556;
+}
+
+.mp-status {
+  color: #6a8a7a;
+  font-size: 12px;
+  min-height: 18px;
+  margin-top: 8px;
+}
+
+/* Room list */
+.mp-room-list {
+  margin: 12px 0;
+  max-height: 200px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mp-room-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(22, 33, 62, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.mp-room-item:hover {
+  border-color: #00ff41;
+  background: rgba(0, 255, 65, 0.06);
+}
+
+.mp-room-item-name {
+  color: #ccc;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.mp-room-item-info {
+  color: #6a8a7a;
+  font-size: 11px;
+}
+
+/* Lobby view */
+.mp-room-header {
+  margin-bottom: 20px;
+}
+
+.mp-room-label {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: #6a8a7a;
+  margin-bottom: 4px;
+}
+
+.mp-room-code {
+  font-size: 36px;
+  font-weight: 900;
+  letter-spacing: 8px;
+  color: #ffcc00;
+  text-shadow: 0 0 12px rgba(255, 204, 0, 0.3);
+  cursor: pointer;
+  user-select: all;
+  transition: color 0.2s;
+}
+
+.mp-room-code:hover {
+  color: #ffdd44;
+}
+
+/* Player slots */
+.mp-players {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.mp-player-slot {
+  flex: 1;
+  padding: 14px 16px;
+  background: rgba(22, 33, 62, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  min-width: 180px;
+}
+
+.mp-slot-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.mp-slot-label {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: #8a9aaa;
+  text-transform: uppercase;
+}
+
+.mp-slot-ready {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #ff4444;
+}
+
+.mp-slot-ready.is-ready {
+  color: #00ff41;
+}
+
+.mp-slot-nation {
+  font-size: 14px;
+  font-weight: 600;
+  color: #556;
+}
+
+.mp-slot-nation.has-nation {
+  color: #ccc;
+}
+
+.mp-vs {
+  font-size: 20px;
+  font-weight: 900;
+  color: #ffcc00;
+  letter-spacing: 2px;
+}
+
+/* Nation selector in lobby */
+.mp-nation-select {
+  margin-bottom: 16px;
+}
+
+.mp-section-title {
+  font-size: 12px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #8a9aaa;
+  margin-bottom: 10px;
+}
+
+.mp-nation-grid {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.mp-nation-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: rgba(22, 33, 62, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  color: #ccc;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+
+.mp-nation-btn:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(22, 33, 62, 0.9);
+}
+
+.mp-nation-btn.selected {
+  border-color: #00ff41;
+  background: rgba(0, 255, 65, 0.1);
+  color: #fff;
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+}
+
+.mp-flag {
+  display: inline-block;
+  width: 20px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+/* Ready section */
+.mp-ready-section {
+  margin-bottom: 16px;
+}
+
+.mp-countdown {
+  font-size: 48px;
+  font-weight: 900;
+  color: #ffcc00;
+  text-shadow: 0 0 20px rgba(255, 204, 0, 0.5);
+  letter-spacing: 4px;
+  margin-top: 10px;
+  animation: mp-pulse 1s ease-in-out infinite;
+}
+
+@keyframes mp-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+/* Chat */
+.mp-chat {
+  margin-top: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.mp-chat-messages {
+  height: 100px;
+  overflow-y: auto;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.3);
+  font-size: 12px;
+  text-align: left;
+}
+
+.mp-chat-msg {
+  margin-bottom: 3px;
+  line-height: 1.4;
+}
+
+.mp-chat-msg-name {
+  font-weight: 700;
+  color: #88aaff;
+}
+
+.mp-chat-msg-text {
+  color: #bbb;
+}
+
+.mp-chat-msg-system {
+  color: #6a8a7a;
+  font-style: italic;
+}
+
+.mp-chat-input-row {
+  display: flex;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.mp-chat-input-row .mp-input {
+  flex: 1;
+  border: none;
+  border-radius: 0;
+  background: rgba(22, 33, 62, 0.4);
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.mp-chat-send-btn {
+  padding: 8px 14px;
+  background: rgba(0, 100, 40, 0.3);
+  border: none;
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+  color: #00ff41;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  transition: background 0.15s;
+}
+
+.mp-chat-send-btn:hover {
+  background: rgba(0, 100, 40, 0.5);
+}
+
+/* ============================================
    HUD
    ============================================ */
 #hud {
