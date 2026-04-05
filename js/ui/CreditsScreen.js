@@ -8,8 +8,11 @@ export class CreditsScreen {
     this.scrollContainer = null;
     this.animationId = null;
     this.scrollSpeed = 0.8; // pixels per frame
+    this.baseSpeed = 0.8;
+    this.speedMultiplier = 1;
     this.paused = false;
     this._onKeyDown = null;
+    this._speedBtn = null;
     this._built = false;
   }
 
@@ -92,9 +95,35 @@ export class CreditsScreen {
     closeBtn.addEventListener('click', () => this.close());
     this.overlay.appendChild(closeBtn);
 
+    // Speed toggle button
+    this._speedBtn = document.createElement('button');
+    this._speedBtn.textContent = '1x';
+    Object.assign(this._speedBtn.style, {
+      position: 'fixed',
+      top: '20px',
+      left: '20px',
+      padding: '8px 20px',
+      background: 'rgba(30, 30, 50, 0.8)',
+      color: '#00ff41',
+      border: '1px solid #00ff41',
+      borderRadius: '4px',
+      cursor: 'pointer',
+      fontSize: '14px',
+      fontFamily: "'Courier New', monospace",
+      fontWeight: 'bold',
+      zIndex: '2',
+      transition: 'all 0.2s',
+      minWidth: '60px'
+    });
+    this._speedBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this._cycleSpeed();
+    });
+    this.overlay.appendChild(this._speedBtn);
+
     // Pause hint
     const hint = document.createElement('div');
-    hint.textContent = 'Click to pause/resume scrolling';
+    hint.textContent = 'Click to pause/resume \u00B7 Speed button to go faster';
     Object.assign(hint.style, {
       position: 'fixed',
       bottom: '15px',
@@ -191,6 +220,70 @@ export class CreditsScreen {
         <h2 style="color:#00ff41;font-size:14px;letter-spacing:6px;margin-bottom:20px;">- - - - - - - - - -</h2>
       </div>
 
+      ${this._section('DEVELOPMENT TEAM')}
+      ${this._subtext('Claude Opus 4.6 \u2014 AI Agent Studio')}
+
+      <div style="height:20px;"></div>
+      ${this._credit('Ability System', 'Active/passive unit and building abilities')}
+      ${this._credit('Accessibility', 'Playability across diverse hardware and input')}
+      ${this._credit('Animator', 'Character and building animations')}
+      ${this._credit('Anti-Cheat', 'Detection and prevention of unfair play')}
+      ${this._credit('Asset Pipeline', 'Import, processing, and delivery of all assets')}
+      ${this._credit('Backend Services', 'Accounts, leaderboards, persistence')}
+      ${this._credit('Balance Data', 'Unit stats, win rates, patch notes')}
+      ${this._credit('Build & CI', 'Compilation, packaging, and delivery pipeline')}
+      ${this._credit('Build & Tech Tree', 'Construction, production, tech prerequisites')}
+      ${this._credit('Campaign Scripting', 'Mission triggers, objectives, scripted sequences')}
+      ${this._credit('Cinematic & Narrative', 'Cutscenes, dialogue, subtitles')}
+      ${this._credit('Codebase Archaeology', 'Prototype analysis and shared knowledge')}
+      ${this._credit('Combat', 'Damage calculation and combat resolution')}
+      ${this._credit('Concept Artist', 'Visual language and faction identity')}
+      ${this._credit('Economy', 'Resource gathering and economic feedback loop')}
+      ${this._credit('Environment Artist', 'Terrain, structures, props, dressing')}
+      ${this._credit('Fog of War', 'Visibility system for each player')}
+      ${this._credit('Game Systems Designer', 'Faction design, unit roles, balance targets')}
+      ${this._credit('HUD', 'Selection, command card, resource display')}
+      ${this._credit('Lobby & Matchmaking', 'Finding opponents and setting up matches')}
+      ${this._credit('Localization', 'Internationalization pipeline')}
+      ${this._credit('Map Editor', 'Terrain painting, object placement, triggers')}
+      ${this._credit('Map & Terrain', 'Terrain system, tile types, resource nodes')}
+      ${this._credit('Menus & Settings', 'Main menu, settings, profile screens')}
+      ${this._credit('Minimap', 'Tactical overview, pings, and alerts')}
+      ${this._credit('Multiplayer Map Designer', 'Competitive layouts and chokepoints')}
+      ${this._credit('Music', 'Adaptive soundtrack and faction themes')}
+      ${this._credit('Narrative Designer', 'Story, lore, voice lines, tooltips')}
+      ${this._credit('Networking & Sync', 'Deterministic lockstep multiplayer')}
+      ${this._credit('Pathfinding', 'A*, flow fields, formation movement')}
+      ${this._credit('Performance Profiling', 'CPU, GPU, and memory optimization')}
+      ${this._credit('Physics & Collision', 'Collision detection and projectile physics')}
+      ${this._credit('Platform Integration', 'Storefronts, launchers, OS services')}
+      ${this._credit('Production', 'Project coordination and milestone tracking')}
+      ${this._credit('QA & Testing', 'Regression tests, determinism, benchmarks')}
+      ${this._credit('Rendering', 'Shaders, LOD, fog visuals, post-processing')}
+      ${this._credit('Replay', 'Recording, storage, and playback of replays')}
+      ${this._credit('Sound Engine', 'Spatial audio, voice lines, ambient sound')}
+      ${this._credit('Strategic AI', 'Build orders, army composition, scouting')}
+      ${this._credit('Technical Artist', 'Polygon budgets, rigging, shader library')}
+      ${this._credit('UI Artist', 'Icons, menus, loading screens')}
+      ${this._credit('Unit AI', 'Threat assessment, kiting, focus fire, retreat')}
+      ${this._credit('Unit Behavior', 'State machines, command queuing, formations')}
+      ${this._credit('Unit & Character Artist', '3D models for units and heroes')}
+      ${this._credit('VFX Artist', 'Explosions, projectiles, environmental effects')}
+      ${this._credit('Voice Director', 'VO production, casting, session notes')}
+
+      <div style="height:80px;"></div>
+
+      <div style="margin-bottom:40px;">
+        <h2 style="color:#00ff41;font-size:14px;letter-spacing:6px;margin-bottom:20px;">- - - - - - - - - -</h2>
+      </div>
+
+      <div style="margin-bottom:60px;">
+        <h3 style="font-size:22px;color:#ffcc00;letter-spacing:4px;text-shadow:0 0 30px rgba(255,204,0,0.4);">Cory Cowgill</h3>
+        <p style="color:#8ab4f8;font-size:14px;letter-spacing:3px;margin-top:8px;">Humble Human Director</p>
+      </div>
+
+      <div style="height:80px;"></div>
+
       <div style="margin-bottom:100vh;">
         <p style="color:#666;font-size:12px;letter-spacing:2px;">MADE WITH PASSION FOR RTS GAMES</p>
         <p style="color:#444;font-size:11px;margin-top:20px;">Special thanks to the open source community</p>
@@ -221,10 +314,27 @@ export class CreditsScreen {
     `;
   }
 
+  _cycleSpeed() {
+    if (this.speedMultiplier === 1) {
+      this.speedMultiplier = 2;
+    } else if (this.speedMultiplier === 2) {
+      this.speedMultiplier = 4;
+    } else {
+      this.speedMultiplier = 1;
+    }
+    this.scrollSpeed = this.baseSpeed * this.speedMultiplier;
+    if (this._speedBtn) {
+      this._speedBtn.textContent = this.speedMultiplier + 'x';
+    }
+  }
+
   open() {
     this._build();
     this.overlay.classList.remove('hidden');
     this.paused = false;
+    this.speedMultiplier = 1;
+    this.scrollSpeed = this.baseSpeed;
+    if (this._speedBtn) this._speedBtn.textContent = '1x';
 
     // Reset scroll position
     this.scrollContainer.style.top = '0';
@@ -233,10 +343,17 @@ export class CreditsScreen {
     // Start scrolling animation
     this._animate();
 
-    // ESC to close
+    // ESC to close, 1/2/4 for speed
     this._onKeyDown = (e) => {
       if (e.key === 'Escape') {
         this.close();
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        this.paused = !this.paused;
+      } else if (e.key === '1' || e.key === '2' || e.key === '4') {
+        this.speedMultiplier = parseInt(e.key);
+        this.scrollSpeed = this.baseSpeed * this.speedMultiplier;
+        if (this._speedBtn) this._speedBtn.textContent = this.speedMultiplier + 'x';
       }
     };
     document.addEventListener('keydown', this._onKeyDown);
