@@ -14,7 +14,53 @@ function createRNG(seed) {
 }
 
 export class Terrain {
-  constructor(game, mapTemplate = 'continental', seed = null) {
+  // Biome color palettes
+  static BIOMES = {
+    temperate: {
+      label: 'Temperate',
+      seafloor:    [0.08, 0.15, 0.25],
+      beach:       [0.76, 0.68, 0.45],
+      grassLow:    [0.25, 0.55, 0.18],
+      grassDirt:   [0.52, 0.40, 0.25],
+      grassOlive:  [0.35, 0.45, 0.20],
+      grassHigh:   [0.28, 0.52, 0.22],
+      rock:        [0.40, 0.38, 0.30],
+      shoreBlend:  [0.85, 0.82, 0.75],
+      waterShallow: 0x22aaaa,
+      waterDeep:    0x0a2244,
+      foliageColor: 0x2a6a1a,
+    },
+    desert: {
+      label: 'Desert',
+      seafloor:    [0.12, 0.10, 0.06],
+      beach:       [0.82, 0.72, 0.50],
+      grassLow:    [0.72, 0.62, 0.40],
+      grassDirt:   [0.65, 0.52, 0.32],
+      grassOlive:  [0.68, 0.58, 0.38],
+      grassHigh:   [0.60, 0.50, 0.30],
+      rock:        [0.55, 0.48, 0.35],
+      shoreBlend:  [0.90, 0.82, 0.65],
+      waterShallow: 0x1a8866,
+      waterDeep:    0x0a3322,
+      foliageColor: 0x5a7a2a,
+    },
+    arctic: {
+      label: 'Arctic',
+      seafloor:    [0.10, 0.15, 0.22],
+      beach:       [0.78, 0.80, 0.84],
+      grassLow:    [0.82, 0.85, 0.88],
+      grassDirt:   [0.62, 0.64, 0.68],
+      grassOlive:  [0.72, 0.74, 0.78],
+      grassHigh:   [0.75, 0.78, 0.82],
+      rock:        [0.50, 0.52, 0.56],
+      shoreBlend:  [0.90, 0.92, 0.96],
+      waterShallow: 0x3388aa,
+      waterDeep:    0x0a2244,
+      foliageColor: 0x2a5a3a,
+    }
+  };
+
+  constructor(game, mapTemplate = 'continental', seed = null, biome = 'temperate') {
     this.game = game;
     this.mapSize = GAME_CONFIG.mapSize;
     this.worldScale = GAME_CONFIG.worldScale;
@@ -22,6 +68,8 @@ export class Terrain {
     this.heightData = [];
     this.walkableGrid = [];
     this.mapTemplate = mapTemplate;
+    this.biome = Terrain.BIOMES[biome] ? biome : 'temperate';
+    this.biomeData = Terrain.BIOMES[this.biome];
     this.seed = seed !== null ? seed : Math.floor(Math.random() * 999999);
     this.rng = createRNG(this.seed);
     this.treePositions = [];
@@ -318,6 +366,15 @@ export class Terrain {
       }
     }
 
+    // Mark tree positions as non-walkable in pathfinding grid
+    for (const tree of this.treePositions) {
+      const tx = tree.x;
+      const tz = tree.z;
+      if (tx >= 0 && tx < this.mapSize && tz >= 0 && tz < this.mapSize) {
+        this.walkableGrid[tz][tx] = 0;
+      }
+    }
+
     // Generate cliff positions on steep terrain
     for (let z = 1; z < this.mapSize - 1; z++) {
       for (let x = 1; x < this.mapSize - 1; x++) {
@@ -328,6 +385,15 @@ export class Terrain {
         if (slope > 3 && h > 0 && this.rng() < 0.3) {
           this.cliffPositions.push({ x, z, height: h });
         }
+      }
+    }
+
+    // Mark cliff positions as non-walkable in pathfinding grid
+    for (const cliff of this.cliffPositions) {
+      const cx = cliff.x;
+      const cz = cliff.z;
+      if (cx >= 0 && cx < this.mapSize && cz >= 0 && cz < this.mapSize) {
+        this.walkableGrid[cz][cx] = 0;
       }
     }
   }
@@ -349,53 +415,57 @@ export class Terrain {
 
       positions[i * 3 + 1] = height;
 
-      // GD-106: Enhanced terrain vertex colors with noise variation
+      // Biome-aware terrain vertex colors with noise variation
       const noiseVal = this.noise2D(x, z, 0.3) * 0.08;
       const noiseVal2 = this.noise2D(x * 1.7 + 31, z * 1.7 + 47, 0.15) * 0.06;
+      const b = this.biomeData;
 
       if (height < -0.5) {
         // Underwater (hidden by water shader) - dark seafloor
-        colors[i * 3] = 0.08 + noiseVal;
-        colors[i * 3 + 1] = 0.15 + noiseVal;
-        colors[i * 3 + 2] = 0.25 + noiseVal;
+        colors[i * 3] = b.seafloor[0] + noiseVal;
+        colors[i * 3 + 1] = b.seafloor[1] + noiseVal;
+        colors[i * 3 + 2] = b.seafloor[2] + noiseVal;
       } else if (height < 0.3) {
         // Beach / sand with variation
-        colors[i * 3] = 0.76 + noiseVal;
-        colors[i * 3 + 1] = 0.68 + noiseVal2;
-        colors[i * 3 + 2] = 0.45 + noiseVal;
+        colors[i * 3] = b.beach[0] + noiseVal;
+        colors[i * 3 + 1] = b.beach[1] + noiseVal2;
+        colors[i * 3 + 2] = b.beach[2] + noiseVal;
       } else if (height < 1.5) {
-        // Grass lowland with patchy dirt
+        // Lowland with patchy variation
         const dirtBlend = this.noise2D(x * 2.3, z * 2.3, 0.4);
         if (dirtBlend > 0.6) {
-          // Dirt patches
-          colors[i * 3] = 0.4 + noiseVal;
-          colors[i * 3 + 1] = 0.3 + noiseVal2;
-          colors[i * 3 + 2] = 0.18;
+          colors[i * 3] = b.grassDirt[0] + noiseVal;
+          colors[i * 3 + 1] = b.grassDirt[1] + noiseVal2;
+          colors[i * 3 + 2] = b.grassDirt[2];
+        } else if (dirtBlend > 0.45) {
+          colors[i * 3] = b.grassOlive[0] + noiseVal;
+          colors[i * 3 + 1] = b.grassOlive[1] + noiseVal2;
+          colors[i * 3 + 2] = b.grassOlive[2];
         } else {
-          colors[i * 3] = 0.18 + noiseVal;
-          colors[i * 3 + 1] = 0.42 + noiseVal + noiseVal2;
-          colors[i * 3 + 2] = 0.12;
+          colors[i * 3] = b.grassLow[0] + noiseVal;
+          colors[i * 3 + 1] = b.grassLow[1] + noiseVal + noiseVal2;
+          colors[i * 3 + 2] = b.grassLow[2];
         }
       } else if (height < 4) {
-        // Grass highland
-        colors[i * 3] = 0.22 + noiseVal;
-        colors[i * 3 + 1] = 0.48 + noiseVal;
-        colors[i * 3 + 2] = 0.18 + noiseVal2;
+        // Highland
+        colors[i * 3] = b.grassHigh[0] + noiseVal;
+        colors[i * 3 + 1] = b.grassHigh[1] + noiseVal;
+        colors[i * 3 + 2] = b.grassHigh[2] + noiseVal2;
       } else {
         // Rocky high ground
         const rockBlend = this.noise2D(x * 3, z * 3, 0.5) * 0.1;
-        colors[i * 3] = 0.4 + rockBlend;
-        colors[i * 3 + 1] = 0.38 + rockBlend;
-        colors[i * 3 + 2] = 0.3 + rockBlend;
+        colors[i * 3] = b.rock[0] + rockBlend;
+        colors[i * 3 + 1] = b.rock[1] + rockBlend;
+        colors[i * 3 + 2] = b.rock[2] + rockBlend;
       }
 
-      // Shoreline highlight (white-ish vertices near water edge)
+      // Shoreline highlight
       if (height > -0.3 && height < 0.5) {
         const shoreBlend = 1 - Math.abs(height - 0.1) / 0.4;
         if (shoreBlend > 0) {
-          colors[i * 3] = colors[i * 3] * (1 - shoreBlend * 0.3) + 0.85 * shoreBlend * 0.3;
-          colors[i * 3 + 1] = colors[i * 3 + 1] * (1 - shoreBlend * 0.3) + 0.82 * shoreBlend * 0.3;
-          colors[i * 3 + 2] = colors[i * 3 + 2] * (1 - shoreBlend * 0.3) + 0.75 * shoreBlend * 0.3;
+          colors[i * 3] = colors[i * 3] * (1 - shoreBlend * 0.3) + b.shoreBlend[0] * shoreBlend * 0.3;
+          colors[i * 3 + 1] = colors[i * 3 + 1] * (1 - shoreBlend * 0.3) + b.shoreBlend[1] * shoreBlend * 0.3;
+          colors[i * 3 + 2] = colors[i * 3 + 2] * (1 - shoreBlend * 0.3) + b.shoreBlend[2] * shoreBlend * 0.3;
         }
       }
     }
@@ -416,8 +486,8 @@ export class Terrain {
     const waterMaterial = new THREE.ShaderMaterial({
       uniforms: {
         uTime: { value: 0 },
-        uShallowColor: { value: new THREE.Color(0x22aaaa) },
-        uDeepColor: { value: new THREE.Color(0x0a2244) },
+        uShallowColor: { value: new THREE.Color(this.biomeData.waterShallow) },
+        uDeepColor: { value: new THREE.Color(this.biomeData.waterDeep) },
         uFoamColor: { value: new THREE.Color(0xddeeff) },
         uLightDir: { value: new THREE.Vector3(0.5, 0.8, 0.3).normalize() },
         uCameraPos: { value: new THREE.Vector3() },
@@ -541,7 +611,7 @@ export class Terrain {
       const trunkGeo = new THREE.CylinderGeometry(0.15, 0.25, 2, 5);
       const trunkMat = new THREE.MeshPhongMaterial({ color: 0x5a3a1a });
       const foliageGeo = new THREE.ConeGeometry(1.2, 2.5, 6);
-      const foliageMat = new THREE.MeshPhongMaterial({ color: 0x2a6a1a });
+      const foliageMat = new THREE.MeshPhongMaterial({ color: this.biomeData.foliageColor });
 
       const count = this.treePositions.length;
       const trunkMesh = new THREE.InstancedMesh(trunkGeo, trunkMat, count);

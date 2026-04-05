@@ -26,6 +26,42 @@ export class Building extends Entity {
 
     // Nation reference for production speed bonus (set externally)
     this.nation = null;
+
+    // Footprint outline (created on first select)
+    this._footprintOutline = null;
+  }
+
+  setSelected(selected) {
+    super.setSelected(selected);
+
+    // Show/hide footprint outline on the ground
+    if (selected && !this._footprintOutline && this.mesh) {
+      this._createFootprintOutline();
+    }
+    if (this._footprintOutline) {
+      this._footprintOutline.visible = selected;
+    }
+  }
+
+  _createFootprintOutline() {
+    if (!this.mesh) return;
+    const halfSize = this.size * 1.2; // slightly larger than actual footprint
+    // Create a square outline on the ground using EdgesGeometry of a PlaneGeometry
+    const planeGeo = new THREE.PlaneGeometry(halfSize * 2, halfSize * 2);
+    const edges = new THREE.EdgesGeometry(planeGeo);
+    const lineMat = new THREE.LineBasicMaterial({
+      color: this.team === 'player' ? 0x44ff44 : 0xff4444,
+      transparent: true,
+      opacity: 0.8,
+      depthWrite: false
+    });
+    const outline = new THREE.LineSegments(edges, lineMat);
+    outline.rotation.x = -Math.PI / 2; // Lay flat on ground
+    outline.position.y = 0.25; // Slightly above ground to avoid z-fighting
+    outline.visible = false;
+    planeGeo.dispose(); // EdgesGeometry creates its own buffer
+    this.mesh.add(outline);
+    this._footprintOutline = outline;
   }
 
   canProduce(unitType) {
@@ -33,9 +69,14 @@ export class Building extends Entity {
   }
 
   queueUnit(unitType) {
-    if (this.canProduce(unitType)) {
-      this.productionQueue.push(unitType);
-    }
+    if (!this.canProduce(unitType)) return false;
+
+    // Queue limit: max 5 total (current production + queued)
+    const totalQueued = (this.currentProduction ? 1 : 0) + this.productionQueue.length;
+    if (totalQueued >= 5) return false;
+
+    this.productionQueue.push(unitType);
+    return true;
   }
 
   update(deltaTime) {
@@ -251,10 +292,10 @@ export class Building extends Entity {
               this.game.effectsManager.createSmoke(pos);
             }
             if (newState >= 2) {
-              // Fire particles: create small explosion with orange tint
+              // Spec 009: Dedicated fire effect on critically damaged buildings
               pos.x += (Math.random() - 0.5) * 3;
               pos.z += (Math.random() - 0.5) * 3;
-              this.game.effectsManager.createMuzzleFlash(pos);
+              this.game.effectsManager.createFireEffect(pos);
             }
           }
         }

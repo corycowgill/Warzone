@@ -1,6 +1,6 @@
 # Spec: Selection UX Improvements
 
-**Priority:** 8 (High -- Visual polish and usability)
+**Priority:** 8 (High-- Visual polish and usability)
 **Estimated Complexity:** Medium
 
 ## Problem
@@ -13,19 +13,19 @@ Improve selection visuals and unit status display for better battlefield readabi
 
 ## Acceptance Criteria
 
-- [ ] Selected units show a colored circle on the ground beneath them (green for friendly, red for enemy if selected)
-- [ ] Selection circles scale with unit size (larger for tanks/ships, smaller for infantry)
-- [ ] Health bars float above units, visible at all times (not just when selected)
+- [x] Selected units show a colored circle on the ground beneath them (green for friendly, red for enemy if selected)
+- [x] Selection circles scale with unit size (larger for tanks/ships, smaller for infantry)
+- [x] Health bars float above units, visible at all times (not just when selected)
   - Green when HP > 60%, yellow when 30-60%, red when < 30%
   - Health bars face camera (billboard)
   - Health bars only visible for units within a reasonable distance from camera
-- [ ] Selected building shows its footprint outline on the ground
-- [ ] Drag selection box renders as a semi-transparent rectangle (current implementation improved)
-- [ ] Double-click a unit to select all visible units of that type on screen
-- [ ] Status icons above units for: moving (arrow), attacking (sword/cross), idle (none), producing (gear)
-- [ ] Unit type label shown below health bar when zoomed in close enough
-- [ ] No console errors introduced
-- [ ] Game still loads and plays correctly
+- [x] Selected building shows its footprint outline on the ground
+- [x] Drag selection box renders as a semi-transparent rectangle (current implementation improved)
+- [x] Double-click a unit to select all visible units of that type on screen
+- [x] Status icons above units for: moving (arrow), attacking (sword/cross), idle (none), producing (gear)
+- [x] Unit type label shown below health bar when zoomed in close enough
+- [x] No console errors introduced
+- [x] Game still loads and plays correctly
 
 ## Technical Notes
 
@@ -37,7 +37,12 @@ Improve selection visuals and unit status display for better battlefield readabi
 ## Files to Modify
 
 - `js/entities/Unit.js` (selection circle, health bar mesh)
+- `js/entities/Entity.js` (health bar thresholds, type label)
 - `js/entities/Building.js` (footprint outline)
 - `js/systems/SelectionManager.js` (double-click select, improved drag box)
 - `js/rendering/SceneManager.js` (health bar rendering)
 - `js/ui/HUD.js` (status display)
+
+## Status: COMPLETE
+
+<!-- NR_OF_TRIES: 1 -->

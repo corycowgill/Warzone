@@ -33,6 +33,10 @@ export class SelectionManager {
           // Ctrl+Number: save current selection to control group
           e.preventDefault();
           this.saveControlGroup(groupIndex);
+        } else if (e.shiftKey && !e.altKey) {
+          // Shift+Number: append current selection to control group
+          e.preventDefault();
+          this.appendControlGroup(groupIndex);
         } else if (!e.altKey && !e.shiftKey) {
           // Number key alone: recall control group
           // Check for double-tap to center camera
@@ -57,12 +61,34 @@ export class SelectionManager {
     if (this.game.uiManager && this.game.uiManager.hud) {
       this.game.uiManager.hud.showNotification(`Group ${index} saved (${this.selected.length} units)`, '#00ccff');
     }
+    this.game.eventBus.emit('controlgroups:changed', { groups: this.controlGroups });
+  }
+
+  appendControlGroup(index) {
+    // Append current selection to existing control group (no duplicates)
+    if (this.selected.length === 0) return;
+    const existing = this.controlGroups[index];
+    let added = 0;
+    for (const entity of this.selected) {
+      if (!existing.includes(entity)) {
+        existing.push(entity);
+        added++;
+      }
+    }
+    if (this.game.uiManager && this.game.uiManager.hud) {
+      this.game.uiManager.hud.showNotification(`Added ${added} units to Group ${index}`, '#00ccff');
+    }
+    this.game.eventBus.emit('controlgroups:changed', { groups: this.controlGroups });
   }
 
   recallControlGroup(index) {
     // Filter out dead entities
+    const before = this.controlGroups[index].length;
     this.controlGroups[index] = this.controlGroups[index].filter(e => e.alive);
     const group = this.controlGroups[index];
+    if (before !== group.length) {
+      this.game.eventBus.emit('controlgroups:changed', { groups: this.controlGroups });
+    }
     if (group.length === 0) return;
     this.selectEntities(group);
   }

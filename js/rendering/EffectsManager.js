@@ -486,13 +486,20 @@ export class EffectsManager {
     });
   }
 
-  // GD-065: Projectile trail line
-  createProjectileTrail(from, to) {
+  // GD-065: Projectile trail line (enhanced with trail types)
+  createProjectileTrail(from, to, trailType) {
+    trailType = trailType || 'bullet';
+    const colorMap = {
+      bullet: 0xffee44, shell: 0xff8800, laser: 0x00ff44,
+      artillery: 0xff4400, torpedo: 0xaaddff
+    };
+    const color = colorMap[trailType] || 0xffcc44;
+
     const points = [from.clone(), to.clone()];
     points[0].y += 2;
     points[1].y += 2;
     const geo = new THREE.BufferGeometry().setFromPoints(points);
-    const mat = new THREE.LineBasicMaterial({ color: 0xffcc44, transparent: true, opacity: 0.8 });
+    const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: trailType === 'bullet' ? 1.0 : 0.8 });
     const line = new THREE.Line(geo, mat);
     this.scene.add(line);
 
@@ -501,9 +508,198 @@ export class EffectsManager {
       group: line,
       material: mat,
       geometry: geo,
-      lifetime: 0.2,
+      lifetime: trailType === 'laser' ? 0.1 : 0.2,
       elapsed: 0
     });
+
+    // Extra smoke puffs for artillery/shell trails
+    if (trailType === 'artillery' || trailType === 'shell') {
+      const dir = new THREE.Vector3().subVectors(to, from);
+      const puffCount = trailType === 'artillery' ? 4 : 3;
+      for (let i = 0; i < puffCount; i++) {
+        const t = (i + 1) / (puffCount + 1);
+        const pos = from.clone().addScaledVector(dir, t);
+        pos.y += 2 + Math.random();
+        const sprite = this._getPooledSprite(this._smokeTexture, 0x777777, 0.5 + Math.random() * 0.4);
+        sprite.position.copy(pos);
+        sprite.userData.velocity = new THREE.Vector3(
+          (Math.random() - 0.5) * 1, 0.5 + Math.random(), (Math.random() - 0.5) * 1
+        );
+        sprite.userData.isPooled = true;
+        this.scene.add(sprite);
+        this.activeEffects.push({
+          type: 'trailPuff',
+          group: sprite,
+          particles: [sprite],
+          lifetime: 0.4,
+          elapsed: 0
+        });
+      }
+    }
+
+    // Wake sprites for torpedo trails
+    if (trailType === 'torpedo') {
+      const dir = new THREE.Vector3().subVectors(to, from);
+      for (let i = 0; i < 3; i++) {
+        const t = (i + 1) / 4;
+        const pos = from.clone().addScaledVector(dir, t);
+        pos.y = 0.5;
+        const sprite = this._getPooledSprite(this._sparkTexture, 0xccddff, 0.4);
+        sprite.position.copy(pos);
+        sprite.userData.velocity = new THREE.Vector3(0, 0.3, 0);
+        sprite.userData.isPooled = true;
+        this.scene.add(sprite);
+        this.activeEffects.push({
+          type: 'trailPuff',
+          group: sprite,
+          particles: [sprite],
+          lifetime: 0.3,
+          elapsed: 0
+        });
+      }
+    }
+  }
+
+  // Impact effect at hit location based on projectile trail type
+  createImpactEffect(position, impactType) {
+    impactType = impactType || 'bullet';
+    const group = new THREE.Group();
+    group.position.copy(position);
+    const particles = [];
+
+    if (impactType === 'bullet') {
+      // 3 tiny yellow sparks + tiny dust puff
+      for (let i = 0; i < 3; i++) {
+        const sprite = this._getPooledSprite(this._sparkTexture, 0xffee44, 0.2 + Math.random() * 0.15);
+        sprite.userData.velocity = new THREE.Vector3(
+          (Math.random() - 0.5) * 6, Math.random() * 4 + 1, (Math.random() - 0.5) * 6
+        );
+        sprite.userData.isPooled = true;
+        group.add(sprite);
+        particles.push(sprite);
+      }
+      // dust puff
+      const dust = this._getPooledSprite(this._smokeTexture, 0xbbaa88, 0.4);
+      dust.userData.velocity = new THREE.Vector3(0, 1, 0);
+      dust.userData.isPooled = true;
+      group.add(dust);
+      particles.push(dust);
+      this.scene.add(group);
+      this.activeEffects.push({ type: 'explosion', group, particles, lifetime: 0.2, elapsed: 0 });
+
+    } else if (impactType === 'shell') {
+      // Small explosion: 5 fire sprites + dust cloud
+      for (let i = 0; i < 5; i++) {
+        const sprite = this._getPooledSprite(this._fireTexture, Math.random() > 0.5 ? 0xff6600 : 0xffaa00, 0.5 + Math.random() * 0.5);
+        sprite.userData.velocity = new THREE.Vector3(
+          (Math.random() - 0.5) * 5, Math.random() * 4 + 2, (Math.random() - 0.5) * 5
+        );
+        sprite.userData.isPooled = true;
+        group.add(sprite);
+        particles.push(sprite);
+      }
+      const dust = this._getPooledSprite(this._smokeTexture, 0x998877, 0.8);
+      dust.userData.velocity = new THREE.Vector3(0, 1.5, 0);
+      dust.userData.isPooled = true;
+      group.add(dust);
+      particles.push(dust);
+      this.scene.add(group);
+      this.activeEffects.push({ type: 'explosion', group, particles, lifetime: 0.4, elapsed: 0 });
+
+    } else if (impactType === 'artillery') {
+      // Medium explosion: 10 fire + 5 dirt chunks + scorch mark
+      for (let i = 0; i < 10; i++) {
+        const sprite = this._getPooledSprite(this._fireTexture, Math.random() > 0.3 ? 0xff4400 : 0xffcc00, 0.6 + Math.random() * 0.8);
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 3 + Math.random() * 6;
+        sprite.userData.velocity = new THREE.Vector3(
+          Math.cos(angle) * speed, Math.random() * 5 + 3, Math.sin(angle) * speed
+        );
+        sprite.userData.isPooled = true;
+        group.add(sprite);
+        particles.push(sprite);
+      }
+      for (let i = 0; i < 5; i++) {
+        const sprite = this._getPooledSprite(this._smokeTexture, 0x665533, 0.3 + Math.random() * 0.3);
+        sprite.userData.velocity = new THREE.Vector3(
+          (Math.random() - 0.5) * 8, Math.random() * 6 + 2, (Math.random() - 0.5) * 8
+        );
+        sprite.userData.isPooled = true;
+        group.add(sprite);
+        particles.push(sprite);
+      }
+      this.scene.add(group);
+      this.activeEffects.push({ type: 'explosion', group, particles, lifetime: 0.6, elapsed: 0 });
+      this.createScorchMark(position);
+
+    } else if (impactType === 'laser') {
+      // Green flash sprite
+      const flash = this._getPooledSprite(this._sparkTexture, 0x00ff44, 1.0);
+      flash.userData.velocity = new THREE.Vector3(0, 0, 0);
+      flash.userData.isPooled = true;
+      group.add(flash);
+      particles.push(flash);
+      this.scene.add(group);
+      this.activeEffects.push({ type: 'explosion', group, particles, lifetime: 0.15, elapsed: 0 });
+
+    } else if (impactType === 'torpedo') {
+      // Water splash: white sprites moving up then falling
+      for (let i = 0; i < 6; i++) {
+        const sprite = this._getPooledSprite(this._sparkTexture, 0xccddff, 0.4 + Math.random() * 0.3);
+        const angle = Math.random() * Math.PI * 2;
+        sprite.userData.velocity = new THREE.Vector3(
+          Math.cos(angle) * 2, 4 + Math.random() * 3, Math.sin(angle) * 2
+        );
+        sprite.userData.isPooled = true;
+        group.add(sprite);
+        particles.push(sprite);
+      }
+      this.scene.add(group);
+      this.activeEffects.push({ type: 'explosion', group, particles, lifetime: 0.5, elapsed: 0 });
+    }
+  }
+
+  // Construction sparks: 2-3 small orange sparks at building position + random offset
+  createConstructionSparks(position) {
+    const group = new THREE.Group();
+    group.position.copy(position);
+    const particles = [];
+    const count = 2 + Math.floor(Math.random() * 2);
+    for (let i = 0; i < count; i++) {
+      const sprite = this._getPooledSprite(this._sparkTexture, 0xff8800, 0.2 + Math.random() * 0.2);
+      sprite.position.set(
+        (Math.random() - 0.5) * 4,
+        Math.random() * 3 + 1,
+        (Math.random() - 0.5) * 4
+      );
+      sprite.userData.velocity = new THREE.Vector3(
+        (Math.random() - 0.5) * 3, 1 + Math.random() * 2, (Math.random() - 0.5) * 3
+      );
+      sprite.userData.isPooled = true;
+      group.add(sprite);
+      particles.push(sprite);
+    }
+    this.scene.add(group);
+    this.activeEffects.push({ type: 'explosion', group, particles, lifetime: 0.4, elapsed: 0 });
+  }
+
+  // Dust puff on construction completion
+  createConstructionDust(position) {
+    const group = new THREE.Group();
+    group.position.copy(position);
+    const particles = [];
+    for (let i = 0; i < 5; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const sprite = this._getPooledSprite(this._smokeTexture, 0xbbaa77, 0.6 + Math.random() * 0.5);
+      sprite.userData.velocity = new THREE.Vector3(
+        Math.cos(angle) * 2, 1 + Math.random() * 1.5, Math.sin(angle) * 2
+      );
+      sprite.userData.isPooled = true;
+      group.add(sprite);
+      particles.push(sprite);
+    }
+    this.scene.add(group);
+    this.activeEffects.push({ type: 'smoke', group, particles, lifetime: 0.8, elapsed: 0 });
   }
 
   // GD-065: Debris on building destruction
@@ -634,6 +830,135 @@ export class EffectsManager {
     this._moveMarkerPool.push(effect);
   }
 
+  // Spec 009: Dedicated fire effect for critically damaged buildings
+  // Orange/red flickering particles that rise slowly and fade (0.5-1s lifetime)
+  createFireEffect(position) {
+    const group = new THREE.Group();
+    group.position.copy(position);
+    const particles = [];
+
+    const count = 5 + Math.floor(Math.random() * 4); // 5-8 particles
+    for (let i = 0; i < count; i++) {
+      const color = Math.random() > 0.5 ? 0xff4400 : 0xff6600;
+      const size = 0.4 + Math.random() * 0.6;
+      const sprite = this._getPooledSprite(this._fireTexture, color, size);
+      sprite.position.set(
+        (Math.random() - 0.5) * 2,
+        Math.random() * 1.5,
+        (Math.random() - 0.5) * 2
+      );
+      sprite.userData.velocity = new THREE.Vector3(
+        (Math.random() - 0.5) * 1.5,
+        1.5 + Math.random() * 2, // rise slowly
+        (Math.random() - 0.5) * 1.5
+      );
+      sprite.userData.isPooled = true;
+      sprite.userData.flickerPhase = Math.random() * Math.PI * 2; // random flicker offset
+      group.add(sprite);
+      particles.push(sprite);
+    }
+
+    this.scene.add(group);
+    this.activeEffects.push({
+      type: 'fire',
+      group,
+      particles,
+      lifetime: 0.5 + Math.random() * 0.5, // 0.5-1.0s
+      elapsed: 0
+    });
+  }
+
+  // Spec 009: Larger death explosion (40-50 particles) for unit/building destruction
+  createDeathExplosion(position) {
+    const group = new THREE.Group();
+    group.position.copy(position);
+    const particles = [];
+
+    // Fire particles: 40-50, bigger radius than regular explosion
+    const fireCount = 40 + Math.floor(Math.random() * 11);
+    for (let i = 0; i < fireCount; i++) {
+      const size = 1.2 + Math.random() * 2.0;
+      const sprite = this._getPooledSprite(
+        this._fireTexture,
+        Math.random() > 0.3 ? 0xff4400 : 0xffcc00,
+        size
+      );
+      const angle = Math.random() * Math.PI * 2;
+      const elevation = (Math.random() - 0.3) * Math.PI;
+      const speed = 6 + Math.random() * 14; // bigger spread
+      sprite.userData.velocity = new THREE.Vector3(
+        Math.cos(angle) * Math.cos(elevation) * speed,
+        Math.sin(elevation) * speed + 7,
+        Math.sin(angle) * Math.cos(elevation) * speed
+      );
+      sprite.userData.isPooled = true;
+      group.add(sprite);
+      particles.push(sprite);
+    }
+
+    // Heavier smoke cloud
+    const smokeCount = 12;
+    for (let i = 0; i < smokeCount; i++) {
+      const size = 2.0 + Math.random() * 2.5;
+      const sprite = this._getPooledSprite(this._smokeTexture, 0x222222, size);
+      sprite.userData.velocity = new THREE.Vector3(
+        (Math.random() - 0.5) * 4,
+        2.5 + Math.random() * 4,
+        (Math.random() - 0.5) * 4
+      );
+      sprite.userData.isPooled = true;
+      sprite.userData.isSmoke = true;
+      group.add(sprite);
+      particles.push(sprite);
+    }
+
+    this.scene.add(group);
+    this.activeEffects.push({
+      type: 'explosion',
+      group,
+      particles,
+      lifetime: 1.0,
+      elapsed: 0
+    });
+
+    this.createScorchMark(position);
+  }
+
+  // Spec 009: Water splash for projectiles/units entering water
+  // Blue/white particles that spray upward and fall back down
+  createWaterSplash(position) {
+    const group = new THREE.Group();
+    group.position.copy(position);
+    group.position.y = Math.max(group.position.y, 0.2); // at water surface
+    const particles = [];
+
+    const count = 8 + Math.floor(Math.random() * 5); // 8-12 particles
+    for (let i = 0; i < count; i++) {
+      const color = Math.random() > 0.4 ? 0xaaddff : 0xffffff;
+      const size = 0.3 + Math.random() * 0.4;
+      const sprite = this._getPooledSprite(this._sparkTexture, color, size);
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 2 + Math.random() * 3;
+      sprite.userData.velocity = new THREE.Vector3(
+        Math.cos(angle) * speed,
+        5 + Math.random() * 4, // spray upward
+        Math.sin(angle) * speed
+      );
+      sprite.userData.isPooled = true;
+      group.add(sprite);
+      particles.push(sprite);
+    }
+
+    this.scene.add(group);
+    this.activeEffects.push({
+      type: 'explosion', // reuse explosion update logic (gravity + fade)
+      group,
+      particles,
+      lifetime: 0.6,
+      elapsed: 0
+    });
+  }
+
   createDamageVignette() {
     // Create a full-screen red border flash using CSS overlay
     if (this._vignetteEl) return; // already active
@@ -748,6 +1073,27 @@ export class EffectsManager {
             particle.rotation.z += particle.userData.rotSpeed.z * delta;
           }
           particle.material.opacity = 1.0 - progress;
+        }
+      } else if (effect.type === 'trailPuff') {
+        // Fade and expand small trail puffs
+        for (const p of effect.particles) {
+          p.position.addScaledVector(p.userData.velocity, delta);
+          p.material.opacity = 0.7 * (1.0 - progress);
+          const s = 1.0 + progress;
+          p.scale.set(s, s, s);
+        }
+      } else if (effect.type === 'fire') {
+        // Spec 009: Flickering fire particles rise and fade
+        for (const particle of effect.particles) {
+          particle.position.addScaledVector(particle.userData.velocity, delta);
+          // Flicker: oscillate opacity for fire feel
+          const flicker = 0.5 + 0.5 * Math.sin((effect.elapsed * 12) + (particle.userData.flickerPhase || 0));
+          particle.material.opacity = flicker * (1.0 - progress);
+          // Color shift between orange and red
+          const t = 0.5 + 0.5 * Math.sin(effect.elapsed * 8 + (particle.userData.flickerPhase || 0));
+          particle.material.color.setRGB(1.0, 0.2 + t * 0.4, 0.0);
+          const scale = 0.8 + progress * 0.6;
+          particle.scale.set(scale, scale, scale);
         }
       } else if (effect.type === 'scorch') {
         // GD-129: Fade scorch marks over time

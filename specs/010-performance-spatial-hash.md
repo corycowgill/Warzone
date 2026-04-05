@@ -48,3 +48,8 @@ Implement spatial partitioning and an entity manager for efficient queries.
 - `js/systems/CombatSystem.js` (use spatial queries)
 - `js/systems/SelectionManager.js` (use spatial queries)
 - `js/entities/Projectile.js` (object pooling)
+
+## Audit (2026-04-05)
+**Status: INCOMPLETE** — SpatialHash class fully implemented with all methods. EntityManager class exists but is orphaned (not integrated into Game.js). Game.js still uses raw this.entities[] array with manual caching. CombatSystem uses spatialGrid for target acquisition. Missing: EntityManager integration, SelectionManager spatial queries, Vector3 pooling. Projectile mesh pooling works (pool size 300).
+
+<!-- NR_OF_TRIES: 0 -->

@@ -38,72 +38,85 @@ export class CombatSystem {
     // GD-075: Clear committed damage from previous frame - it only matters within a single update pass
     this._committedDamage.clear();
 
-    const allUnits = this.game.entities.filter(e => e.isUnit && e.alive);
+    // Performance: use cached unit lists instead of filter() every frame
+    const playerUnits = this.game.getUnits('player');
+    const enemyUnits = this.game.getUnits('enemy');
     const camera = this.game.sceneManager.camera;
 
-    for (const unit of allUnits) {
-      // Skip garrisoned, EMP-disabled, and retreating units
-      if (unit.isGarrisoned) continue;
-      if (unit.empDisabledTimer > 0) continue;
-      if (unit.isRetreating) continue;
+    // Iterate both teams' units without allocating a merged array
+    for (let ti = 0; ti < 2; ti++) {
+      const units = ti === 0 ? playerUnits : enemyUnits;
+      for (let ui = 0, ulen = units.length; ui < ulen; ui++) {
+        const unit = units[ui];
+        // Skip garrisoned, EMP-disabled, and retreating units
+        if (unit.isGarrisoned) continue;
+        if (unit.empDisabledTimer > 0) continue;
+        if (unit.isRetreating) continue;
 
-      // Handle combat for units with attack targets
-      if (unit.attackTarget) {
-        if (!unit.attackTarget.alive) {
-          unit.attackTarget = null;
-          // Find new target nearby
-          this.autoAcquireTarget(unit);
-          continue;
-        }
-
-        // Check if in range and can fire
-        if (unit.isInRange(unit.attackTarget) && unit.canAttack()) {
-          this.performAttack(unit, unit.attackTarget);
-        }
-      } else {
-        // Auto-acquire nearest enemy in range
-        this.autoAcquireTarget(unit);
-      }
-    }
-
-    // Handle APC garrisoned infantry firing
-    const apcs = allUnits.filter(u => u.type === 'apc' && u.garrisoned && u.garrisoned.length > 0);
-    for (const apc of apcs) {
-      if (!apc.attackTarget || !apc.attackTarget.alive) continue;
-      const dist = apc.distanceTo(apc.attackTarget);
-      // Garrisoned infantry fire at 50% of infantry range
-      const garrisonRange = (UNIT_STATS.infantry?.range || 6) * 3 * 0.5;
-      if (dist <= garrisonRange) {
-        // Each garrisoned infantry adds damage
-        for (const inf of apc.garrisoned) {
-          if (!inf.alive) continue;
-          if (inf.attackCooldown > 0) {
-            inf.attackCooldown -= delta;
+        // Handle combat for units with attack targets
+        if (unit.attackTarget) {
+          if (!unit.attackTarget.alive) {
+            unit.attackTarget = null;
+            // Find new target nearby
+            this.autoAcquireTarget(unit);
             continue;
           }
-          const infDmg = Math.max(1, (UNIT_STATS.infantry?.damage || 8) * 0.5);
-          apc.attackTarget.takeDamage(infDmg);
-          inf.attackCooldown = 1 / (UNIT_STATS.infantry?.attackRate || 1.5);
-          if (!apc.attackTarget.alive) {
-            if (inf.addKill) inf.addKill();
-            this.game.eventBus.emit('combat:kill', { attacker: inf, defender: apc.attackTarget });
-            apc.attackTarget = null;
-            break;
+
+          // Check if in range and can fire
+          if (unit.isInRange(unit.attackTarget) && unit.canAttack()) {
+            this.performAttack(unit, unit.attackTarget);
+          }
+        } else {
+          // Auto-acquire nearest enemy in range
+          this.autoAcquireTarget(unit);
+        }
+      }
+    }
+
+    // Handle APC garrisoned infantry firing — iterate cached lists instead of filter
+    for (let ti = 0; ti < 2; ti++) {
+      const units = ti === 0 ? playerUnits : enemyUnits;
+      for (let ui = 0, ulen = units.length; ui < ulen; ui++) {
+        const apc = units[ui];
+        if (apc.type !== 'apc' || !apc.garrisoned || apc.garrisoned.length === 0) continue;
+        if (!apc.attackTarget || !apc.attackTarget.alive) continue;
+        const dist = apc.distanceTo(apc.attackTarget);
+        const garrisonRange = (UNIT_STATS.infantry?.range || 6) * 3 * 0.5;
+        if (dist <= garrisonRange) {
+          for (const inf of apc.garrisoned) {
+            if (!inf.alive) continue;
+            if (inf.attackCooldown > 0) {
+              inf.attackCooldown -= delta;
+              continue;
+            }
+            const infDmg = Math.max(1, (UNIT_STATS.infantry?.damage || 8) * 0.5);
+            apc.attackTarget.takeDamage(infDmg);
+            inf.attackCooldown = 1 / (UNIT_STATS.infantry?.attackRate || 1.5);
+            if (!apc.attackTarget.alive) {
+              if (inf.addKill) inf.addKill();
+              this.game.eventBus.emit('combat:kill', { attacker: inf, defender: apc.attackTarget });
+              apc.attackTarget = null;
+              break;
+            }
           }
         }
       }
     }
 
-    // Handle turret attacks (buildings with isTurret flag)
-    const turrets = this.game.entities.filter(e => e.isBuilding && e.isTurret && e.alive);
-    for (const turret of turrets) {
-      if (turret.attackTarget) {
-        if (!turret.attackTarget.alive) {
-          turret.attackTarget = null;
-          continue;
-        }
-        if (turret.isInRange(turret.attackTarget) && turret.canAttack()) {
-          this.performTurretAttack(turret, turret.attackTarget);
+    // Handle turret attacks — iterate cached building lists instead of filter
+    for (let ti = 0; ti < 2; ti++) {
+      const buildings = ti === 0 ? this.game.getBuildings('player') : this.game.getBuildings('enemy');
+      for (let bi = 0, blen = buildings.length; bi < blen; bi++) {
+        const turret = buildings[bi];
+        if (!turret.isTurret) continue;
+        if (turret.attackTarget) {
+          if (!turret.attackTarget.alive) {
+            turret.attackTarget = null;
+            continue;
+          }
+          if (turret.isInRange(turret.attackTarget) && turret.canAttack()) {
+            this.performTurretAttack(turret, turret.attackTarget);
+          }
         }
       }
     }
@@ -172,9 +185,11 @@ export class CombatSystem {
     let ditchMod = 1.0;
     if (defender.isUnit && defender.domain === 'land') {
       const dPos = defender.getPosition();
-      for (const entity of this.game.entities) {
-        if (!entity.alive || entity.type !== 'ditch' || entity.team !== defender.team) continue;
-        const dist = entity.getPosition().distanceTo(dPos);
+      const ditches = this.game.getDitches(defender.team);
+      for (let di = 0, dlen = ditches.length; di < dlen; di++) {
+        const ditch = ditches[di];
+        if (!ditch.alive) continue;
+        const dist = ditch.getPosition().distanceTo(dPos);
         if (dist < 6) { ditchMod = 0.5; break; }
       }
     }
@@ -203,7 +218,18 @@ export class CombatSystem {
     // GD-125: Retreating units take -25% damage
     const retreatMod = (defender.isUnit && defender.isRetreating) ? 0.75 : 1.0;
 
-    const finalDmg = Math.max(1, baseDmg * modifier * armorReduction * terrainMod * ditchMod * banzaiMod * forestMod * cmdDmgMod * retreatMod);
+    // Kids mode / difficulty damage scaling
+    let difficultyMod = 1.0;
+    const diffConfig = this.game._difficultyConfig;
+    if (diffConfig) {
+      if (attacker.team === 'enemy' && diffConfig.aiDamageMult) {
+        difficultyMod = diffConfig.aiDamageMult;
+      } else if (attacker.team === 'player' && diffConfig.playerDamageMult) {
+        difficultyMod = diffConfig.playerDamageMult;
+      }
+    }
+
+    const finalDmg = Math.max(1, baseDmg * modifier * armorReduction * terrainMod * ditchMod * banzaiMod * forestMod * cmdDmgMod * retreatMod * difficultyMod);
 
     // GD-075: Track committed damage for overkill protection
     this.addCommittedDamage(defender, finalDmg);
@@ -259,11 +285,23 @@ export class CombatSystem {
     const projectile = new Projectile(attacker, defender, 0, 80);
     this.game.addProjectile(projectile);
 
+    // Determine impact type from attacker type
+    const _impactType = this._getImpactType(attacker);
+
+    // Create impact effect at defender position
+    if (this.game.effectsManager) {
+      this.game.effectsManager.createImpactEffect(defenderPos.clone(), _impactType);
+      // Spec 009: Water splash when projectile hits water terrain
+      if (this.game.terrain && this.game.terrain.isWater(defenderPos.x, defenderPos.z)) {
+        this.game.effectsManager.createWaterSplash(defenderPos.clone());
+      }
+    }
+
     // Create muzzle flash effect
     if (this.game.effectsManager) {
       this.game.effectsManager.createMuzzleFlash(attackerPos);
-      // GD-065: Projectile trail
-      this.game.effectsManager.createProjectileTrail(attackerPos, defenderPos);
+      // GD-065: Projectile trail (enhanced with trail type)
+      this.game.effectsManager.createProjectileTrail(attackerPos, defenderPos, _impactType);
     }
 
     // GD-108: Trigger recoil animation
@@ -365,14 +403,24 @@ export class CombatSystem {
     let ditchMod = 1.0;
     if (defender.isUnit && defender.domain === 'land') {
       const dPos = defender.getPosition();
-      for (const entity of this.game.entities) {
-        if (!entity.alive || entity.type !== 'ditch' || entity.team !== defender.team) continue;
-        const dist = entity.getPosition().distanceTo(dPos);
+      const ditches = this.game.getDitches(defender.team);
+      for (let di = 0, dlen = ditches.length; di < dlen; di++) {
+        const ditch = ditches[di];
+        if (!ditch.alive) continue;
+        const dist = ditch.getPosition().distanceTo(dPos);
         if (dist < 6) { ditchMod = 0.5; break; }
       }
     }
 
-    const finalDmg = Math.max(1, baseDmg * modifier * armorReduction * terrainMod * ditchMod);
+    // Kids mode / difficulty damage scaling for turrets
+    let tDiffMod = 1.0;
+    const tDiffConfig = this.game._difficultyConfig;
+    if (tDiffConfig) {
+      if (turret.team === 'enemy' && tDiffConfig.aiDamageMult) tDiffMod = tDiffConfig.aiDamageMult;
+      else if (turret.team === 'player' && tDiffConfig.playerDamageMult) tDiffMod = tDiffConfig.playerDamageMult;
+    }
+
+    const finalDmg = Math.max(1, baseDmg * modifier * armorReduction * terrainMod * ditchMod * tDiffMod);
 
     defender.takeDamage(finalDmg);
     turret.attackCooldown = 1 / turret.attackRate;
@@ -391,6 +439,17 @@ export class CombatSystem {
     // Projectile visual
     const projectile = new Projectile(turret, defender, 0, 100);
     this.game.addProjectile(projectile);
+
+    // Impact effect at defender position
+    if (this.game.effectsManager) {
+      const turretImpact = turret.type === 'aaturret' ? 'bullet' : 'shell';
+      const defPos = defender.getPosition().clone();
+      this.game.effectsManager.createImpactEffect(defPos, turretImpact);
+      // Spec 009: Water splash when projectile hits water terrain
+      if (this.game.terrain && this.game.terrain.isWater(defPos.x, defPos.z)) {
+        this.game.effectsManager.createWaterSplash(defPos.clone());
+      }
+    }
 
     if (this.game.effectsManager) {
       this.game.effectsManager.createMuzzleFlash(turret.getPosition());
@@ -570,7 +629,7 @@ export class CombatSystem {
     for (let salvo = 0; salvo < ab.salvos; salvo++) {
       const timeoutId = setTimeout(() => {
         if (!unit.alive || this.game.state !== 'PLAYING') return;
-        const offset = new THREE.Vector3((Math.random() - 0.5) * 4, 0, (Math.random() - 0.5) * 4);
+        const offset = new THREE.Vector3((this.game.rng.next() - 0.5) * 4, 0, (this.game.rng.next() - 0.5) * 4);
         const impactPos = targetPos.clone().add(offset);
         for (const enemy of this.game.getEntitiesByTeam(enemyTeam)) {
           if (!enemy.alive) continue;
@@ -752,6 +811,25 @@ export class CombatSystem {
     return success;
   }
 
+  // Determine impact/trail type from attacker unit type
+  _getImpactType(attacker) {
+    if (!attacker || !attacker.type) return 'bullet';
+    switch (attacker.type) {
+      case 'infantry': case 'scoutcar': case 'apc': case 'aahalftrack':
+        return 'bullet';
+      case 'tank': case 'heavytank': case 'battleship':
+        return 'shell';
+      case 'drone': case 'plane':
+        return 'laser';
+      case 'bomber': case 'spg': case 'mortar':
+        return 'artillery';
+      case 'submarine': case 'patrolboat':
+        return 'torpedo';
+      default:
+        return 'bullet';
+    }
+  }
+
   autoAcquireTarget(unit) {
     // Hold fire stance: never auto-acquire targets
     if (unit.stance === 'holdfire') return;
@@ -766,7 +844,10 @@ export class CombatSystem {
     const enemyTeam = ownTeam === 'player' ? 'enemy' : 'player';
     const autoRange = unit.range * 3; // Auto-acquire range in world units
 
-    const enemies = this.game.getEntitiesByTeam(enemyTeam);
+    // Performance: use spatial grid for O(1) range query instead of scanning all enemies
+    const pos = unit.getPosition();
+    const nearby = this.game.spatialGrid.query(pos.x, pos.z, autoRange);
+
     let nearestEnemy = null;
     let nearestDist = Infinity;
 
@@ -776,7 +857,9 @@ export class CombatSystem {
     // Get unit stats for special targeting rules
     const unitStats = UNIT_STATS[unit.type];
 
-    for (const enemy of enemies) {
+    for (let i = 0, len = nearby.length; i < len; i++) {
+      const enemy = nearby[i];
+      if (enemy.team === ownTeam) continue;
       if (!enemy.alive) continue;
       if (enemy.isGarrisoned) continue;
 
@@ -804,7 +887,7 @@ export class CombatSystem {
       const committedDmg = this.getCommittedDamage(enemy);
       if (enemy.health - committedDmg <= 0) continue;
 
-      if (dist <= autoRange && dist < nearestDist) {
+      if (dist < nearestDist) {
         nearestDist = dist;
         nearestEnemy = enemy;
       }

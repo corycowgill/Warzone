@@ -1,6 +1,7 @@
 import { NATIONS, CHALLENGE_SCENARIOS } from '../core/Constants.js';
 import { HUD } from './HUD.js';
 import { GameOverScreen } from './GameOverScreen.js';
+import { CreditsScreen } from './CreditsScreen.js';
 
 export class UIManager {
   constructor(game) {
@@ -20,6 +21,7 @@ export class UIManager {
     this.selectedDifficulty = 'normal';
     this.selectedMap = 'continental';
     this.selectedGameMode = 'annihilation';
+    this.selectedBiome = 'temperate';
 
     this.setupEventListeners();
   }
@@ -34,6 +36,63 @@ export class UIManager {
     document.getElementById('btn-2player')?.addEventListener('click', () => {
       this.game.mode = '2P';
       this.showNationSelect();
+    });
+
+    document.getElementById('btn-tutorial')?.addEventListener('click', () => {
+      this.hideAll();
+      this.game.startGame({
+        mode: '1P',
+        playerNation: 'america',
+        enemyNation: 'germany',
+        difficulty: 'easy',
+        mapTemplate: 'plains',
+        gameMode: 'tutorial'
+      });
+    });
+
+    // New menu buttons
+    document.getElementById('btn-campaign')?.addEventListener('click', () => {
+      if (this.game.campaignManager) {
+        this.game.campaignManager.showCampaignMenu();
+      } else {
+        this._showComingSoon('Campaign mode is loading...');
+      }
+    });
+
+    document.getElementById('btn-multiplayer')?.addEventListener('click', () => {
+      if (this.game.networkManager) {
+        this.game.networkManager.showLobby();
+      } else {
+        this._showComingSoon('Multiplayer is loading...');
+      }
+    });
+
+    document.getElementById('btn-map-editor')?.addEventListener('click', () => {
+      if (this.game.mapEditor) {
+        this.game.mapEditor.open();
+      } else {
+        this._showComingSoon('Map Editor is loading...');
+      }
+    });
+
+    document.getElementById('btn-replays')?.addEventListener('click', () => {
+      if (this.game.replaySystem) {
+        this.game.replaySystem.showBrowser();
+      } else {
+        this._showComingSoon('Replay system is loading...');
+      }
+    });
+
+    document.getElementById('btn-settings-menu')?.addEventListener('click', () => {
+      if (this.game.settingsUI) {
+        this.game.settingsUI.open();
+      }
+    });
+
+    // Credits screen
+    this._creditsScreen = new CreditsScreen();
+    document.getElementById('btn-credits')?.addEventListener('click', () => {
+      this._creditsScreen.open();
     });
 
     document.getElementById('btn-spectate')?.addEventListener('click', () => {
@@ -126,6 +185,7 @@ export class UIManager {
 
     // Difficulty selection buttons
     const difficultyDescs = {
+      kids: 'Super easy! Your units are nearly invincible. Perfect for young players.',
       easy: 'Relaxed AI with slower build-up and weaker attacks.',
       normal: 'Standard AI with varied strategies and smart targeting.',
       hard: 'Aggressive AI with resource bonuses and relentless pressure.'
@@ -177,6 +237,32 @@ export class UIManager {
         btn.style.boxShadow = '0 0 10px rgba(0,255,65,0.2)';
         const descEl = document.getElementById('map-desc');
         if (descEl) descEl.textContent = mapDescs[map] || '';
+      });
+    });
+
+    // Biome selection buttons
+    const biomeDescs = {
+      temperate: 'Green grass and blue water.',
+      desert: 'Sandy dunes with oasis water.',
+      arctic: 'Snow and ice with frigid waters.'
+    };
+    document.querySelectorAll('.biome-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const biome = btn.dataset.biome;
+        if (!biome) return;
+        this.selectedBiome = biome;
+        document.querySelectorAll('.biome-btn').forEach(b => {
+          b.classList.remove('selected');
+          b.style.background = 'rgba(22,33,62,0.6)';
+          b.style.borderColor = 'rgba(255,255,255,0.08)';
+          b.style.boxShadow = 'none';
+        });
+        btn.classList.add('selected');
+        btn.style.background = 'rgba(0,255,65,0.1)';
+        btn.style.borderColor = '#00ff41';
+        btn.style.boxShadow = '0 0 10px rgba(0,255,65,0.2)';
+        const descEl = document.getElementById('biome-desc');
+        if (descEl) descEl.textContent = biomeDescs[biome] || '';
       });
     });
 
@@ -260,10 +346,18 @@ export class UIManager {
       this.game.saveMatchHistory(false);
     });
 
+    // Save/Load buttons in pause menu
+    this._setupSaveLoadUI();
+
     // Options panel
     this.optionsPanel = document.getElementById('options-panel');
     document.getElementById('btn-options')?.addEventListener('click', () => {
-      this.toggleOptions();
+      // Use new settings UI if available, fall back to old options panel
+      if (this.game.settingsUI) {
+        this.game.settingsUI.toggle();
+      } else {
+        this.toggleOptions();
+      }
     });
     document.getElementById('btn-help')?.addEventListener('click', () => {
       // Toggle keyboard help
@@ -357,7 +451,8 @@ export class UIManager {
       difficulty: this.selectedDifficulty,
       mapTemplate: mapTemplate,
       mapSeed: mapSeed,
-      gameMode: this.selectedGameMode
+      gameMode: this.selectedGameMode,
+      biome: this.selectedBiome
     });
   }
 
@@ -447,6 +542,19 @@ export class UIManager {
       });
       listEl.appendChild(card);
     }
+  }
+
+  _showComingSoon(message) {
+    // Simple notification overlay
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:30000;';
+    overlay.innerHTML = `<div style="text-align:center;padding:40px 60px;background:rgba(15,25,35,0.95);border:1px solid rgba(0,255,65,0.2);border-radius:8px;">
+      <h2 style="color:#00ff41;font-size:20px;letter-spacing:3px;margin:0 0 12px 0;">${message}</h2>
+      <p style="color:#6a8a7a;font-size:13px;margin:0 0 20px 0;">This feature is being built and will be available soon.</p>
+      <button onclick="this.closest('div[style]').remove()" style="padding:8px 24px;background:#1a4a2e;color:#00ff41;border:1px solid #2a6a3e;border-radius:4px;cursor:pointer;font-size:14px;font-family:inherit;">OK</button>
+    </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
   }
 
   showMainMenu() {
@@ -661,5 +769,143 @@ export class UIManager {
       }, 500);
       if (this.game && this.game._pendingTimeouts) this.game._pendingTimeouts.push(innerId);
     }, 2500));
+  }
+
+  // =========================================================
+  // Save / Load UI
+  // =========================================================
+
+  _setupSaveLoadUI() {
+    const saveDialog = document.getElementById('save-load-dialog');
+    const slotList = document.getElementById('save-slot-list');
+    const title = document.getElementById('save-load-title');
+    const fileInput = document.getElementById('save-file-input');
+
+    // Close dialog
+    document.getElementById('btn-close-save-dialog')?.addEventListener('click', () => {
+      saveDialog?.classList.add('hidden');
+    });
+
+    // Save Game button
+    document.getElementById('btn-save-game')?.addEventListener('click', () => {
+      this._showSaveSlots('save');
+    });
+
+    // Load Game button
+    document.getElementById('btn-load-game')?.addEventListener('click', () => {
+      this._showSaveSlots('load');
+    });
+
+    // Export File button
+    document.getElementById('btn-export-save')?.addEventListener('click', () => {
+      if (this.game.saveSystem) {
+        this.game.saveSystem.exportToFile();
+        this.showNotification('Save file exported!');
+      }
+    });
+
+    // Import File button
+    document.getElementById('btn-import-save')?.addEventListener('click', () => {
+      fileInput?.click();
+    });
+
+    // File input change
+    fileInput?.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      fileInput.value = '';
+      try {
+        const saveData = await this.game.saveSystem.importFromFile(file);
+        await this.game.saveSystem.loadFromData(saveData);
+      } catch (err) {
+        this.showNotification('Load failed: ' + err.message);
+        console.error('Import failed:', err);
+      }
+    });
+  }
+
+  _showSaveSlots(mode) {
+    const saveDialog = document.getElementById('save-load-dialog');
+    const slotList = document.getElementById('save-slot-list');
+    const title = document.getElementById('save-load-title');
+    if (!saveDialog || !slotList || !title) return;
+
+    title.textContent = mode === 'save' ? 'Save Game' : 'Load Game';
+    slotList.innerHTML = '';
+
+    const saves = this.game.saveSystem.listSaves();
+
+    for (const save of saves) {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;background:rgba(40,40,60,0.8);border:1px solid rgba(255,255,255,0.1);border-radius:4px;';
+
+      const info = document.createElement('div');
+      info.style.cssText = 'flex:1;';
+
+      if (save.empty) {
+        info.innerHTML = `<span style="color:#666;font-size:14px;">${save.name} - Empty</span>`;
+      } else {
+        const elapsed = save.gameElapsed || 0;
+        const mins = Math.floor(elapsed / 60);
+        const secs = Math.floor(elapsed % 60);
+        const pNation = save.playerNation ? save.playerNation.charAt(0).toUpperCase() + save.playerNation.slice(1) : '?';
+        const eNation = save.enemyNation ? save.enemyNation.charAt(0).toUpperCase() + save.enemyNation.slice(1) : '?';
+        info.innerHTML = `
+          <div style="color:#eee;font-size:14px;font-weight:bold;">${save.name}</div>
+          <div style="color:#888;font-size:11px;">${save.dateString || 'Unknown date'} | ${pNation} vs ${eNation} | ${mins}m ${secs}s</div>
+        `;
+      }
+
+      row.appendChild(info);
+
+      if (mode === 'save') {
+        // Save button (allow overwriting any slot, even autosave is listed but skip for save)
+        if (save.slot !== '__autosave__') {
+          const btn = document.createElement('button');
+          btn.textContent = save.empty ? 'Save' : 'Overwrite';
+          btn.style.cssText = 'padding:6px 16px;font-size:13px;font-weight:bold;background:#224422;color:#44ff44;border:1px solid #44ff44;border-radius:4px;cursor:pointer;white-space:nowrap;';
+          btn.addEventListener('click', () => {
+            const success = this.game.saveSystem.saveToLocal(save.slot);
+            if (success) {
+              this.showNotification('Game saved to ' + save.name);
+              saveDialog.classList.add('hidden');
+            }
+          });
+          row.appendChild(btn);
+        }
+      } else {
+        // Load button (only if slot has data)
+        if (!save.empty) {
+          const btn = document.createElement('button');
+          btn.textContent = 'Load';
+          btn.style.cssText = 'padding:6px 16px;font-size:13px;font-weight:bold;background:#222244;color:#4488ff;border:1px solid #4488ff;border-radius:4px;cursor:pointer;white-space:nowrap;';
+          btn.addEventListener('click', async () => {
+            saveDialog.classList.add('hidden');
+            try {
+              await this.game.saveSystem.loadGame(save.slot);
+            } catch (err) {
+              this.showNotification('Load failed: ' + err.message);
+              console.error('Load failed:', err);
+            }
+          });
+          row.appendChild(btn);
+
+          // Delete button
+          const delBtn = document.createElement('button');
+          delBtn.textContent = 'X';
+          delBtn.title = 'Delete save';
+          delBtn.style.cssText = 'padding:6px 10px;font-size:13px;font-weight:bold;background:#442222;color:#ff4444;border:1px solid #ff4444;border-radius:4px;cursor:pointer;';
+          delBtn.addEventListener('click', () => {
+            this.game.saveSystem.deleteSave(save.slot);
+            this._showSaveSlots(mode); // Refresh
+          });
+          row.appendChild(delBtn);
+        }
+      }
+
+      slotList.appendChild(row);
+    }
+
+    saveDialog.classList.remove('hidden');
   }
 }

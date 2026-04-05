@@ -33,6 +33,7 @@ export class Unit extends Entity {
 
     this.waypoints = [];
     this._attackMove = false;
+    this._pathPending = false;
     this.formationSpeed = null;
 
     // Stance system: 'aggressive' (default), 'defensive', 'holdfire'
@@ -400,7 +401,7 @@ export class Unit extends Entity {
   updateStatusBadge() {
     if (!this.mesh) return;
 
-    // Determine badge state
+    // Determine badge state — priority: stance/order overrides, then activity status
     let badgeState = '';
     if (this.isRetreating) badgeState = 'retreat';
     else if (this.stance === 'holdfire') badgeState = 'holdfire';
@@ -408,6 +409,9 @@ export class Unit extends Entity {
     else if (this._isPatrolling) badgeState = 'patrol';
     else if (this._attackMove) badgeState = 'attackmove';
     else if (this._siegeMode) badgeState = 'siege';
+    else if (this.attackTarget) badgeState = 'attacking';
+    else if (this.moveTarget) badgeState = 'moving';
+    else badgeState = 'idle';
 
     // Only update if state changed
     if (badgeState === this._lastBadgeState) return;
@@ -418,36 +422,93 @@ export class Unit extends Entity {
       this.mesh.remove(this._statusBadge);
       this._statusBadge.traverse(c => {
         if (c.geometry) c.geometry.dispose();
-        if (c.material) c.material.dispose();
+        if (c.material) {
+          if (c.material.map) c.material.map.dispose();
+          c.material.dispose();
+        }
       });
       this._statusBadge = null;
     }
 
-    if (!badgeState) return;
+    // No badge for idle state
+    if (badgeState === 'idle') return;
 
-    // Create badge
+    // Create badge — use canvas-based icons for activity states, circles for stances
     const badgeColors = {
       holdfire: 0xffcc00,
       defensive: 0x4488ff,
       patrol: 0x00ccff,
       attackmove: 0xff4444,
       siege: 0xff8800,
-      retreat: 0xffffff
+      retreat: 0xffffff,
+      moving: 0x44ff44,
+      attacking: 0xff4444
     };
 
     const color = badgeColors[badgeState] || 0xffffff;
-    const geo = new THREE.CircleGeometry(0.3, 8);
-    const mat = new THREE.MeshBasicMaterial({
-      color,
-      transparent: true,
-      opacity: 0.8,
-      side: THREE.DoubleSide,
-      depthWrite: false
-    });
-    const badge = new THREE.Mesh(geo, mat);
-    badge.position.set(1.5, 4, 0);
-    this.mesh.add(badge);
-    this._statusBadge = badge;
+
+    // For moving/attacking, use a canvas icon sprite
+    if (badgeState === 'moving' || badgeState === 'attacking') {
+      const canvas = document.createElement('canvas');
+      canvas.width = 64;
+      canvas.height = 64;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, 64, 64);
+
+      if (badgeState === 'moving') {
+        // Arrow pointing up
+        ctx.fillStyle = '#44ff44';
+        ctx.beginPath();
+        ctx.moveTo(32, 8);   // top
+        ctx.lineTo(48, 40);  // bottom right
+        ctx.lineTo(36, 36);
+        ctx.lineTo(36, 56);  // shaft bottom right
+        ctx.lineTo(28, 56);  // shaft bottom left
+        ctx.lineTo(28, 36);
+        ctx.lineTo(16, 40);  // bottom left
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        // Crosshair for attacking
+        ctx.strokeStyle = '#ff4444';
+        ctx.lineWidth = 4;
+        // Outer circle
+        ctx.beginPath();
+        ctx.arc(32, 32, 20, 0, Math.PI * 2);
+        ctx.stroke();
+        // Cross lines
+        ctx.beginPath();
+        ctx.moveTo(32, 6); ctx.lineTo(32, 58);
+        ctx.moveTo(6, 32); ctx.lineTo(58, 32);
+        ctx.stroke();
+      }
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.minFilter = THREE.LinearFilter;
+      const spriteMat = new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true,
+        depthWrite: false
+      });
+      const sprite = new THREE.Sprite(spriteMat);
+      sprite.scale.set(0.8, 0.8, 1);
+      sprite.position.set(1.5, 4, 0);
+      this.mesh.add(sprite);
+      this._statusBadge = sprite;
+    } else {
+      const geo = new THREE.CircleGeometry(0.3, 8);
+      const mat = new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity: 0.8,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      });
+      const badge = new THREE.Mesh(geo, mat);
+      badge.position.set(1.5, 4, 0);
+      this.mesh.add(badge);
+      this._statusBadge = badge;
+    }
   }
 
   cycleStance() {
@@ -549,14 +610,21 @@ export class Unit extends Entity {
           pos.y = this.game.terrain.getHeightAt(pos.x, pos.z);
         }
 
-        // White flash effect
+        // White flash effect — use cached mesh children to avoid traverse() every frame
         this._retreatFlashTimer += deltaTime;
         const flash = Math.sin(this._retreatFlashTimer * 6) > 0.3;
-        this.mesh.traverse(child => {
-          if (child.isMesh && child.material && child.material.emissive) {
-            child.material.emissive.setHex(flash ? 0x444444 : 0x000000);
-          }
-        });
+        if (!this._emissiveChildren) {
+          this._emissiveChildren = [];
+          this.mesh.traverse(child => {
+            if (child.isMesh && child.material && child.material.emissive) {
+              this._emissiveChildren.push(child);
+            }
+          });
+        }
+        const flashHex = flash ? 0x444444 : 0x000000;
+        for (let ci = 0, clen = this._emissiveChildren.length; ci < clen; ci++) {
+          this._emissiveChildren[ci].material.emissive.setHex(flashHex);
+        }
       }
 
       // Update status badge and procedural animation, then return (skip normal movement)
@@ -604,12 +672,13 @@ export class Unit extends Entity {
         const moveAmount = effSpeed * deltaTime * GAME_CONFIG.unitSpeedMultiplier;
 
         let sepX = 0, sepZ = 0;
-        if (this.game) {
-          const nearby = this.game.getUnits(this.team);
+        if (this.game && this.game.spatialGrid) {
           const sepR = FORMATION_CONFIG.separationRadius;
           const sepR2 = sepR * sepR;
-          for (const other of nearby) {
-            if (other === this || !other.alive || !other.mesh) continue;
+          const nearby = this.game.spatialGrid.query(pos.x, pos.z, sepR);
+          for (let ni = 0, nlen = nearby.length; ni < nlen; ni++) {
+            const other = nearby[ni];
+            if (other === this || !other.isUnit || other.team !== this.team || !other.alive) continue;
             const odx = pos.x - other.mesh.position.x;
             const odz = pos.z - other.mesh.position.z;
             const d2 = odx * odx + odz * odz;
@@ -779,43 +848,62 @@ export class Unit extends Entity {
     const t = this._animTime;
 
     if (this.domain === 'land' && this.type === 'infantry') {
-      // Walking bob and leg oscillation
-      if (this.isMoving) {
-        const bobFreq = 8;
-        const bobAmp = 0.15;
-        // Whole group Y bob
-        this.mesh.position.y += Math.sin(t * bobFreq) * bobAmp * 0.3;
-
-        // Leg swing (children 0,1 = left/right leg in Infantry mesh)
-        const legSwing = Math.sin(t * bobFreq) * 0.4;
-        if (this.mesh.children[0]) this.mesh.children[0].rotation.x = legSwing;
-        if (this.mesh.children[1]) this.mesh.children[1].rotation.x = -legSwing;
-
-        // Arm swing (children ~10,11)
-        const armChild1 = this.mesh.children[10];
-        const armChild2 = this.mesh.children[11];
-        if (armChild1 && armChild1.geometry?.type === 'BoxGeometry') {
-          armChild1.rotation.x = -legSwing * 0.5;
+      if (this._hasGLBModel) {
+        // GLB model: simple bob animation only (no child-index-based leg/arm swing)
+        if (this.isMoving) {
+          const bobFreq = 8;
+          const bobAmp = 0.1;
+          // Find the model group (first child that isn't selection ring or health bar)
+          const modelChild = this.mesh.children[0];
+          if (modelChild && !modelChild.geometry) {
+            // Subtle Y bob on the model sub-group
+            modelChild.position.y = (modelChild._baseY || modelChild.position.y) + Math.sin(t * bobFreq) * bobAmp;
+            if (modelChild._baseY === undefined) modelChild._baseY = modelChild.position.y;
+          }
         }
-        if (armChild2 && armChild2.geometry?.type === 'BoxGeometry') {
-          armChild2.rotation.x = legSwing * 0.3;
+        if (this._recoilTimer > 0) {
+          this._recoilTimer -= dt;
         }
       } else {
-        // Return to idle
-        if (this.mesh.children[0]) this.mesh.children[0].rotation.x *= 0.9;
-        if (this.mesh.children[1]) this.mesh.children[1].rotation.x *= 0.9;
-      }
+        // Procedural mesh: detailed child-index-based animation
+        // Walking bob and leg oscillation
+        if (this.isMoving) {
+          const bobFreq = 8;
+          const bobAmp = 0.15;
+          // Whole group Y bob
+          this.mesh.position.y += Math.sin(t * bobFreq) * bobAmp * 0.3;
 
-      // Weapon recoil on attack
-      if (this._recoilTimer > 0) {
-        this._recoilTimer -= dt;
-        const recoil = Math.max(0, this._recoilTimer) * 2;
-        // Push gun backward slightly (gun is typically child ~14-16)
-        for (let i = 14; i < Math.min(this.mesh.children.length, 20); i++) {
-          const c = this.mesh.children[i];
-          if (c && c.geometry) {
-            c.position.z = (c._origZ || c.position.z) - recoil * 0.3;
-            if (!c._origZ) c._origZ = c.position.z + recoil * 0.3;
+          // Leg swing (children 0,1 = left/right leg in Infantry mesh)
+          const legSwing = Math.sin(t * bobFreq) * 0.4;
+          if (this.mesh.children[0]) this.mesh.children[0].rotation.x = legSwing;
+          if (this.mesh.children[1]) this.mesh.children[1].rotation.x = -legSwing;
+
+          // Arm swing (children ~10,11)
+          const armChild1 = this.mesh.children[10];
+          const armChild2 = this.mesh.children[11];
+          if (armChild1 && armChild1.geometry?.type === 'BoxGeometry') {
+            armChild1.rotation.x = -legSwing * 0.5;
+          }
+          if (armChild2 && armChild2.geometry?.type === 'BoxGeometry') {
+            armChild2.rotation.x = legSwing * 0.3;
+          }
+        } else {
+          // Return to idle
+          if (this.mesh.children[0]) this.mesh.children[0].rotation.x *= 0.9;
+          if (this.mesh.children[1]) this.mesh.children[1].rotation.x *= 0.9;
+        }
+
+        // Weapon recoil on attack
+        if (this._recoilTimer > 0) {
+          this._recoilTimer -= dt;
+          const recoil = Math.max(0, this._recoilTimer) * 2;
+          // Push gun backward slightly (gun is typically child ~14-16)
+          for (let i = 14; i < Math.min(this.mesh.children.length, 20); i++) {
+            const c = this.mesh.children[i];
+            if (c && c.geometry) {
+              c.position.z = (c._origZ || c.position.z) - recoil * 0.3;
+              if (!c._origZ) c._origZ = c.position.z + recoil * 0.3;
+            }
           }
         }
       }

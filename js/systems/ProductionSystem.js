@@ -32,10 +32,21 @@ export class ProductionSystem {
     const stats = UNIT_STATS[unitType];
     if (!stats) return;
 
-    // Spawn the unit at the rally point
-    const spawnPos = building.rallyPoint
+    // Spawn the unit near the building (offset slightly toward rally)
+    const buildPos = building.getPosition().clone();
+    const rallyPos = building.rallyPoint
       ? building.rallyPoint.clone()
-      : building.getPosition().clone().add(new THREE.Vector3(0, 0, 10));
+      : buildPos.clone().add(new THREE.Vector3(0, 0, 10));
+
+    // Offset spawn position slightly toward rally (3 units out from building center)
+    const dir = rallyPos.clone().sub(buildPos);
+    if (dir.lengthSq() > 0.01) {
+      dir.normalize().multiplyScalar(3);
+    } else {
+      dir.set(0, 0, 3);
+    }
+    const spawnPos = buildPos.clone().add(dir);
+    spawnPos.y = 0;
 
     const unit = this.game.createUnit(unitType, building.team, spawnPos);
 
@@ -48,6 +59,27 @@ export class ProductionSystem {
       if (tierBonus.hpBonus && unit.maxHealth) {
         unit.maxHealth = Math.round(unit.maxHealth * tierBonus.hpBonus);
         unit.health = unit.maxHealth;
+      }
+    }
+
+    // Issue move command to rally point (unit walks there after spawning)
+    if (unit && building.rallyPoint) {
+      // Check if there's an enemy near the rally point - if so, attack-move
+      let enemyNearRally = false;
+      const enemies = this.game.entities.filter(
+        e => e.alive && e.team !== building.team && e.team !== 'neutral'
+      );
+      for (const enemy of enemies) {
+        const dist = enemy.getPosition().distanceTo(rallyPos);
+        if (dist < 15) {
+          enemyNearRally = true;
+          break;
+        }
+      }
+
+      unit.moveTo(rallyPos);
+      if (enemyNearRally) {
+        unit._attackMove = true;
       }
     }
 
@@ -70,6 +102,16 @@ export class ProductionSystem {
       this.game.eventBus.emit('production:error', {
         message: `${building.type} cannot produce ${unitType}`
       });
+      return false;
+    }
+
+    // Check queue limit (max 5 total: current + queued)
+    const totalQueued = (building.currentProduction ? 1 : 0) + building.productionQueue.length;
+    if (totalQueued >= 5) {
+      this.game.eventBus.emit('production:error', {
+        message: 'Production queue full (max 5)'
+      });
+      if (this.game.soundManager) this.game.soundManager.play('error');
       return false;
     }
 
@@ -381,10 +423,21 @@ export class ProductionSystem {
       building.mesh.scale.set(scale, scale, scale);
     }
 
+    // Construction spark timer: every 0.5s spawn welding sparks
+    if (!building._constructionSparkTimer) building._constructionSparkTimer = 0;
+    building._constructionSparkTimer += delta;
+    if (building._constructionSparkTimer >= 0.5 && progress < 1) {
+      building._constructionSparkTimer = 0;
+      if (this.game.effectsManager) {
+        this.game.effectsManager.createConstructionSparks(building.getPosition());
+      }
+    }
+
     // Construction complete
     if (progress >= 1) {
       building._constructing = false;
       building.health = building._constructionMaxHP;
+      delete building._constructionSparkTimer;
 
       // Restore materials
       if (building.mesh) {
@@ -397,6 +450,11 @@ export class ProductionSystem {
             delete child.material._origTransparent;
           }
         });
+      }
+
+      // Dust puff on completion
+      if (this.game.effectsManager) {
+        this.game.effectsManager.createConstructionDust(building.getPosition());
       }
 
       if (building.team === 'player' && this.game.uiManager?.hud) {

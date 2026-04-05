@@ -41,6 +41,9 @@ Add Munitions (MU) as a second resource. SP funds basic units/buildings. MU fund
 - Modify ProductionSystem to check both resources
 - Reference: `docs/GAME_DESIGN_DOCUMENT.md` Section 5
 
+## Audit (2026-04-05)
+**Status: INCOMPLETE** — MU resource, HUD display, Munitions Cache building, resource nodes, minimap integration all work. AI builds MU caches. Missing: advanced units (plane, battleship, carrier, submarine) don't require MU costs in production. Salvage income (15% of destroyed enemy unit cost) not implemented. MU generation is 4/s not 5/s. Starting MU is 100 not 0.
+
 ## Files to Modify
 
 - `js/core/Constants.js` (MU costs, Munitions Cache building)
@@ -51,3 +54,5 @@ Add Munitions (MU) as a second resource. SP funds basic units/buildings. MU fund
 - `js/buildings/BuildingFactory.js` (register new building)
 - `js/ui/HUD.js` (MU display)
 - `js/ai/AIController.js` (AI builds MU caches)
+
+<!-- NR_OF_TRIES: 0 -->

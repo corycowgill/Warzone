@@ -46,6 +46,9 @@ Implement unique passive bonuses and active abilities for each nation as defined
 - Damage modifiers: apply in CombatSystem.calculateDamage()
 - Reference: `docs/GAME_DESIGN_DOCUMENT.md` Section 2 for full faction details
 
+## Audit (2026-04-05)
+**Status: INCOMPLETE** — Active abilities work (Lend-Lease, Banzai Charge, all 6 nation abilities). NationAbilitySystem functional. Missing: Britain defensive building bonuses, France stationary infantry bonus, Japan low-HP damage bonus, Austria building cost reduction. Some values differ from spec (America 5% vs 15%, Germany armor 20% vs +1). Nation select screen doesn't show ability descriptions.
+
 ## Files to Modify
 
 - `js/core/Constants.js` (nation definitions with abilities)
@@ -55,3 +58,5 @@ Implement unique passive bonuses and active abilities for each nation as defined
 - `js/core/Game.js` (integrate faction system)
 - `js/ui/HUD.js` (ability button and cooldown display)
 - `js/ui/UIManager.js` (nation select descriptions)
+
+<!-- NR_OF_TRIES: 0 -->

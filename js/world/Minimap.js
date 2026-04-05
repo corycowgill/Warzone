@@ -154,6 +154,30 @@ export class Minimap {
 
     const terrain = this.game.terrain;
 
+    // Biome-aware minimap color palettes
+    const biomePalettes = {
+      temperate: {
+        water: [26, 107, 196],
+        beach: [194, 178, 128],
+        grass: [51, 115, 38],
+        highGrass: [76, 128, 51]
+      },
+      desert: {
+        water: [26, 136, 102],
+        beach: [209, 184, 128],
+        grass: [184, 158, 102],
+        highGrass: [153, 128, 77]
+      },
+      arctic: {
+        water: [51, 136, 170],
+        beach: [199, 204, 214],
+        grass: [209, 217, 224],
+        highGrass: [191, 199, 209]
+      }
+    };
+    const biome = terrain.biome || 'temperate';
+    const pal = biomePalettes[biome] || biomePalettes.temperate;
+
     for (let py = 0; py < this.size; py++) {
       for (let px = 0; px < this.size; px++) {
         // Map minimap pixel to grid cell
@@ -164,25 +188,13 @@ export class Minimap {
         let r, g, b;
 
         if (height < -0.5) {
-          // Water - blue
-          r = 26;
-          g = 107;
-          b = 196;
+          r = pal.water[0]; g = pal.water[1]; b = pal.water[2];
         } else if (height < 0.5) {
-          // Beach/shore - tan
-          r = 194;
-          g = 178;
-          b = 128;
+          r = pal.beach[0]; g = pal.beach[1]; b = pal.beach[2];
         } else if (height < 3) {
-          // Grass - green
-          r = 51;
-          g = 115;
-          b = 38;
+          r = pal.grass[0]; g = pal.grass[1]; b = pal.grass[2];
         } else {
-          // Higher ground - darker green
-          r = 76;
-          g = 128;
-          b = 51;
+          r = pal.highGrass[0]; g = pal.highGrass[1]; b = pal.highGrass[2];
         }
 
         const idx = (py * this.size + px) * 4;
@@ -194,6 +206,33 @@ export class Minimap {
     }
 
     offCtx.putImageData(imageData, 0, 0);
+
+    // Render props (trees and cliffs) onto the terrain image
+    const offCtx2 = offscreen.getContext('2d');
+
+    // Draw trees as small green/olive dots
+    if (terrain.treePositions) {
+      const treeColor = biome === 'desert' ? '#6a8a3a' : biome === 'arctic' ? '#3a7a5a' : '#1a5a1a';
+      offCtx2.fillStyle = treeColor;
+      for (const tree of terrain.treePositions) {
+        const mx = (tree.x / this.mapSize) * this.size;
+        const my = (tree.z / this.mapSize) * this.size;
+        offCtx2.fillRect(mx, my, 1.5, 1.5);
+      }
+    }
+
+    // Draw cliffs as small gray dots
+    if (terrain.cliffPositions) {
+      offCtx2.fillStyle = '#8a8a7a';
+      const maxCliffs = Math.min(terrain.cliffPositions.length, 50);
+      for (let i = 0; i < maxCliffs; i++) {
+        const cliff = terrain.cliffPositions[i];
+        const mx = (cliff.x / this.mapSize) * this.size;
+        const my = (cliff.z / this.mapSize) * this.size;
+        offCtx2.fillRect(mx, my, 2, 2);
+      }
+    }
+
     this.terrainImage = offscreen;
     this.terrainRendered = true;
   }
