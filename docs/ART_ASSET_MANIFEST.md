@@ -390,3 +390,44 @@ These bundles provide the most assets in a single download with consistent style
 6. **Sketchfab Fighter Jet Collection by bohmerang** (multiple jets, CC-BY, GLTF) -- Air units
 7. **Poly Haven HDRIs** (hundreds, CC0, HDR) -- Skyboxes
 8. **ambientCG Materials** (2000+, CC0, PNG) -- Terrain textures
+
+
+## Original Armored Vehicle Set (2026-10-15)
+
+The active tank, heavy tank and APC assets are now original Blender-generated GLBs
+in `assets/models/units/warzone-original/`. They replace the mixed-source tank,
+light-tank-as-heavy-tank and truck-as-APC mappings. The models use beveled armor,
+visible road wheels and treads, hatches, optics and role-specific silhouettes.
+No downloaded meshes, textures, or external model-generation service were used.
+The generator is the editable source; these assets add no third-party attribution requirement.
+
+| Asset | Triangles | Material meshes | Bytes |
+|---|---:|---:|---:|
+| tank.glb | 1,804 | 6 | 131,572 |
+| heavy-tank.glb | 1,876 | 6 | 136,668 |
+| apc.glb | 1,668 | 6 | 121,408 |
+
+`TeamColor` is the paint material. AssetManager tints only that material on these
+models, preserving olive armor, dark tracks, steel, optics and markings. Other
+assets retain the existing tint behavior. All three face +X, matching the vehicle
+rotation offset, and use the existing target sizes and procedural load fallbacks.
+Static parts are merged by material, keeping each vehicle to six meshes.
+
+Regenerate with Blender 5.2:
+
+```sh
+blender --background --python scripts/generate-armored-vehicles.py
+blender --background --python scripts/generate-armored-vehicles.py -- --preview
+npm run test:armor
+```
+
+The optional preview writes `docs/armored-vehicles-preview.png`. For an interactive
+review using the game's Three.js 0.172 loader and toon shading, serve the repository
+root and open `/docs/armor-preview.html`. It shows all three vehicles in both teams.
+
+Validation: GLB parsing, triangle/file budgets, six meshes, isolated team materials,
+color preservation, target dimensions, grounding, centering and shadow flags pass.
+Browser review loaded all six team variants; the game loaded 52/52 manifest assets
+with no failures. The full suite reports 99 passes and 12 failures, identical when
+rerun with the original AssetManager. Existing gameplay test failures remain outside
+this graphics change. This pass covers three armored vehicles, not the full roster.

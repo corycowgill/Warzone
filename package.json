@@ -9,7 +9,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "test:armor": "node scripts/verify-armored-vehicles.mjs"
   },
   "dependencies": {
     "@gltf-transform/core": "^4.3.0",

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="../"><title>Warzone — Armor Review</title>
+<style>body{margin:0;background:#172024;color:#e7e7da;font:16px system-ui}header{position:absolute;top:24px;left:32px;pointer-events:none}h1{font-size:24px;margin:0 0 8px}p{color:#b8c4be;margin:0 0 6px}footer{position:absolute;bottom:24px;left:32px;color:#bbc4bc}canvas{display:block}#status{color:#91b6ef}</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.172.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.172.0/examples/jsm/"}}</script></head>
+<body><header><h1>WARZONE / ARMORED DIVISION</h1><p>Tank · Heavy tank · Tracked APC</p><p>Blue and red team paint. Original Blender models.</p><p id="status">Loading armor…</p></header><footer>Drag to orbit · Scroll to zoom · Right-drag to pan</footer><script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { AssetManager } from './js/rendering/AssetManager.js';
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+document.body.append(renderer.domElement);
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x172024);
+const camera=new THREE.PerspectiveCamera(40,innerWidth/innerHeight,.1,150);camera.position.set(13,14,19);
+const controls=new OrbitControls(camera,renderer.domElement);controls.target.set(0,0.5,0);controls.update();
+scene.add(new THREE.HemisphereLight(0xc4d8ee,0x626449,2));
+const sun=new THREE.DirectionalLight(0xfff0d7,2.5);sun.position.set(8,15,9);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-15,right:15,top:15,bottom:-15});sun.shadow.normalBias=.03;scene.add(sun);
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(100,100),new THREE.MeshStandardMaterial({color:0x343d36,roughness:1}));floor.rotation.x=-Math.PI/2;floor.position.y=-.02;floor.receiveShadow=true;scene.add(floor);
+const grid=new THREE.GridHelper(30,30,0x6b7762,0x424d41);grid.position.y=-.01;scene.add(grid);
+const manager=new AssetManager();
+try {
+const keys=['unit_tank','unit_heavytank','unit_apc'];
+await Promise.all(keys.map(key=>manager.load(key,AssetManager.MANIFEST[key].path)));
+for(const [row,team] of ['player','enemy'].entries()) for(const [col,key] of keys.entries()){
+const model=manager.getTeamTintedModel(key,team);const group=new THREE.Group();group.add(model);group.position.set((col-1)*6,0,(row-.5)*5);group.rotation.y=-.25;scene.add(group);
+}
+document.querySelector('#status').textContent='All 3 GLBs loaded · 6 team variants';
+}catch(error){document.querySelector('#status').textContent='Model load failed: '+error.message;console.error(error);}
+renderer.setAnimationLoop(()=>renderer.render(scene,camera));
+addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});
+</script></body></html>

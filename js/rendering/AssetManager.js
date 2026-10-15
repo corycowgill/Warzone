@@ -42,10 +42,10 @@ export class AssetManager {
     // --- Units (Poly Pizza military models by Zsky, Quaternius, KolosStudios, etc.) ---
     unit_infantry:        { path: 'assets/models/units/quaternius/soldier-quaternius.glb',    targetSize: 2.0 },  // CC0 Quaternius soldier
     unit_engineer:        { path: 'assets/models/units/quaternius/swat-quaternius.glb',     targetSize: 2.0 },  // CC0 Quaternius SWAT
-    unit_tank:            { path: 'assets/models/units/mreliptik-tank/GREEN/tank_1_green.glb', targetSize: 3.5 },  // CC0 MrEliptik stylized tank
-    unit_heavytank:       { path: 'assets/models/units/poly-pizza/light-tank-zsky.glb',     targetSize: 4.5 },
+    unit_tank:            { path: 'assets/models/units/warzone-original/tank.glb', teamMaterial: 'TeamColor', targetSize: 3.5 },  // Original Blender armor set
+    unit_heavytank:       { path: 'assets/models/units/warzone-original/heavy-tank.glb',     teamMaterial: 'TeamColor', targetSize: 4.5 },
     unit_scoutcar:        { path: 'assets/models/units/poly-pizza/jeep-zsky.glb',           targetSize: 3.0 },
-    unit_apc:             { path: 'assets/models/units/poly-pizza/truck-zsky.glb',          targetSize: 3.5 },
+    unit_apc:             { path: 'assets/models/units/warzone-original/apc.glb',          teamMaterial: 'TeamColor', targetSize: 3.5 },
     unit_aahalftrack:     { path: 'assets/models/units/poly-pizza/ambulance-zsky.glb',      targetSize: 3.0 },
     unit_spg:             { path: 'assets/models/units/cannon-mobile.glb',                  targetSize: 3.5 },
     unit_mortarteam:      { path: 'assets/models/buildings/ithappy-military/Separate_assets_glb/mortar_001.glb', targetSize: 2.5 },  // ITHappy mortar
@@ -261,8 +261,14 @@ export class AssetManager {
       ? new THREE.Color(0x6699ff)
       : new THREE.Color(0xff6666);
 
+    // Authored models identify paint explicitly; preserve tracks, optics and steel.
+    const teamMaterial = AssetManager.MANIFEST[key]?.teamMaterial;
     const tintMaterial = (mat) => {
       if (!mat || !mat.color) return;
+      if (teamMaterial) {
+        if (mat.name === teamMaterial) mat.color.copy(teamColor);
+        return;
+      }
 
       // Choose tint colors based on entity type
       const tintColor = isBuilding ? buildingAccent : teamColor;
