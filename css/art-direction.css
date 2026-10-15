@@ -1386,6 +1386,84 @@ button {
 .camera-controls button:hover,.camera-controls button:focus-visible{background:#3d555c;border-color:#dac184;outline:2px solid #dac184;outline-offset:1px}
 .camera-controls kbd{font:10px system-ui;color:#cbbd96}
 
+/* Command briefing: deliberate nation choices, then battlefield configuration. */
+#nation-select{padding:20px 0;align-items:flex-start}
+#nation-select .command-briefing{width:min(1160px,calc(100% - 40px));max-width:1160px;max-height:calc(100dvh - 40px);padding:28px 32px 0;text-align:left;overflow:auto;box-sizing:border-box}
+.command-briefing [hidden]{display:none!important}
+.command-briefing .nation-select-title{font-size:38px;letter-spacing:1px;margin:0 0 4px}
+.command-briefing .briefing-intro{margin-bottom:18px;font-size:13px}
+.briefing-steps{display:flex;border-bottom:1px solid #81948b40;margin-bottom:20px;gap:25px}
+.briefing-steps button{background:none;color:#9aaea7;border:0;border-bottom:2px solid transparent;padding:12px 0;font:600 13px "Segoe UI",sans-serif;cursor:pointer}
+.briefing-steps button span{display:inline-grid;place-items:center;background:#283b40;border:1px solid #81948b40;width:25px;height:25px;margin-right:9px;font-size:10px}
+.briefing-steps button[aria-current=step]{color:#f0d49b;border-color:#d2b477}
+.briefing-steps button:disabled{opacity:.45;cursor:default}
+.command-briefing .nation-panels{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:22px}
+.command-briefing .nation-panel{padding:0;background:none;border:0;min-width:0}
+.command-briefing .panel-header{margin:0 0 12px;font-size:10px;letter-spacing:2px;text-align:left;color:#bac9be!important}
+.command-briefing .nation-grid{display:grid;grid-template-columns:1fr;gap:10px}
+.command-briefing .nation-card{position:relative;display:flex;flex-direction:column;align-items:stretch;width:100%;padding:15px 18px;text-align:left;color:#d3ded4;font-family:inherit;background:linear-gradient(125deg,#2c4148aa,#1b2c32aa);border:1px solid #7f958f50;border-radius:5px;cursor:pointer;transition:border-color .15s,background .15s;box-sizing:border-box}
+.command-briefing .nation-card:hover{border-color:#d3b577;background:linear-gradient(125deg,#40534eaa,#21373daa);transform:none}
+.command-briefing .nation-card.selected{border-color:#e0bd7d;box-shadow:inset 3px 0 #e0bd7d;background:linear-gradient(120deg,#71613c55,#293c3e99)}
+.country-heading{display:flex;align-items:center;gap:14px;margin-bottom:8px}
+.country-heading>span:nth-child(2){flex:1}
+.command-briefing .nation-code{display:block;color:#b3c4b7;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px}
+.command-briefing .nation-name{display:block;font-size:21px;letter-spacing:.1px;font-weight:600;line-height:1.1}
+.country-check{display:grid;place-items:center;width:24px;height:24px;color:transparent;border:1px solid #8d9d8c66;border-radius:50%;font-size:14px}
+.selected .country-check{color:#17292d;background:#e0bd7d;border-color:#e0bd7d}
+.country-tagline{font-size:12px;color:#e7dfc8;margin-bottom:7px}
+.command-briefing .nation-passive,.command-briefing .nation-ability{display:block;width:auto;padding-left:0;margin:3px 0 0;line-height:1.4;font-size:11px;font-style:normal}
+.command-briefing .nation-passive{color:#b8c9bd}.command-briefing .nation-ability{color:#c9b98e}
+.opponent-note{font-size:11px;line-height:1.5;color:#9bafa8;margin:-5px 0 9px}
+.random-opponent{border:1px solid #83948a66;background:#23363b;color:#c4d2c5;border-radius:4px;padding:7px 12px;margin-bottom:10px;cursor:pointer;font-family:inherit;font-size:11px}
+.random-opponent[aria-pressed=true]{border-color:#d6b777;color:#e3c78b;background:#64573544}
+.command-briefing .nation-flag{position:relative;display:inline-block;flex-shrink:0;width:52px;height:34px;margin:0;border:1px solid #fff4;border-radius:3px;overflow:hidden;box-shadow:0 2px 8px #0005}
+.flag-america{background:repeating-linear-gradient(#b34c49 0 2.6px,#e5e2d5 2.6px 5.2px)}
+.flag-america:after{content:'★';position:absolute;left:0;top:0;background:#344d71;width:24px;height:19px;color:#eee;font-size:14px;text-align:center;line-height:19px}
+.flag-britain{background:linear-gradient(90deg,transparent 39%,#c54f4b 39% 61%,transparent 61%),linear-gradient(transparent 33%,#c54f4b 33% 66%,transparent 66%),linear-gradient(90deg,transparent 32%,#efecdd 32% 68%,transparent 68%),linear-gradient(transparent 25%,#efecdd 25% 75%,transparent 75%),linear-gradient(33deg,transparent 44%,#eee9d9 44% 55%,transparent 55%),linear-gradient(-33deg,#334b75 44%,#eee9d9 44% 55%,#334b75 55%)}
+.flag-france{background:linear-gradient(90deg,#395785 33.3%,#eee9dc 33.3% 66.6%,#bd5250 66.6%)}
+.flag-japan{background:radial-gradient(circle at center,#bb4947 0 9px,#eee9dc 9.5px)}
+.flag-germany{background:linear-gradient(#252d31 33.3%,#b54b44 33.3% 66.6%,#d0ac5e 66.6%)}
+.flag-austria{background:linear-gradient(#ba5550 33.3%,#eee8d9 33.3% 66.6%,#ba5550 66.6%)}
+.briefing-battlefield{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:20px}
+.briefing-setting{background:#10222899;border:1px solid #7c938e44;border-radius:5px;padding:18px;margin:0!important;min-width:0}
+.briefing-setting>div:first-of-type{justify-content:flex-start!important;gap:7px!important;flex-wrap:wrap}
+.briefing-setting button{font-family:inherit!important;min-height:38px;padding:9px 12px!important;letter-spacing:.2px!important;color:#d0dcd0!important}
+.briefing-setting button.selected{color:#f2d495!important}
+.briefing-setting [id$="-desc"]{font-size:12px!important;line-height:1.5;color:#a8bcb0!important;margin-top:12px!important}
+#nation-select #map-select{grid-column:1/-1}
+#nation-select #map-select>div:first-of-type{display:grid!important;grid-template-columns:repeat(5,1fr)}
+#nation-select .map-btn{display:flex;flex-direction:column;gap:8px;text-align:left;align-items:stretch;padding:10px!important}
+#nation-select .map-btn:before{content:'';height:64px;border:1px solid #9aaf9d44;background:repeating-linear-gradient(0deg,transparent 0 13px,#a9b59d12 13px 14px),linear-gradient(112deg,#607761 65%,#c1ad7a 65% 69%,#355b6b 69%);border-radius:2px}
+#nation-select .map-btn[data-map=islands]:before{background:radial-gradient(ellipse at 28% 40%,#7a8b68 0 18%,transparent 20%),radial-gradient(ellipse at 75% 63%,#7a8b68 0 21%,transparent 23%),#355b6b}
+#nation-select .map-btn[data-map=river]:before{background:linear-gradient(110deg,#6c8265 42%,#c4b27e 43% 46%,#355b6b 47% 54%,#c4b27e 55% 58%,#6c8265 59%)}
+#nation-select .map-btn[data-map=plains]:before{background:repeating-radial-gradient(ellipse at 25% 70%,#6f8260 0 12px,#798d68 13px 15px,#6f8260 16px 29px)}
+#nation-select .map-btn[data-map=random]:before{background:linear-gradient(135deg,#355b6b,#6b7c62 65%,#af9e6a)}
+#nation-select #map-seed-input{width:150px!important;padding:9px 11px!important;font-size:12px!important;color:#e9e2ce!important}
+.briefing-footer{position:sticky;bottom:0;display:flex;align-items:center;gap:12px;padding:18px 0!important;margin:0!important;border-top:1px solid #a9b7a044;background:#182a30;z-index:2;box-shadow:0 -12px 22px #182a30c9}
+.deployment-summary{flex:1;min-width:0;text-align:left}.deployment-summary strong{display:block;font-size:13px;font-weight:600;color:#efdfb9}.deployment-summary span{display:block;color:#a6b9ad;font-size:10px;line-height:1.5;margin-top:5px}
+.briefing-footer .menu-btn{width:auto;min-width:140px;margin:0!important;padding:13px 18px;font-size:12px;letter-spacing:1px}
+.briefing-footer .briefing-next,#nation-select #btn-start-game{color:#17272c;background:linear-gradient(120deg,#e0c28a,#bfa062);border-color:#e1c486;font-weight:700}
+.briefing-previous{background:none;border:0;color:#c8baa0;cursor:pointer;font-family:inherit;font-size:12px}
+.command-briefing button:focus-visible,.command-briefing input:focus-visible{outline:2px solid #edd395;outline-offset:3px}
+.command-briefing button:disabled{cursor:default;opacity:.4}
+#main-menu button:focus-visible,#main-menu summary:focus-visible{outline:2px solid #e1c18b;outline-offset:4px}
+@media(min-width:761px) and (max-height:800px){
+ #nation-select .command-briefing{padding:18px 28px 0}
+ .command-briefing>.menu-eyebrow{margin-bottom:6px}
+ .command-briefing .nation-select-title{font-size:30px}
+ .command-briefing .briefing-intro{margin-bottom:8px}
+ .briefing-steps{margin-bottom:14px}.briefing-steps button{padding:8px 0}
+ .command-briefing .nation-card{padding:8px 14px;gap:0;flex-wrap:nowrap}
+ .command-briefing .nation-grid{gap:8px}
+ .country-heading{margin-bottom:5px}.country-tagline{margin-bottom:4px}
+ .command-briefing .nation-panels{margin-bottom:14px}
+ .opponent-note{display:inline-block;max-width:calc(100% - 150px);vertical-align:middle;margin-right:10px}
+ .random-opponent{vertical-align:middle}
+ .briefing-footer{padding:12px 0!important}
+}
+@media(max-width:760px){#nation-select{padding:10px 0}.command-briefing .nation-panels,.briefing-battlefield{grid-template-columns:1fr}#nation-select .command-briefing{width:calc(100% - 20px);padding:22px 16px 0;max-height:calc(100dvh - 20px)}.briefing-footer{flex-wrap:wrap}.deployment-summary{flex-basis:100%}.briefing-footer .menu-btn{flex:1;min-width:115px}.briefing-previous{order:2;width:100%;text-align:left}.briefing-steps{gap:14px}.briefing-steps button{font-size:12px}.command-briefing .nation-select-title{font-size:30px}#nation-select #map-select>div:first-of-type{grid-template-columns:repeat(2,1fr)}.command-briefing .nation-name{font-size:19px}}
+@media(prefers-reduced-motion:reduce){.command-briefing *{transition:none!important;scroll-behavior:auto!important}}
+
 /* Fit rotation controls without clipping the tactical map. */
 #minimap-container{height:286px}
 @media(max-width:900px){#minimap-container{height:222px}.camera-controls{gap:2px}.camera-controls button{font-size:10px;min-height:30px}}

@@ -2,6 +2,7 @@ import { NATIONS, NATION_ABILITIES, CHALLENGE_SCENARIOS, VICTORY_CONDITIONS } fr
 import { HUD } from './HUD.js';
 import { GameOverScreen } from './GameOverScreen.js';
 import { CreditsScreen } from './CreditsScreen.js';
+import { BriefingMenu } from './BriefingMenu.js';
 
 export class UIManager {
   constructor(game) {
@@ -30,6 +31,7 @@ export class UIManager {
     this._mpIsHost = false;
     this._mpRoomCode = null;
 
+    this.briefing = new BriefingMenu(this);
     this.setupEventListeners();
   }
 
@@ -139,8 +141,8 @@ export class UIManager {
         const nationData = NATIONS[nation];
         if (!nationData || nationData.side !== 'enemy') return;
 
-        // In 2P mode, allow selecting enemy nation
-        if (this.game.mode === '2P') {
+        // Choose either an AI opponent or the local second player's nation.
+        if (['1P','2P','SPECTATE'].includes(this.game.mode)) {
           enemyCards.forEach(c => c.classList.remove('selected'));
           card.classList.add('selected');
           this.selectedEnemyNation = nation;
@@ -430,7 +432,7 @@ export class UIManager {
 
     let enemyNation = this.selectedEnemyNation;
 
-    if (this.game.mode === '1P' || this.game.mode === 'SPECTATE') {
+    if ((this.game.mode === '1P' || this.game.mode === 'SPECTATE') && !enemyNation) {
       // Auto-select a random enemy nation for AI
       const enemyNations = Object.keys(NATIONS).filter(n => NATIONS[n].side === 'enemy');
       enemyNation = enemyNations[Math.floor(Math.random() * enemyNations.length)];
@@ -454,6 +456,11 @@ export class UIManager {
 
     // Get optional seed
     const seedInput = document.getElementById('map-seed-input');
+    if (seedInput && !seedInput.checkValidity()) {
+      seedInput.reportValidity();
+      seedInput.focus();
+      return;
+    }
     const mapSeed = seedInput && seedInput.value.trim() ? parseInt(seedInput.value.trim()) || null : null;
 
     // Start the game
@@ -1018,9 +1025,9 @@ export class UIManager {
     const enemyPanel = document.querySelector('.enemy-panel');
     if (enemyPanel) {
       if (this.game.mode === '1P' || this.game.mode === 'SPECTATE') {
-        enemyPanel.style.opacity = '0.5';
-        enemyPanel.style.pointerEvents = 'none';
-        enemyPanel.querySelector('.panel-header').textContent = 'Enemy Nation (Auto)';
+        enemyPanel.style.opacity = '1';
+        enemyPanel.style.pointerEvents = 'auto';
+        enemyPanel.querySelector('.panel-header').textContent = 'Opposing command';
       } else {
         enemyPanel.style.opacity = '1';
         enemyPanel.style.pointerEvents = 'auto';
@@ -1028,11 +1035,10 @@ export class UIManager {
       }
     }
 
-    // Auto-selected enemy nations should not appear keyboard-interactive.
+    // Both AI opponents and local Player 2 nations can be chosen explicitly.
     enemyPanel?.querySelectorAll('.nation-card').forEach(card => {
-      const disabled = this.game.mode !== '2P';
-      card.setAttribute('aria-disabled', String(disabled));
-      card.tabIndex = disabled ? -1 : 0;
+      card.setAttribute('aria-disabled', 'false');
+      card.tabIndex = 0;
     });
 
     // Reset selections when re-entering nation select
@@ -1041,6 +1047,7 @@ export class UIManager {
     this.selectedDifficulty = 'normal';
     this.selectedMap = 'continental';
     this.selectedGameMode = 'hq_destruction';
+    this.selectedBiome = 'temperate';
     document.querySelectorAll('.nation-card').forEach(c => c.classList.remove('selected'));
 
     // Reset button visual states to defaults
@@ -1062,9 +1069,15 @@ export class UIManager {
     resetBtnGroup('.difficulty-btn', 'data-difficulty', 'normal');
     resetBtnGroup('.map-btn', 'data-map', 'continental');
     resetBtnGroup('.gamemode-btn', 'data-gamemode', 'hq_destruction');
+    resetBtnGroup('.biome-btn', 'data-biome', 'temperate');
+    // Use the selection handlers to reset descriptions alongside their controls.
+    for (const selector of ['.difficulty-btn.selected', '.map-btn.selected', '.gamemode-btn.selected', '.biome-btn.selected']) {
+      document.querySelector(selector)?.click();
+    }
 
     const startBtn = document.getElementById('btn-start-game');
     if (startBtn) startBtn.disabled = true;
+    this.briefing?.reset();
   }
 
   showHUD() {
