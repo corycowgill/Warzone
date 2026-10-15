@@ -11,7 +11,7 @@ Ground units include equipped infantry, engineer, commander, two-person mortar c
 - Carrier escort aircraft reuse the fighter GLB at reduced scale.
 - Authored PBR materials survive Game.addEntity's toon conversion. Tracks, glass, masonry and steel retain their authored colors.
 - Models keep the existing gameplay target sizes, centering and orientation conventions. Naval models receive a shallow waterline offset.
-- Procedural fallbacks remain available if asset loading fails. Terrain, trees and decorative props are outside this roster replacement.
+- Procedural fallbacks remain available if asset loading fails. Terrain, trees and decorative props were subsequently rebuilt in the environment pass; see ENVIRONMENT_ART.md.
 
 ## Reproduce
 

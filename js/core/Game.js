@@ -1,3 +1,4 @@
+import { loadGroundTextures } from '../world/TerrainMaterials.js';
 import * as THREE from 'three';
 import { EventBus } from './EventBus.js';
 import { GAME_CONFIG, NATIONS, BUILDING_STATS, UNIT_STATS, SALVAGE_CONFIG, RESOURCE_NODE_CONFIG, CONSTRUCTION_CONFIG, COMMANDER_CONFIG, AI_DIFFICULTY, VICTORY_CONDITIONS } from './Constants.js';
@@ -256,6 +257,8 @@ export class Game {
       if (!assetManager.ready) {
         await assetManager.preloadAll();
       }
+
+      this.environmentTextures ??= await loadGroundTextures(this.sceneManager.renderer);
 
       // Store asset manager reference for terrain and other systems
       this.assetManager = assetManager;
@@ -645,7 +648,8 @@ export class Game {
     const boxMat = new THREE.MeshPhongMaterial({ color });
     const box = new THREE.Mesh(boxGeo, boxMat);
     box.position.y = 0.75;
-    group.add(box);
+    const cacheModel = assetManager.getScaledModel('env_supply_cache');
+    if (cacheModel) { group.add(cacheModel); boxGeo.dispose(); boxMat.dispose(); } else group.add(box);
     const markerGeo = new THREE.OctahedronGeometry(0.5, 0);
     const markerMat = new THREE.MeshBasicMaterial({ color: markerColor });
     const marker = new THREE.Mesh(markerGeo, markerMat);
@@ -758,7 +762,8 @@ export class Game {
     const pillar = new THREE.Mesh(pillarGeo, pillarMat);
     pillar.position.y = 1.5;
     pillar.castShadow = true;
-    group.add(pillar);
+    const outcrop = assetManager.getScaledModel('env_resource_outcrop');
+    if (outcrop) { group.add(outcrop); pillarGeo.dispose(); pillarMat.dispose(); } else group.add(pillar);
 
     // Glowing base ring
     const ringGeo = new THREE.RingGeometry(1.5, 2, 24);
@@ -1595,6 +1600,7 @@ export class Game {
     });
     if (this.terrain && this.terrain.mesh) {
       this.sceneManager.scene.remove(this.terrain.mesh);
+      this.terrain.dispose();
     }
     this.entities = [];
     this.projectiles = [];

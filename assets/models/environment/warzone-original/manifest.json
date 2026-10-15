@@ -1,0 +1,210 @@
+[
+  {
+    "model": "tree-oak",
+    "category": "environment",
+    "triangles": 1168,
+    "meshes": 4,
+    "bytes": 102164,
+    "path": "assets/models/environment/warzone-original/tree-oak.glb"
+  },
+  {
+    "model": "tree-birch",
+    "category": "environment",
+    "triangles": 1168,
+    "meshes": 4,
+    "bytes": 102176,
+    "path": "assets/models/environment/warzone-original/tree-birch.glb"
+  },
+  {
+    "model": "tree-pine",
+    "category": "environment",
+    "triangles": 3232,
+    "meshes": 4,
+    "bytes": 290196,
+    "path": "assets/models/environment/warzone-original/tree-pine.glb"
+  },
+  {
+    "model": "tree-fir",
+    "category": "environment",
+    "triangles": 3232,
+    "meshes": 4,
+    "bytes": 290196,
+    "path": "assets/models/environment/warzone-original/tree-fir.glb"
+  },
+  {
+    "model": "tree-broadleaf",
+    "category": "environment",
+    "triangles": 1168,
+    "meshes": 4,
+    "bytes": 102176,
+    "path": "assets/models/environment/warzone-original/tree-broadleaf.glb"
+  },
+  {
+    "model": "tree-palm",
+    "category": "environment",
+    "triangles": 422,
+    "meshes": 2,
+    "bytes": 21888,
+    "path": "assets/models/environment/warzone-original/tree-palm.glb"
+  },
+  {
+    "model": "boulder",
+    "category": "environment",
+    "triangles": 320,
+    "meshes": 2,
+    "bytes": 34860,
+    "path": "assets/models/environment/warzone-original/boulder.glb"
+  },
+  {
+    "model": "cliff",
+    "category": "environment",
+    "triangles": 940,
+    "meshes": 2,
+    "bytes": 80636,
+    "path": "assets/models/environment/warzone-original/cliff.glb"
+  },
+  {
+    "model": "mountain",
+    "category": "environment",
+    "triangles": 400,
+    "meshes": 1,
+    "bytes": 41796,
+    "path": "assets/models/environment/warzone-original/mountain.glb"
+  },
+  {
+    "model": "resource-outcrop",
+    "category": "environment",
+    "triangles": 320,
+    "meshes": 2,
+    "bytes": 34860,
+    "path": "assets/models/environment/warzone-original/resource-outcrop.glb"
+  },
+  {
+    "model": "supply-cache",
+    "category": "environment",
+    "triangles": 192,
+    "meshes": 4,
+    "bytes": 17988,
+    "path": "assets/models/environment/warzone-original/supply-cache.glb"
+  },
+  {
+    "model": "grass",
+    "category": "environment",
+    "triangles": 28,
+    "meshes": 2,
+    "bytes": 4108,
+    "path": "assets/models/environment/warzone-original/grass.glb"
+  },
+  {
+    "model": "reeds",
+    "category": "environment",
+    "triangles": 182,
+    "meshes": 2,
+    "bytes": 11544,
+    "path": "assets/models/environment/warzone-original/reeds.glb"
+  },
+  {
+    "model": "bush",
+    "category": "environment",
+    "triangles": 400,
+    "meshes": 2,
+    "bytes": 42840,
+    "path": "assets/models/environment/warzone-original/bush.glb"
+  },
+  {
+    "model": "stump",
+    "category": "environment",
+    "triangles": 196,
+    "meshes": 2,
+    "bytes": 11096,
+    "path": "assets/models/environment/warzone-original/stump.glb"
+  },
+  {
+    "model": "fallen-log",
+    "category": "environment",
+    "triangles": 152,
+    "meshes": 2,
+    "bytes": 8928,
+    "path": "assets/models/environment/warzone-original/fallen-log.glb"
+  },
+  {
+    "model": "prop-generator",
+    "category": "environment",
+    "triangles": 336,
+    "meshes": 2,
+    "bytes": 24920,
+    "path": "assets/models/environment/warzone-original/prop-generator.glb"
+  },
+  {
+    "model": "prop-wireless",
+    "category": "environment",
+    "triangles": 460,
+    "meshes": 2,
+    "bytes": 33872,
+    "path": "assets/models/environment/warzone-original/prop-wireless.glb"
+  },
+  {
+    "model": "prop-barrel-machine",
+    "category": "environment",
+    "triangles": 828,
+    "meshes": 4,
+    "bytes": 41744,
+    "path": "assets/models/environment/warzone-original/prop-barrel-machine.glb"
+  },
+  {
+    "model": "prop-rocket-fuel",
+    "category": "environment",
+    "triangles": 828,
+    "meshes": 4,
+    "bytes": 41740,
+    "path": "assets/models/environment/warzone-original/prop-rocket-fuel.glb"
+  },
+  {
+    "model": "prop-hangar-round",
+    "category": "environment",
+    "triangles": 540,
+    "meshes": 1,
+    "bytes": 39088,
+    "path": "assets/models/environment/warzone-original/prop-hangar-round.glb"
+  },
+  {
+    "model": "prop-wood-structure",
+    "category": "environment",
+    "triangles": 152,
+    "meshes": 2,
+    "bytes": 8928,
+    "path": "assets/models/environment/warzone-original/prop-wood-structure.glb"
+  },
+  {
+    "model": "prop-rocks-large",
+    "category": "environment",
+    "triangles": 940,
+    "meshes": 2,
+    "bytes": 80636,
+    "path": "assets/models/environment/warzone-original/prop-rocks-large.glb"
+  },
+  {
+    "model": "prop-rocks",
+    "category": "environment",
+    "triangles": 320,
+    "meshes": 2,
+    "bytes": 34856,
+    "path": "assets/models/environment/warzone-original/prop-rocks.glb"
+  },
+  {
+    "model": "prop-weapon-cannon",
+    "category": "environment",
+    "triangles": 2232,
+    "meshes": 8,
+    "bytes": 154308,
+    "path": "assets/models/environment/warzone-original/prop-weapon-cannon.glb"
+  },
+  {
+    "model": "prop-weapon-turret",
+    "category": "environment",
+    "triangles": 2140,
+    "meshes": 5,
+    "bytes": 143108,
+    "path": "assets/models/environment/warzone-original/prop-weapon-turret.glb"
+  }
+]

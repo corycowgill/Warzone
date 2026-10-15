@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { GAME_CONFIG } from '../core/Constants.js';
 import { assetManager } from '../rendering/AssetManager.js';
+import { createGroundMaterial, createWater } from './TerrainMaterials.js';
+import { addEnvironmentScenery } from './EnvironmentScenery.js';
 
 // Simple seeded PRNG (mulberry32)
 function createRNG(seed) {
@@ -144,6 +146,12 @@ export class Terrain {
   }
 
   generateContinental() {
+    // Coast parameters belong to the map, not individual vertices: per-vertex
+    // randomness produced serrated banks and spikes that textures could not hide.
+    const waterOffset = 0.68 + this.rng() * 0.08;
+    const shore1 = this.mapSize * (0.25 + this.rng() * 0.1);
+    const shore2 = this.mapSize * (0.65 + this.rng() * 0.1);
+    const shoreWidth = 6 + this.rng() * 4;
     for (let z = 0; z <= this.mapSize; z++) {
       for (let x = 0; x <= this.mapSize; x++) {
         let height = 0;
@@ -152,7 +160,6 @@ export class Terrain {
         height += Math.sin(x * 0.05 + this.seed) * 1.0 + Math.cos(z * 0.07 + this.seed * 0.7) * 0.8;
 
         // Water channel on right side (variable position based on seed)
-        const waterOffset = 0.68 + this.rng() * 0.08;
         const waterStart = this.mapSize * waterOffset;
         if (x > waterStart) {
           const waterDepth = (x - waterStart) / (this.mapSize - waterStart);
@@ -167,11 +174,10 @@ export class Terrain {
         }
 
         // Shore access points (randomized positions)
-        const shore1 = this.mapSize * (0.25 + this.rng() * 0.1);
-        const shore2 = this.mapSize * (0.65 + this.rng() * 0.1);
-        const shoreWidth = 6 + this.rng() * 4;
         if ((Math.abs(z - shore1) < shoreWidth || Math.abs(z - shore2) < shoreWidth) && x > coastZone) {
-          height = Math.max(-0.5, height * 0.3);
+          const shoreDist = Math.min(Math.abs(z - shore1), Math.abs(z - shore2));
+          const blend = 1 - THREE.MathUtils.smoothstep(shoreDist, shoreWidth * .5, shoreWidth);
+          height = THREE.MathUtils.lerp(height, Math.max(-0.5, height * 0.3), blend);
         }
 
         this.setHeightAndWalkable(x, z, height);
@@ -482,192 +488,19 @@ export class Terrain {
     geometry.computeVertexNormals();
     geometry.translate(this.worldSize / 2, 0, this.worldSize / 2);
 
-    const material = new THREE.MeshPhongMaterial({ vertexColors: true, shininess: 5 });
+    const material = this.game.environmentTextures ? createGroundMaterial(this, this.game.environmentTextures) : new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .95 });
+    material.userData.preservePBR = true;
     const mesh = new THREE.Mesh(geometry, material);
     mesh.receiveShadow = true;
 
-    // GD-106: Water Shader with animated waves, specular, depth color gradient
-    const waterRes = 128;
-    const waterGeometry = new THREE.PlaneGeometry(this.worldSize, this.worldSize, waterRes, waterRes);
-    waterGeometry.rotateX(-Math.PI / 2);
-
-    const waterMaterial = new THREE.ShaderMaterial({
-      uniforms: {
-        uTime: { value: 0 },
-        uShallowColor: { value: new THREE.Color(this.biomeData.waterShallow) },
-        uDeepColor: { value: new THREE.Color(this.biomeData.waterDeep) },
-        uFoamColor: { value: new THREE.Color(0xddeeff) },
-        uLightDir: { value: new THREE.Vector3(0.5, 0.8, 0.3).normalize() },
-        uCameraPos: { value: new THREE.Vector3() },
-        uOpacity: { value: 0.75 }
-      },
-      vertexShader: `
-        uniform float uTime;
-        varying vec2 vUv;
-        varying vec3 vWorldPos;
-        varying float vWaveHeight;
-        void main() {
-          vUv = uv;
-          vec3 pos = position;
-          // Multiple sine waves for organic wave motion
-          float wave1 = sin(pos.x * 0.08 + uTime * 1.2) * 0.4;
-          float wave2 = sin(pos.z * 0.12 + uTime * 0.8) * 0.3;
-          float wave3 = sin((pos.x + pos.z) * 0.06 + uTime * 1.5) * 0.2;
-          pos.y += wave1 + wave2 + wave3;
-          vWaveHeight = wave1 + wave2 + wave3;
-          vWorldPos = (modelMatrix * vec4(pos, 1.0)).xyz;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
-        }
-      `,
-      fragmentShader: `
-        uniform vec3 uShallowColor;
-        uniform vec3 uDeepColor;
-        uniform vec3 uFoamColor;
-        uniform vec3 uLightDir;
-        uniform vec3 uCameraPos;
-        uniform float uTime;
-        uniform float uOpacity;
-        varying vec2 vUv;
-        varying vec3 vWorldPos;
-        varying float vWaveHeight;
-        void main() {
-          // Depth-based color (center = deeper)
-          float edgeDist = min(min(vUv.x, 1.0 - vUv.x), min(vUv.y, 1.0 - vUv.y));
-          float depthFactor = smoothstep(0.0, 0.3, edgeDist);
-          vec3 waterColor = mix(uShallowColor, uDeepColor, depthFactor);
-
-          // Foam at shore edges (where shallow meets land)
-          float foam = smoothstep(0.02, 0.0, edgeDist);
-          // Animated foam line
-          float foamLine = sin(vWorldPos.x * 0.3 + uTime * 2.0) * 0.5 + 0.5;
-          foamLine *= sin(vWorldPos.z * 0.25 + uTime * 1.5) * 0.5 + 0.5;
-          foam += smoothstep(0.06, 0.03, edgeDist) * foamLine * 0.5;
-          // Wave crest foam
-          foam += smoothstep(0.5, 0.8, vWaveHeight) * 0.3;
-          waterColor = mix(waterColor, uFoamColor, clamp(foam, 0.0, 0.6));
-
-          // Specular highlight from directional light
-          vec3 viewDir = normalize(uCameraPos - vWorldPos);
-          vec3 normal = normalize(vec3(
-            sin(vWorldPos.x * 0.1 + uTime) * 0.1,
-            1.0,
-            sin(vWorldPos.z * 0.1 + uTime * 0.7) * 0.1
-          ));
-          vec3 halfDir = normalize(uLightDir + viewDir);
-          float spec = pow(max(dot(normal, halfDir), 0.0), 64.0);
-          waterColor += vec3(1.0) * spec * 0.4;
-
-          gl_FragColor = vec4(waterColor, uOpacity);
-        }
-      `,
-      transparent: true,
-      side: THREE.DoubleSide,
-      depthWrite: false
-    });
-
-    const waterMesh = new THREE.Mesh(waterGeometry, waterMaterial);
-    waterMesh.position.set(this.worldSize / 2, -0.3, this.worldSize / 2);
-    this.waterMesh = waterMesh;
-    this.waterMaterial = waterMaterial;
-
+    const water = createWater(this);
+    this.waterMesh = water.mesh;
+    this.waterMaterial = water.material;
     const group = new THREE.Group();
-    group.add(mesh);
-    group.add(waterMesh);
-
-    // Add tree props
-    this.addTreeMeshes(group);
-
-    // Add cliff props
-    this.addCliffMeshes(group);
+    group.add(mesh, water.mesh);
+    addEnvironmentScenery(this, group);
 
     return group;
-  }
-
-  addTreeMeshes(group) {
-    if (this.treePositions.length === 0) return;
-
-    // Tree model keys to randomly pick from
-    const treeKeys = ['tree_default', 'tree_oak', 'tree_cone', 'tree_detailed', 'tree_fat'];
-    const hasLoadedTrees = treeKeys.some(k => assetManager.has(k));
-
-    if (hasLoadedTrees) {
-      // Use loaded 3D tree models
-      const availableKeys = treeKeys.filter(k => assetManager.has(k));
-
-      for (const tree of this.treePositions) {
-        const worldPos = this.gridToWorld(tree.x, tree.z);
-        const h = this.getHeightAt(worldPos.x, worldPos.z);
-        const scale = tree.scale;
-
-        // Pick a random tree type
-        const key = availableKeys[Math.floor(this.rng() * availableKeys.length)];
-        const model = assetManager.getScaledModel(key);
-        if (!model) continue;
-
-        model.scale.multiplyScalar(scale);
-        model.position.set(worldPos.x, h, worldPos.z);
-        model.rotation.y = this.rng() * Math.PI * 2;
-        model.traverse((child) => {
-          if (child.isMesh) {
-            child.castShadow = true;
-          }
-        });
-        group.add(model);
-      }
-    } else {
-      // GD-061: Instanced procedural trees (cone+cylinder) for performance
-      const trunkGeo = new THREE.CylinderGeometry(0.15, 0.25, 2, 5);
-      const trunkMat = new THREE.MeshPhongMaterial({ color: 0x5a3a1a });
-      const foliageGeo = new THREE.ConeGeometry(1.2, 2.5, 6);
-      const foliageMat = new THREE.MeshPhongMaterial({ color: this.biomeData.foliageColor });
-
-      const count = this.treePositions.length;
-      const trunkMesh = new THREE.InstancedMesh(trunkGeo, trunkMat, count);
-      const foliageMesh = new THREE.InstancedMesh(foliageGeo, foliageMat, count);
-      trunkMesh.castShadow = true;
-      foliageMesh.castShadow = true;
-
-      const dummy = new THREE.Object3D();
-      for (let i = 0; i < count; i++) {
-        const tree = this.treePositions[i];
-        const worldPos = this.gridToWorld(tree.x, tree.z);
-        const h = this.getHeightAt(worldPos.x, worldPos.z);
-        const scale = tree.scale;
-
-        dummy.position.set(worldPos.x, h + 1 * scale, worldPos.z);
-        dummy.scale.set(scale, scale, scale);
-        dummy.updateMatrix();
-        trunkMesh.setMatrixAt(i, dummy.matrix);
-
-        dummy.position.set(worldPos.x, h + 2.5 * scale, worldPos.z);
-        dummy.scale.set(scale, scale, scale);
-        dummy.updateMatrix();
-        foliageMesh.setMatrixAt(i, dummy.matrix);
-      }
-
-      group.add(trunkMesh);
-      group.add(foliageMesh);
-    }
-  }
-
-  addCliffMeshes(group) {
-    if (this.cliffPositions.length === 0) return;
-
-    const cliffGeo = new THREE.BoxGeometry(1.5, 2, 1.5);
-    const cliffMat = new THREE.MeshPhongMaterial({ color: 0x8a8a7a });
-
-    // Limit cliff meshes for performance
-    const maxCliffs = Math.min(this.cliffPositions.length, 50);
-    for (let i = 0; i < maxCliffs; i++) {
-      const cliff = this.cliffPositions[i];
-      const worldPos = this.gridToWorld(cliff.x, cliff.z);
-
-      const mesh = new THREE.Mesh(cliffGeo, cliffMat);
-      mesh.position.set(worldPos.x, cliff.height + 0.5, worldPos.z);
-      mesh.rotation.y = this.rng() * Math.PI;
-      mesh.castShadow = true;
-      group.add(mesh);
-    }
   }
 
   getHeightAt(worldX, worldZ) {
@@ -740,7 +573,19 @@ export class Terrain {
     return this._forestGrid[gz * this.mapSize + gx] === 1;
   }
 
-  // GD-106: Update water shader uniforms each frame
+  dispose() {
+    const materials = new Set(), geometries = new Set();
+    this.mesh.traverse(o => {
+      if (!o.isMesh) return;
+      geometries.add(o.geometry);
+      for (const m of Array.isArray(o.material) ? o.material : [o.material]) materials.add(m);
+    });
+    for (const geometry of geometries) geometry.dispose();
+    for (const material of materials) { material.alphaMap?.dispose(); material.dispose(); }
+    this.waterMaterial.uniforms.uHeight.value.dispose();
+  }
+
+  // Update water shader uniforms each frame
   updateWater(deltaTime, camera) {
     if (!this.waterMaterial || !this.waterMaterial.uniforms) return;
     this.waterMaterial.uniforms.uTime.value += deltaTime;

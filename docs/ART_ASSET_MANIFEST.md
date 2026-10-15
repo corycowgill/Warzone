@@ -448,3 +448,8 @@ the same 12 failures were verified on the original code before this rebuild.
 ## Original full-roster replacement
 
 All unit and building manifest entries now use original Blender-authored GLBs generated from the checked-in scripts. Includes infantry, support vehicles, aircraft, naval units, military architecture, capturable structures and carrier escorts. Reproduction, budgets and limitations: [ROSTER_ASSETS.md](ROSTER_ASSETS.md). The older third-party models remain in the repository for provenance/history but are no longer used for roster manifest entries. Environment trees and decorative props retain their existing sources.
+
+
+## Original environment replacement
+
+All environment/tree/prop manifest slots now use original Blender GLBs. Ground textures were generated with built-in ImageGen and saved with their source atlas. See [ENVIRONMENT_ART.md](ENVIRONMENT_ART.md) for provenance, final prompt, regeneration commands, budgets, integration and limitations. Previous third-party files remain as historical sources; current manifest entries use the original set.

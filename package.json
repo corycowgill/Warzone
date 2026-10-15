@@ -13,7 +13,8 @@
     "test:armor": "node scripts/verify-armored-vehicles.mjs",
     "test:interface": "node scripts/verify-interface.mjs",
     "test:roster": "node scripts/verify-roster.mjs",
-    "test:camera": "node scripts/verify-camera.mjs"
+    "test:camera": "node scripts/verify-camera.mjs",
+    "test:environment": "node scripts/verify-environment.mjs"
   },
   "dependencies": {
     "@gltf-transform/core": "^4.3.0",

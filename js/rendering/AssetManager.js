@@ -32,12 +32,12 @@ export class AssetManager {
 
   static MANIFEST = {
     // --- Environment ---
-    tree_default:  { path: 'assets/models/environment/nature-kit/tree_default.glb',  targetSize: 4.0 },
-    tree_oak:      { path: 'assets/models/environment/nature-kit/tree_oak.glb',      targetSize: 4.5 },
-    tree_cone:     { path: 'assets/models/environment/nature-kit/tree_cone.glb',     targetSize: 4.0 },
-    tree_detailed: { path: 'assets/models/environment/nature-kit/tree_detailed.glb', targetSize: 4.0 },
-    tree_fat:      { path: 'assets/models/environment/nature-kit/tree_fat.glb',      targetSize: 4.5 },
-    tree_palm:     { path: 'assets/models/environment/nature-kit/tree_palm.glb',     targetSize: 4.0 },
+    tree_default:  { path: 'assets/models/environment/warzone-original/tree-broadleaf.glb', shading: 'standard',  targetSize: 4.0 },
+    tree_oak:      { path: 'assets/models/environment/warzone-original/tree-oak.glb', shading: 'standard',      targetSize: 4.5 },
+    tree_cone:     { path: 'assets/models/environment/warzone-original/tree-pine.glb', shading: 'standard',     targetSize: 4.0 },
+    tree_detailed: { path: 'assets/models/environment/warzone-original/tree-birch.glb', shading: 'standard', targetSize: 4.0 },
+    tree_fat:      { path: 'assets/models/environment/warzone-original/tree-fir.glb', shading: 'standard',      targetSize: 4.5 },
+    tree_palm:     { path: 'assets/models/environment/warzone-original/tree-palm.glb', shading: 'standard',     targetSize: 4.0 },
 
     // --- Original authored unit roster ---
     unit_infantry: { path: 'assets/models/units/warzone-original/infantry.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 2.0 },
@@ -84,17 +84,29 @@ export class AssetManager {
     bld_commrelay: { path: 'assets/models/buildings/warzone-original/commrelay.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 5.0 },
     bld_repairbay: { path: 'assets/models/buildings/warzone-original/repairbay.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 5.0 },
 
+    // Original terrain dressing, batched by material at placement time.
+    env_boulder: { path: 'assets/models/environment/warzone-original/boulder.glb', shading: 'standard', targetSize: 2.5 },
+    env_cliff: { path: 'assets/models/environment/warzone-original/cliff.glb', shading: 'standard', targetSize: 5 },
+    env_mountain: { path: 'assets/models/environment/warzone-original/mountain.glb', shading: 'standard', targetSize: 16 },
+    env_grass: { path: 'assets/models/environment/warzone-original/grass.glb', shading: 'standard', targetSize: 1.2 },
+    env_reeds: { path: 'assets/models/environment/warzone-original/reeds.glb', shading: 'standard', targetSize: 2 },
+    env_bush: { path: 'assets/models/environment/warzone-original/bush.glb', shading: 'standard', targetSize: 2 },
+    env_stump: { path: 'assets/models/environment/warzone-original/stump.glb', shading: 'standard', targetSize: 1 },
+    env_fallen_log: { path: 'assets/models/environment/warzone-original/fallen-log.glb', shading: 'standard', targetSize: 3 },
+    env_resource_outcrop: { path: 'assets/models/environment/warzone-original/resource-outcrop.glb', shading: 'standard', targetSize: 3 },
+    env_supply_cache: { path: 'assets/models/environment/warzone-original/supply-cache.glb', shading: 'standard', targetSize: 2 },
+
     // --- Environment Props (for map decoration and neutral structures) ---
-    prop_generator:       { path: 'assets/models/units/space-kit/machine_generator.glb',           targetSize: 2.0 },
-    prop_wireless:        { path: 'assets/models/units/space-kit/machine_wireless.glb',            targetSize: 2.0 },
-    prop_barrel_machine:  { path: 'assets/models/units/space-kit/machine_barrel.glb',              targetSize: 1.5 },
-    prop_rocket_fuel:     { path: 'assets/models/units/space-kit/rocket_fuelA.glb',                targetSize: 2.0 },
-    prop_hangar_round:    { path: 'assets/models/units/space-kit/hangar_roundA.glb',               targetSize: 4.0 },
-    prop_wood_structure:  { path: 'assets/models/buildings/tower-defense/wood-structure.glb',       targetSize: 3.0 },
-    prop_rocks_large:     { path: 'assets/models/buildings/tower-defense/detail-rocks-large.glb',   targetSize: 2.0 },
-    prop_rocks:           { path: 'assets/models/buildings/tower-defense/detail-rocks.glb',         targetSize: 1.5 },
-    prop_weapon_cannon:   { path: 'assets/models/buildings/tower-defense/weapon-cannon.glb',        targetSize: 3.0 },
-    prop_weapon_turret:   { path: 'assets/models/buildings/tower-defense/weapon-turret.glb',        targetSize: 3.0 },
+    prop_generator:       { path: 'assets/models/environment/warzone-original/prop-generator.glb', shading: 'standard',           targetSize: 2.0 },
+    prop_wireless:        { path: 'assets/models/environment/warzone-original/prop-wireless.glb', shading: 'standard',            targetSize: 2.0 },
+    prop_barrel_machine:  { path: 'assets/models/environment/warzone-original/prop-barrel-machine.glb', shading: 'standard',              targetSize: 1.5 },
+    prop_rocket_fuel:     { path: 'assets/models/environment/warzone-original/prop-rocket-fuel.glb', shading: 'standard',                targetSize: 2.0 },
+    prop_hangar_round:    { path: 'assets/models/environment/warzone-original/prop-hangar-round.glb', shading: 'standard',               targetSize: 4.0 },
+    prop_wood_structure:  { path: 'assets/models/environment/warzone-original/prop-wood-structure.glb', shading: 'standard',       targetSize: 3.0 },
+    prop_rocks_large:     { path: 'assets/models/environment/warzone-original/prop-rocks-large.glb', shading: 'standard',   targetSize: 2.0 },
+    prop_rocks:           { path: 'assets/models/environment/warzone-original/prop-rocks.glb', shading: 'standard',         targetSize: 1.5 },
+    prop_weapon_cannon:   { path: 'assets/models/environment/warzone-original/prop-weapon-cannon.glb', shading: 'standard',        targetSize: 3.0 },
+    prop_weapon_turret:   { path: 'assets/models/environment/warzone-original/prop-weapon-turret.glb', shading: 'standard',        targetSize: 3.0 },
   };
 
   async preloadAll() {
