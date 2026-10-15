@@ -11,7 +11,8 @@
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
     "test:armor": "node scripts/verify-armored-vehicles.mjs",
-    "test:interface": "node scripts/verify-interface.mjs"
+    "test:interface": "node scripts/verify-interface.mjs",
+    "test:roster": "node scripts/verify-roster.mjs"
   },
   "dependencies": {
     "@gltf-transform/core": "^4.3.0",

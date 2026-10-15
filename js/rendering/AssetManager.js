@@ -39,45 +39,50 @@ export class AssetManager {
     tree_fat:      { path: 'assets/models/environment/nature-kit/tree_fat.glb',      targetSize: 4.5 },
     tree_palm:     { path: 'assets/models/environment/nature-kit/tree_palm.glb',     targetSize: 4.0 },
 
-    // --- Units (Poly Pizza military models by Zsky, Quaternius, KolosStudios, etc.) ---
-    unit_infantry:        { path: 'assets/models/units/quaternius/soldier-quaternius.glb',    targetSize: 2.0 },  // CC0 Quaternius soldier
-    unit_engineer:        { path: 'assets/models/units/quaternius/swat-quaternius.glb',     targetSize: 2.0 },  // CC0 Quaternius SWAT
-    unit_tank:            { path: 'assets/models/units/warzone-original/tank.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 3.5 },  // Original Blender armor set
-    unit_heavytank:       { path: 'assets/models/units/warzone-original/heavy-tank.glb',     teamMaterial: 'TeamColor', shading: 'standard', targetSize: 4.5 },
-    unit_scoutcar:        { path: 'assets/models/units/poly-pizza/jeep-zsky.glb',           targetSize: 3.0 },
-    unit_apc:             { path: 'assets/models/units/warzone-original/apc.glb',          teamMaterial: 'TeamColor', shading: 'standard', targetSize: 3.5 },
-    unit_aahalftrack:     { path: 'assets/models/units/poly-pizza/ambulance-zsky.glb',      targetSize: 3.0 },
-    unit_spg:             { path: 'assets/models/units/cannon-mobile.glb',                  targetSize: 3.5 },
-    unit_mortarteam:      { path: 'assets/models/buildings/ithappy-military/Separate_assets_glb/mortar_001.glb', targetSize: 2.5 },  // ITHappy mortar
-    unit_commander:       { path: 'assets/models/units/poly-pizza/military-man.glb',        targetSize: 2.5 },
-    unit_drone:           { path: 'assets/models/units/poly-pizza/helicopter-zsky.glb',     targetSize: 2.0 },
-    unit_plane:           { path: 'assets/models/units/poly-pizza/jet-google.glb',          targetSize: 4.0 },
-    unit_bomber:          { path: 'assets/models/units/poly-pizza/airplane-google.glb',     targetSize: 5.0 },
-    unit_battleship:      { path: 'assets/models/units/poly-pizza/battleship-catalano.glb', targetSize: 5.0 },
-    unit_destroyer:       { path: 'assets/models/units/poly-pizza/simple-battleship.glb',   targetSize: 4.5 },
-    unit_submarine:       { path: 'assets/models/units/psx-submarine/psx_sub_free.glb',     targetSize: 4.0 },  // BlenderVoyage PSX submarine
-    unit_patrolboat:      { path: 'assets/models/units/poly-pizza/military-boat-zsky.glb',  targetSize: 3.0 },
-    unit_carrier:         { path: 'assets/models/units/poly-pizza/ship-quaternius.glb',     targetSize: 6.0 },
+    // --- Original authored unit roster ---
+    unit_infantry: { path: 'assets/models/units/warzone-original/infantry.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 2.0 },
+    unit_engineer: { path: 'assets/models/units/warzone-original/engineer.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 2.0 },
+    unit_tank: { path: 'assets/models/units/warzone-original/tank.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 3.5 },
+    unit_heavytank: { path: 'assets/models/units/warzone-original/heavy-tank.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 4.5 },
+    unit_scoutcar: { path: 'assets/models/units/warzone-original/scoutcar.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 3.0 },
+    unit_apc: { path: 'assets/models/units/warzone-original/apc.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 3.5 },
+    unit_aahalftrack: { path: 'assets/models/units/warzone-original/aahalftrack.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 3.0 },
+    unit_spg: { path: 'assets/models/units/warzone-original/spg.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 3.5 },
+    unit_mortarteam: { path: 'assets/models/units/warzone-original/mortarteam.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 2.5 },
+    unit_commander: { path: 'assets/models/units/warzone-original/commander.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 2.5 },
+    unit_drone: { path: 'assets/models/units/warzone-original/drone.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 2.0 },
+    unit_plane: { path: 'assets/models/units/warzone-original/plane.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 4.0 },
+    unit_bomber: { path: 'assets/models/units/warzone-original/bomber.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 5.0 },
+    unit_battleship: { path: 'assets/models/units/warzone-original/battleship.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 5.0, waterline: 0.035 },
+    unit_destroyer: { path: 'assets/models/units/warzone-original/destroyer.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 4.5, waterline: 0.035 },
+    unit_submarine: { path: 'assets/models/units/warzone-original/submarine.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 4.0, waterline: 0.035 },
+    unit_patrolboat: { path: 'assets/models/units/warzone-original/patrolboat.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 3.0, waterline: 0.035 },
+    unit_carrier: { path: 'assets/models/units/warzone-original/carrier.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 6.0, waterline: 0.035 },
 
     // --- Buildings (military-themed: hangars, fortifications, industrial) ---
-    bld_headquarters:     { path: 'assets/models/buildings/fortress.glb',                          targetSize: 8.0 },  // Large military compound
-    bld_barracks:         { path: 'assets/models/buildings/barracks.glb',                          targetSize: 5.0 },  // Military barracks
-    bld_warfactory:       { path: 'assets/models/units/space-kit/hangar_largeB.glb',               targetSize: 6.0 },  // Industrial hangar for vehicles
-    bld_shipyard:         { path: 'assets/models/buildings/dock.glb',                              targetSize: 6.0 },  // Naval dock
-    bld_airfield:         { path: 'assets/models/units/space-kit/hangar_largeA.glb',               targetSize: 6.0 },  // Aircraft hangar
-    bld_turret:           { path: 'assets/models/units/space-kit/turret_double.glb',               targetSize: 3.0 },  // Weapon turret
-    bld_aaturret:         { path: 'assets/models/units/space-kit/turret_single.glb',               targetSize: 3.0 },  // AA gun emplacement
-    bld_bunker:           { path: 'assets/models/buildings/poly-pizza/sack-trench-quaternius.glb',  targetSize: 4.0 },  // Sandbag fortification
-    bld_wall:             { path: 'assets/models/buildings/poly-pizza/barrier-kolos.glb',           targetSize: 3.0 },  // Barrier/barricade
-    bld_supplydepot:      { path: 'assets/models/buildings/storage.glb',                           targetSize: 4.0 },  // Supply storage
-    bld_supplyexchange:   { path: 'assets/models/buildings/shipping-port.glb',                     targetSize: 5.0 },  // Industrial port/trade
-    bld_resourcedepot:    { path: 'assets/models/units/space-kit/hangar_smallA.glb',               targetSize: 4.0 },  // Small resource hangar
-    bld_techlab:          { path: 'assets/models/units/space-kit/structure_detailed.glb',           targetSize: 5.0 },  // Research/tech structure
-    bld_superweapon:      { path: 'assets/models/units/space-kit/rocket_baseA.glb',                targetSize: 6.0 },  // Rocket launch base
-    bld_munitionscache:   { path: 'assets/models/buildings/ithappy-military/Separate_assets_glb/barrel_001.glb', targetSize: 3.0 },  // ITHappy military barrel
-    bld_ditch:            { path: 'assets/models/buildings/fence-fortified.glb',                    targetSize: 3.0 },  // Fortified trench
-    bld_shippingport:     { path: 'assets/models/buildings/shipping-port.glb',                     targetSize: 5.0 },  // Port structure
-    bld_watchtower:       { path: 'assets/models/buildings/ithappy-military/Separate_assets_glb/tower_001.glb', targetSize: 5.0 },  // ITHappy military tower
+    bld_headquarters: { path: 'assets/models/buildings/warzone-original/headquarters.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 8.0 },
+    bld_barracks: { path: 'assets/models/buildings/warzone-original/barracks.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 5.0 },
+    bld_warfactory: { path: 'assets/models/buildings/warzone-original/warfactory.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 6.0 },
+    bld_shipyard: { path: 'assets/models/buildings/warzone-original/shipyard.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 6.0 },
+    bld_airfield: { path: 'assets/models/buildings/warzone-original/airfield.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 6.0 },
+    bld_turret: { path: 'assets/models/buildings/warzone-original/turret.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 3.0 },
+    bld_aaturret: { path: 'assets/models/buildings/warzone-original/aaturret.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 3.0 },
+    bld_bunker: { path: 'assets/models/buildings/warzone-original/bunker.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 4.0 },
+    bld_wall: { path: 'assets/models/buildings/warzone-original/wall.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 3.0 },
+    bld_supplydepot: { path: 'assets/models/buildings/warzone-original/supplydepot.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 4.0 },
+    bld_supplyexchange: { path: 'assets/models/buildings/warzone-original/supplyexchange.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 5.0 },
+    bld_resourcedepot: { path: 'assets/models/buildings/warzone-original/resourcedepot.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 4.0 },
+    bld_techlab: { path: 'assets/models/buildings/warzone-original/techlab.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 5.0 },
+    bld_superweapon: { path: 'assets/models/buildings/warzone-original/superweapon.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 6.0 },
+    bld_munitionscache: { path: 'assets/models/buildings/warzone-original/munitionscache.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 3.0 },
+    bld_ditch: { path: 'assets/models/buildings/warzone-original/ditch.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 3.0 },
+    bld_shippingport: { path: 'assets/models/buildings/warzone-original/shippingport.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 5.0 },
+    bld_watchtower: { path: 'assets/models/buildings/warzone-original/watchtower.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 5.0 },
+
+    // Capturable battlefield structures.
+    bld_abandonedfactory: { path: 'assets/models/buildings/warzone-original/abandonedfactory.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 6.0 },
+    bld_commrelay: { path: 'assets/models/buildings/warzone-original/commrelay.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 5.0 },
+    bld_repairbay: { path: 'assets/models/buildings/warzone-original/repairbay.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 5.0 },
 
     // --- Environment Props (for map decoration and neutral structures) ---
     prop_generator:       { path: 'assets/models/units/space-kit/machine_generator.glb',           targetSize: 2.0 },
@@ -224,7 +229,19 @@ export class AssetManager {
       return null;
     }
 
-    // Detailed armor keeps authored roughness and metal response.
+    // Retain the intended waterline and PBR response throughout entity creation.
+    if (info?.waterline) clone.position.y -= info.waterline * info.targetSize;
+    if (info?.shading === 'standard') {
+      clone.traverse(child => {
+        if (!child.isMesh) return;
+        for (const material of (Array.isArray(child.material) ? child.material : [child.material])) {
+          material.userData.preservePBR = true;
+        }
+      });
+    }
+    clone.userData.assetKey = key;
+
+    // Detailed roster keeps authored roughness and metal response.
     if (info?.shading !== 'standard') this.applyToonShading(clone);
 
     return clone;
@@ -248,7 +265,7 @@ export class AssetManager {
 
     const teamColor = team === 'player'
       ? new THREE.Color(0x4488ff)
-      : new THREE.Color(0xcc4444);  // Slightly darker red so it doesn't clash
+      : new THREE.Color(team === 'neutral' ? 0x8d9586 : 0xcc4444);  // Slightly darker red so it doesn't clash
 
     // Building colors: more structural gray/brown with subtle team accent
     const buildingBase = new THREE.Color(0x888877);  // Neutral gray-tan
@@ -352,7 +369,7 @@ export class AssetManager {
    * for cel-shaded look. Preserves color, map, emissive, and transparency.
    */
   _toToonMaterial(mat) {
-    if (!mat || mat.isMeshToonMaterial) return mat;
+    if (!mat || mat.isMeshToonMaterial || mat.userData?.preservePBR) return mat;
 
     const toon = new THREE.MeshToonMaterial({
       color: mat.color ? mat.color.clone() : new THREE.Color(0xffffff),

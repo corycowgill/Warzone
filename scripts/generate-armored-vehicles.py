@@ -418,37 +418,38 @@ def vehicle(kind):
     return {'model':kind,'triangles':count,'meshes':len([o for o in bpy.context.scene.objects if o.type=='MESH']),'bytes':(OUT/(kind+'.glb')).stat().st_size}
 
 
-report=[vehicle(k) for k in ['tank','heavy-tank','apc']]
-(OUT/'manifest.json').write_text(json.dumps(report,indent=2)+'\n')
-print(json.dumps(report))
+if __name__ == '__main__':
+    report=[vehicle(k) for k in ['tank','heavy-tank','apc']]
+    (OUT/'manifest.json').write_text(json.dumps(report,indent=2)+'\n')
+    print(json.dumps(report))
 
-if '--preview' in sys.argv:
-    bpy.ops.object.select_all(action='SELECT')
-    bpy.ops.object.delete(use_global=False)
-    for i,kind in enumerate(['tank','heavy-tank','apc']):
-        bpy.ops.import_scene.gltf(filepath=str(OUT/(kind+'.glb')))
-        for o in bpy.context.selected_objects: o.location.y+=(i-1)*6.2
-    floor=material('Studio floor',(51,57,53))
-    box('Ground',(0,0,-.07),(200,200,.10),floor)
-    bpy.ops.object.camera_add(location=(15,-22,18))
-    cam=bpy.context.object
-    cam.rotation_euler=(Vector((.3,0,1))-cam.location).to_track_quat('-Z','Y').to_euler()
-    cam.data.type='ORTHO'
-    cam.data.ortho_scale=22.5
-    bpy.context.scene.camera=cam
-    for loc,power,size in [((5,-8,14),2700,9),((-7,-2,10),2100,8),((3,11,12),3200,7)]:
-        bpy.ops.object.light_add(type='AREA',location=loc)
-        lamp=bpy.context.object
-        lamp.data.energy=power
-        lamp.data.shape='DISK'
-        lamp.data.size=size
-        lamp.rotation_euler=(-lamp.location).to_track_quat('-Z','Y').to_euler()
-    scene=bpy.context.scene
-    scene.render.engine='CYCLES'
-    scene.cycles.samples=48
-    scene.world.color=(.30,.30,.30)
-    scene.render.resolution_x=1800
-    scene.render.resolution_y=1250
-    scene.render.resolution_percentage=100
-    scene.render.filepath=str(ROOT/'docs/armored-vehicles-preview.png')
-    bpy.ops.render.render(write_still=True)
+    if '--preview' in sys.argv:
+        bpy.ops.object.select_all(action='SELECT')
+        bpy.ops.object.delete(use_global=False)
+        for i,kind in enumerate(['tank','heavy-tank','apc']):
+            bpy.ops.import_scene.gltf(filepath=str(OUT/(kind+'.glb')))
+            for o in bpy.context.selected_objects: o.location.y+=(i-1)*6.2
+        floor=material('Studio floor',(51,57,53))
+        box('Ground',(0,0,-.07),(200,200,.10),floor)
+        bpy.ops.object.camera_add(location=(15,-22,18))
+        cam=bpy.context.object
+        cam.rotation_euler=(Vector((.3,0,1))-cam.location).to_track_quat('-Z','Y').to_euler()
+        cam.data.type='ORTHO'
+        cam.data.ortho_scale=22.5
+        bpy.context.scene.camera=cam
+        for loc,power,size in [((5,-8,14),2700,9),((-7,-2,10),2100,8),((3,11,12),3200,7)]:
+            bpy.ops.object.light_add(type='AREA',location=loc)
+            lamp=bpy.context.object
+            lamp.data.energy=power
+            lamp.data.shape='DISK'
+            lamp.data.size=size
+            lamp.rotation_euler=(-lamp.location).to_track_quat('-Z','Y').to_euler()
+        scene=bpy.context.scene
+        scene.render.engine='CYCLES'
+        scene.cycles.samples=48
+        scene.world.color=(.30,.30,.30)
+        scene.render.resolution_x=1800
+        scene.render.resolution_y=1250
+        scene.render.resolution_percentage=100
+        scene.render.filepath=str(ROOT/'docs/armored-vehicles-preview.png')
+        bpy.ops.render.render(write_still=True)

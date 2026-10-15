@@ -444,3 +444,7 @@ isolated team materials, preserved neutral colors and PBR shading, target size,
 grounding, centering and shadows. The browser inspector loads all six team
 variants. The existing full gameplay suite has 99 passes and 12 failures;
 the same 12 failures were verified on the original code before this rebuild.
+
+## Original full-roster replacement
+
+All unit and building manifest entries now use original Blender-authored GLBs generated from the checked-in scripts. Includes infantry, support vehicles, aircraft, naval units, military architecture, capturable structures and carrier escorts. Reproduction, budgets and limitations: [ROSTER_ASSETS.md](ROSTER_ASSETS.md). The older third-party models remain in the repository for provenance/history but are no longer used for roster manifest entries. Environment trees and decorative props retain their existing sources.

@@ -1,0 +1,122 @@
+[
+  {
+    "model": "infantry",
+    "category": "units",
+    "triangles": 2586,
+    "meshes": 8,
+    "bytes": 142944,
+    "path": "assets/models/units/warzone-original/infantry.glb"
+  },
+  {
+    "model": "engineer",
+    "category": "units",
+    "triangles": 2554,
+    "meshes": 9,
+    "bytes": 140692,
+    "path": "assets/models/units/warzone-original/engineer.glb"
+  },
+  {
+    "model": "commander",
+    "category": "units",
+    "triangles": 2464,
+    "meshes": 7,
+    "bytes": 136924,
+    "path": "assets/models/units/warzone-original/commander.glb"
+  },
+  {
+    "model": "mortarteam",
+    "category": "units",
+    "triangles": 5692,
+    "meshes": 10,
+    "bytes": 311052,
+    "path": "assets/models/units/warzone-original/mortarteam.glb"
+  },
+  {
+    "model": "scoutcar",
+    "category": "units",
+    "triangles": 2936,
+    "meshes": 8,
+    "bytes": 185852,
+    "path": "assets/models/units/warzone-original/scoutcar.glb"
+  },
+  {
+    "model": "aahalftrack",
+    "category": "units",
+    "triangles": 11348,
+    "meshes": 8,
+    "bytes": 646680,
+    "path": "assets/models/units/warzone-original/aahalftrack.glb"
+  },
+  {
+    "model": "spg",
+    "category": "units",
+    "triangles": 10708,
+    "meshes": 7,
+    "bytes": 600972,
+    "path": "assets/models/units/warzone-original/spg.glb"
+  },
+  {
+    "model": "plane",
+    "category": "units",
+    "triangles": 1784,
+    "meshes": 5,
+    "bytes": 94952,
+    "path": "assets/models/units/warzone-original/plane.glb"
+  },
+  {
+    "model": "bomber",
+    "category": "units",
+    "triangles": 2504,
+    "meshes": 5,
+    "bytes": 123456,
+    "path": "assets/models/units/warzone-original/bomber.glb"
+  },
+  {
+    "model": "drone",
+    "category": "units",
+    "triangles": 1132,
+    "meshes": 5,
+    "bytes": 56336,
+    "path": "assets/models/units/warzone-original/drone.glb"
+  },
+  {
+    "model": "battleship",
+    "category": "units",
+    "triangles": 3860,
+    "meshes": 7,
+    "bytes": 204332,
+    "path": "assets/models/units/warzone-original/battleship.glb"
+  },
+  {
+    "model": "destroyer",
+    "category": "units",
+    "triangles": 3116,
+    "meshes": 7,
+    "bytes": 167296,
+    "path": "assets/models/units/warzone-original/destroyer.glb"
+  },
+  {
+    "model": "patrolboat",
+    "category": "units",
+    "triangles": 2284,
+    "meshes": 6,
+    "bytes": 124420,
+    "path": "assets/models/units/warzone-original/patrolboat.glb"
+  },
+  {
+    "model": "carrier",
+    "category": "units",
+    "triangles": 3184,
+    "meshes": 9,
+    "bytes": 180004,
+    "path": "assets/models/units/warzone-original/carrier.glb"
+  },
+  {
+    "model": "submarine",
+    "category": "units",
+    "triangles": 2024,
+    "meshes": 5,
+    "bytes": 122384,
+    "path": "assets/models/units/warzone-original/submarine.glb"
+  }
+]

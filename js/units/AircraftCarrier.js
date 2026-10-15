@@ -39,26 +39,33 @@ export class AircraftCarrier extends Unit {
         const teamColor = this.team === 'player' ? 0x5588ff : 0xff5555;
         const group = new THREE.Group();
 
-        // Fuselage
-        const bodyGeo = new THREE.BoxGeometry(1.2, 0.3, 0.4);
-        const bodyMat = new THREE.MeshPhongMaterial({ color: teamColor });
-        const body = new THREE.Mesh(bodyGeo, bodyMat);
-        body.castShadow = true;
-        group.add(body);
+        const fighter = assetManager.getTeamTintedModel('unit_plane', this.team);
+        if (fighter) {
+            fighter.scale.multiplyScalar(0.36);
+            group.add(fighter);
+        } else {
+            // Fuselage
+            const bodyGeo = new THREE.BoxGeometry(1.2, 0.3, 0.4);
+            const bodyMat = new THREE.MeshPhongMaterial({ color: teamColor });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.castShadow = true;
+            group.add(body);
 
-        // Wings
-        const wingGeo = new THREE.BoxGeometry(0.3, 0.05, 1.4);
-        const wingMat = new THREE.MeshPhongMaterial({ color: 0x444444 });
-        const wing = new THREE.Mesh(wingGeo, wingMat);
-        wing.position.set(-0.1, 0, 0);
-        group.add(wing);
+            // Wings
+            const wingGeo = new THREE.BoxGeometry(0.3, 0.05, 1.4);
+            const wingMat = new THREE.MeshPhongMaterial({ color: 0x444444 });
+            const wing = new THREE.Mesh(wingGeo, wingMat);
+            wing.position.set(-0.1, 0, 0);
+            group.add(wing);
 
-        // Tail
-        const tailGeo = new THREE.BoxGeometry(0.2, 0.4, 0.05);
-        const tailMat = new THREE.MeshPhongMaterial({ color: 0x444444 });
-        const tail = new THREE.Mesh(tailGeo, tailMat);
-        tail.position.set(-0.6, 0.2, 0);
-        group.add(tail);
+            // Tail
+            const tailGeo = new THREE.BoxGeometry(0.2, 0.4, 0.05);
+            const tailMat = new THREE.MeshPhongMaterial({ color: 0x444444 });
+            const tail = new THREE.Mesh(tailGeo, tailMat);
+            tail.position.set(-0.6, 0.2, 0);
+            group.add(tail);
+
+        }
 
         const drone = {
             mesh: group,

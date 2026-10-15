@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <base href="../">
+  <title>Warzone - Full Roster Review</title>
+  <style>
+    body{margin:0;background:#172024;color:#e7e7da;font:16px system-ui}
+    header{position:absolute;top:24px;left:32px;pointer-events:none}
+    h1{font-size:24px;margin:0 0 8px}p{color:#b8c4be;margin:0 0 6px}
+    footer{position:absolute;bottom:24px;left:32px;color:#bbc4bc;pointer-events:none}
+    canvas{display:block}#status{color:#91b6ef}
+    nav{pointer-events:auto;display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+    select{padding:8px;background:#222c27;color:#e7e7da;border:1px solid #687364;max-width:230px}button{padding:8px 14px;border:1px solid #687364;border-radius:4px;background:#222c27;color:#e7e7da;cursor:pointer}
+    button[aria-pressed="true"]{background:#596b4b;border-color:#a4b291}
+  </style>
+  <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.172.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.172.0/examples/jsm/"}}</script>
+</head>
+<body>
+  <header>
+    <h1>WARZONE / COMPLETE ROSTER</h1>
+    <p>18 unit assets &middot; 21 building assets</p>
+    <p>Original Blender GLBs &middot; Team paint &middot; PBR surfaces</p>
+    <p id="status">Loading rebuilt models...</p>
+    <nav aria-label="Model view"><label>Model <select id="model"></select></label><label>Team <select id="team"><option value="player">Player</option><option value="enemy">Enemy</option><option value="neutral">Neutral</option></select></label><button id="audit">Run roster audit</button></nav><p id="audit-status" role="status"></p>
+  </header>
+  <footer>Drag to orbit &middot; Scroll to zoom &middot; Right-drag to pan</footer>
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { AssetManager, assetManager } from './js/rendering/AssetManager.js';
+    import { UnitFactory } from './js/units/UnitFactory.js';
+    import { BuildingFactory } from './js/buildings/BuildingFactory.js';
+    import { NeutralStructureSystem } from './js/systems/NeutralStructureSystem.js';
+    import { NEUTRAL_STRUCTURES } from './js/core/Constants.js';
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.append(renderer.domElement);
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x172024);
+    const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, .1, 150);
+    camera.position.set(13, 14, 19);
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, .6, 0);
+    controls.update();
+    scene.add(new THREE.HemisphereLight(0xc4d8ee, 0x626449, 2));
+    const sun = new THREE.DirectionalLight(0xfff0d7, 2.5);
+    sun.position.set(8, 15, 9);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    Object.assign(sun.shadow.camera, { left: -15, right: 15, top: 15, bottom: -15 });
+    sun.shadow.normalBias = .03;
+    scene.add(sun);
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({ color: 0x343d36, roughness: 1 }));
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = -.02;
+    floor.receiveShadow = true;
+    scene.add(floor);
+    const grid = new THREE.GridHelper(30, 30, 0x6b7762, 0x424d41);
+    grid.position.y = -.01;
+    scene.add(grid);
+    const manager = assetManager;
+    const keys=Object.keys(AssetManager.MANIFEST).filter(k=>/^(unit_|bld_)/.test(k));
+    const select=document.querySelector('#model'),teamSelect=document.querySelector('#team');
+    for(const key of keys){const option=document.createElement('option');option.value=key;option.textContent=key.replace('unit_','UNIT / ').replace('bld_','BUILDING / ');select.append(option);}
+    select.value='bld_headquarters';
+    let current,revision=0;
+    async function display(){const request=++revision,key=select.value;try{
+      document.querySelector('#status').textContent='Loading '+key;
+      await manager.load(key,AssetManager.MANIFEST[key].path);
+      if(request!==revision)return;
+      if(current){scene.remove(current);current.traverse(o=>{if(o.isMesh)for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();});}
+      current=manager.getTeamTintedModel(key,teamSelect.value);if(!current)throw Error('Missing model');scene.add(current);
+      const size=AssetManager.MANIFEST[key].targetSize;
+      camera.position.set(size*1.25,size*1.05,size*1.65);controls.target.set(0,size*.24,0);controls.update();
+      let triangles=0,meshes=0;current.traverse(o=>{if(o.isMesh){meshes++;triangles+=(o.geometry.index?.count??o.geometry.attributes.position.count)/3;}});
+      document.querySelector('#status').textContent=`${triangles.toLocaleString()} triangles / ${meshes} material meshes / authored PBR`;
+    }catch(e){document.querySelector('#status').textContent='FAILED: '+e.message;console.error(e);}}
+    select.addEventListener('change',display);teamSelect.addEventListener('change',display);display();
+    document.querySelector('#audit').addEventListener('click',async()=>{
+      const output=document.querySelector('#audit-status');output.textContent='Checking all assets and game factories...';
+      const check=(ok,message)=>{if(!ok)throw Error(message);};
+      const tagged=root=>{const found=[];root.traverse(o=>{if(o.userData.assetKey)found.push(o);});return found;};
+      try{
+        await Promise.all(keys.map(key=>manager.load(key,AssetManager.MANIFEST[key].path)));
+        check(keys.every(k=>manager.cache.has(k)),'An asset failed to load');
+        const game={teams:{player:{nation:null},enemy:{nation:null}},entities:[],sceneManager:{scene:new THREE.Scene()},rng:{next:Math.random},eventBus:{emit(){}}};
+        const verify=root=>{const models=tagged(root);check(models.length>0,'Factory used procedural fallback');manager.applyToonShading(root);for(const model of models)model.traverse(o=>{if(o.isMesh)check(o.material.isMeshStandardMaterial,'PBR material replaced');});};
+        const factory=new UnitFactory(game);for(const type of factory.getAvailableTypes()){
+          const unit=factory.create(type,'player',new THREE.Vector3());verify(unit.mesh);
+          if(type==='carrier')for(const drone of unit._drones)verify(drone.mesh);
+        }
+        const buildings=['headquarters','barracks','warfactory','airfield','shipyard','resourcedepot','supplydepot','bunker','ditch','turret','aaturret','wall','superweapon','techlab','munitionscache','supplyexchange'];
+        for(const type of buildings)verify(BuildingFactory.create(type,'player',new THREE.Vector3(),game).mesh);
+        const neutral=Object.create(NeutralStructureSystem.prototype);neutral.game=game;neutral.structures=[];
+        for(const [type,config] of Object.entries(NEUTRAL_STRUCTURES)){
+          const structure=neutral._createStructure(type,config,0,0);verify(structure.mesh);neutral._captureStructure(structure,'player');neutral._captureStructure(structure,'enemy');
+          tagged(structure.mesh)[0].traverse(o=>{if(o.isMesh&&o.material.name==='TeamColor')check(o.material.color.getHex()===0xcc4444,'Capture paint failed');});
+        }
+        output.textContent='PASS / 39 GLBs; 17 unit factories, 16 building factories, 5 capturable structures; carrier aircraft and PBR verified.';
+      }catch(e){output.textContent='FAIL / '+e.message;console.error(e);}
+    });
+    renderer.setAnimationLoop(() => renderer.render(scene, camera));
+    addEventListener('resize', () => {
+      renderer.setSize(innerWidth, innerHeight);
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+    });
+  </script>
+</body>
+</html>

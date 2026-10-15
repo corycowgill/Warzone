@@ -61,6 +61,6 @@ Run `npm run test:interface`, `npm run test:armor`, and `npm test`.
 Browser checks cover title, briefing, tutorial launch, actual infantry selection,
 command labels and Stop activation, plus a 390px mobile breakpoint. This is an art
 and interface overhaul, not a claim that every legacy game asset is AAA quality.
-The broader roster and environment still include mixed-source placeholder art;
+All unit and building manifest entries now use original Blender GLBs (see ROSTER_ASSETS.md). Environment trees and props retain mixed-source art;
 large-army performance is not benchmarked. Existing gameplay test failures are
 tracked separately from the graphics and interface work.

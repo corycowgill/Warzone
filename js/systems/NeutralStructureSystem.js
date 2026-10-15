@@ -1,3 +1,4 @@
+import { assetManager } from '../rendering/AssetManager.js';
 import * as THREE from 'three';
 import { GAME_CONFIG, NEUTRAL_STRUCTURES } from '../core/Constants.js';
 
@@ -208,6 +209,24 @@ export class NeutralStructureSystem {
       }
     }
 
+    // Replace structure geometry while preserving capture indicators and bonuses.
+    const modelKeys = {
+      watchtower: 'bld_watchtower', abandoned_factory: 'bld_abandonedfactory',
+      supply_depot: 'bld_supplydepot', comm_relay: 'bld_commrelay', repair_bay: 'bld_repairbay'
+    };
+    const authoredModel = assetManager.getTeamTintedModel(modelKeys[type], 'neutral');
+    if (authoredModel) {
+      for (const child of [...group.children]) {
+        group.remove(child);
+        child.traverse(part => {
+          part.geometry?.dispose();
+          if (Array.isArray(part.material)) part.material.forEach(mat => mat.dispose());
+          else part.material?.dispose();
+        });
+      }
+      group.add(authoredModel);
+    }
+
     // Capture ring indicator (changes color with ownership)
     const ringGeo = new THREE.RingGeometry(CAPTURE_RADIUS - 0.5, CAPTURE_RADIUS, 32);
     ringGeo.rotateX(-Math.PI / 2);
@@ -333,6 +352,9 @@ export class NeutralStructureSystem {
     struct.ringMat.color.setHex(teamColor);
     struct.ringMat.opacity = 0.25;
     struct.beaconMat.color.setHex(teamColor);
+    struct.mesh.traverse(part => {
+      if (part.isMesh && part.material?.name === 'TeamColor') part.material.color.setHex(team === 'enemy' ? 0xcc4444 : teamColor);
+    });
 
     // Remove bonus from previous team
     if (prevTeam !== 'neutral') {

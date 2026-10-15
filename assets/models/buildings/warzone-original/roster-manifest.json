@@ -1,0 +1,170 @@
+[
+  {
+    "model": "headquarters",
+    "category": "buildings",
+    "triangles": 5932,
+    "meshes": 11,
+    "bytes": 410784,
+    "path": "assets/models/buildings/warzone-original/headquarters.glb"
+  },
+  {
+    "model": "barracks",
+    "category": "buildings",
+    "triangles": 2980,
+    "meshes": 10,
+    "bytes": 204392,
+    "path": "assets/models/buildings/warzone-original/barracks.glb"
+  },
+  {
+    "model": "warfactory",
+    "category": "buildings",
+    "triangles": 6984,
+    "meshes": 10,
+    "bytes": 473068,
+    "path": "assets/models/buildings/warzone-original/warfactory.glb"
+  },
+  {
+    "model": "airfield",
+    "category": "buildings",
+    "triangles": 4768,
+    "meshes": 8,
+    "bytes": 256508,
+    "path": "assets/models/buildings/warzone-original/airfield.glb"
+  },
+  {
+    "model": "shipyard",
+    "category": "buildings",
+    "triangles": 3256,
+    "meshes": 9,
+    "bytes": 212664,
+    "path": "assets/models/buildings/warzone-original/shipyard.glb"
+  },
+  {
+    "model": "shippingport",
+    "category": "buildings",
+    "triangles": 3640,
+    "meshes": 9,
+    "bytes": 239552,
+    "path": "assets/models/buildings/warzone-original/shippingport.glb"
+  },
+  {
+    "model": "resourcedepot",
+    "category": "buildings",
+    "triangles": 3252,
+    "meshes": 9,
+    "bytes": 223328,
+    "path": "assets/models/buildings/warzone-original/resourcedepot.glb"
+  },
+  {
+    "model": "supplydepot",
+    "category": "buildings",
+    "triangles": 3252,
+    "meshes": 9,
+    "bytes": 223328,
+    "path": "assets/models/buildings/warzone-original/supplydepot.glb"
+  },
+  {
+    "model": "supplyexchange",
+    "category": "buildings",
+    "triangles": 3896,
+    "meshes": 11,
+    "bytes": 267108,
+    "path": "assets/models/buildings/warzone-original/supplyexchange.glb"
+  },
+  {
+    "model": "munitionscache",
+    "category": "buildings",
+    "triangles": 4200,
+    "meshes": 9,
+    "bytes": 302372,
+    "path": "assets/models/buildings/warzone-original/munitionscache.glb"
+  },
+  {
+    "model": "techlab",
+    "category": "buildings",
+    "triangles": 3228,
+    "meshes": 8,
+    "bytes": 211260,
+    "path": "assets/models/buildings/warzone-original/techlab.glb"
+  },
+  {
+    "model": "superweapon",
+    "category": "buildings",
+    "triangles": 3236,
+    "meshes": 7,
+    "bytes": 198152,
+    "path": "assets/models/buildings/warzone-original/superweapon.glb"
+  },
+  {
+    "model": "bunker",
+    "category": "buildings",
+    "triangles": 2368,
+    "meshes": 8,
+    "bytes": 171372,
+    "path": "assets/models/buildings/warzone-original/bunker.glb"
+  },
+  {
+    "model": "turret",
+    "category": "buildings",
+    "triangles": 2232,
+    "meshes": 8,
+    "bytes": 154312,
+    "path": "assets/models/buildings/warzone-original/turret.glb"
+  },
+  {
+    "model": "aaturret",
+    "category": "buildings",
+    "triangles": 2140,
+    "meshes": 5,
+    "bytes": 143112,
+    "path": "assets/models/buildings/warzone-original/aaturret.glb"
+  },
+  {
+    "model": "wall",
+    "category": "buildings",
+    "triangles": 612,
+    "meshes": 3,
+    "bytes": 46284,
+    "path": "assets/models/buildings/warzone-original/wall.glb"
+  },
+  {
+    "model": "ditch",
+    "category": "buildings",
+    "triangles": 4332,
+    "meshes": 7,
+    "bytes": 310276,
+    "path": "assets/models/buildings/warzone-original/ditch.glb"
+  },
+  {
+    "model": "watchtower",
+    "category": "buildings",
+    "triangles": 2220,
+    "meshes": 7,
+    "bytes": 143624,
+    "path": "assets/models/buildings/warzone-original/watchtower.glb"
+  },
+  {
+    "model": "abandonedfactory",
+    "category": "buildings",
+    "triangles": 7008,
+    "meshes": 10,
+    "bytes": 474752,
+    "path": "assets/models/buildings/warzone-original/abandonedfactory.glb"
+  },
+  {
+    "model": "commrelay",
+    "category": "buildings",
+    "triangles": 2192,
+    "meshes": 7,
+    "bytes": 154116,
+    "path": "assets/models/buildings/warzone-original/commrelay.glb"
+  },
+  {
+    "model": "repairbay",
+    "category": "buildings",
+    "triangles": 1904,
+    "meshes": 7,
+    "bytes": 112960,
+    "path": "assets/models/buildings/warzone-original/repairbay.glb"
+  }
+]
