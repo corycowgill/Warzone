@@ -392,26 +392,40 @@ These bundles provide the most assets in a single download with consistent style
 8. **ambientCG Materials** (2000+, CC0, PNG) -- Terrain textures
 
 
-## Original Armored Vehicle Set (2026-10-15)
+## Rebuilt Armored Vehicle Set (2026-10-15)
 
-The active tank, heavy tank and APC assets are now original Blender-generated GLBs
-in `assets/models/units/warzone-original/`. They replace the mixed-source tank,
-light-tank-as-heavy-tank and truck-as-APC mappings. The models use beveled armor,
-visible road wheels and treads, hatches, optics and role-specific silhouettes.
-No downloaded meshes, textures, or external model-generation service were used.
-The generator is the editable source; these assets add no third-party attribution requirement.
+The active tank, heavy tank and APC assets in
+`assets/models/units/warzone-original/` are rebuilt original Blender models.
+
+- Tank: rounded cast turret, sloped glacis, separate transmission housing and cupola.
+- Heavy tank: larger welded turret, long recessed gun barrel, muzzle brake, spare
+  track armor and separate thin side skirts.
+- APC: angled troop compartment, driver optics, roof hatches, rear access ramp,
+  engine intake and shielded heavy machine gun.
+- All: hollow continuous track bands with individual shoes and grousers, road
+  wheels, hubs, suspension arms, sprockets, return rollers, tools, stowage,
+  tow fittings, headlamp guards and small recognition markings.
+
+These replace the earlier simplified models entirely. The generator is the
+editable source. No downloaded meshes, textures or external generation service
+were used; these assets introduce no third-party attribution requirement.
 
 | Asset | Triangles | Material meshes | Bytes |
 |---|---:|---:|---:|
-| tank.glb | 1,804 | 6 | 131,572 |
-| heavy-tank.glb | 1,876 | 6 | 136,668 |
-| apc.glb | 1,668 | 6 | 121,408 |
+| tank.glb | 12,582 | 8 | 698,708 |
+| heavy-tank.glb | 15,690 | 8 | 892,872 |
+| apc.glb | 12,114 | 8 | 683,960 |
 
-`TeamColor` is the paint material. AssetManager tints only that material on these
-models, preserving olive armor, dark tracks, steel, optics and markings. Other
-assets retain the existing tint behavior. All three face +X, matching the vehicle
-rotation offset, and use the existing target sizes and procedural load fallbacks.
-Static parts are merged by material, keeping each vehicle to six meshes.
+This set deliberately uses a higher geometry budget than the general low-poly
+recommendation above to support the requested visual rebuild: a ceiling of 18,000
+triangles and 1.5 MB per GLB. Static details merge into eight material meshes,
+with shared geometry across clones. Large-army frame rate has not been benchmarked.
+
+The manifest opts these three models into `shading: 'standard'`. AssetManager
+preserves PBR roughness and metalness for armor, steel, tracks, optics and canvas.
+Only `TeamColor` receives team paint. Other assets keep the existing toon/tint
+pipeline. All three face +X, use existing target sizes, and preserve procedural
+load fallbacks.
 
 Regenerate with Blender 5.2:
 
@@ -421,13 +435,12 @@ blender --background --python scripts/generate-armored-vehicles.py -- --preview
 npm run test:armor
 ```
 
-The optional preview writes `docs/armored-vehicles-preview.png`. For an interactive
-review using the game's Three.js 0.172 loader and toon shading, serve the repository
-root and open `/docs/armor-preview.html`. It shows all three vehicles in both teams.
+The optional preview writes `docs/armored-vehicles-preview.png`. Serve the repository
+root and open `/docs/armor-preview.html` to inspect both teams in Three.js 0.172.
+The model view buttons provide individual vehicle close-ups with orbit and zoom.
 
-Validation: GLB parsing, triangle/file budgets, six meshes, isolated team materials,
-color preservation, target dimensions, grounding, centering and shadow flags pass.
-Browser review loaded all six team variants; the game loaded 52/52 manifest assets
-with no failures. The full suite reports 99 passes and 12 failures, identical when
-rerun with the original AssetManager. Existing gameplay test failures remain outside
-this graphics change. This pass covers three armored vehicles, not the full roster.
+Validation covers GLB parsing, triangle/file budgets, material mesh counts,
+isolated team materials, preserved neutral colors and PBR shading, target size,
+grounding, centering and shadows. The browser inspector loads all six team
+variants. The existing full gameplay suite has 99 passes and 12 failures;
+the same 12 failures were verified on the original code before this rebuild.

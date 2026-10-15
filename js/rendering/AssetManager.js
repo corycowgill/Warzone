@@ -42,10 +42,10 @@ export class AssetManager {
     // --- Units (Poly Pizza military models by Zsky, Quaternius, KolosStudios, etc.) ---
     unit_infantry:        { path: 'assets/models/units/quaternius/soldier-quaternius.glb',    targetSize: 2.0 },  // CC0 Quaternius soldier
     unit_engineer:        { path: 'assets/models/units/quaternius/swat-quaternius.glb',     targetSize: 2.0 },  // CC0 Quaternius SWAT
-    unit_tank:            { path: 'assets/models/units/warzone-original/tank.glb', teamMaterial: 'TeamColor', targetSize: 3.5 },  // Original Blender armor set
-    unit_heavytank:       { path: 'assets/models/units/warzone-original/heavy-tank.glb',     teamMaterial: 'TeamColor', targetSize: 4.5 },
+    unit_tank:            { path: 'assets/models/units/warzone-original/tank.glb', teamMaterial: 'TeamColor', shading: 'standard', targetSize: 3.5 },  // Original Blender armor set
+    unit_heavytank:       { path: 'assets/models/units/warzone-original/heavy-tank.glb',     teamMaterial: 'TeamColor', shading: 'standard', targetSize: 4.5 },
     unit_scoutcar:        { path: 'assets/models/units/poly-pizza/jeep-zsky.glb',           targetSize: 3.0 },
-    unit_apc:             { path: 'assets/models/units/warzone-original/apc.glb',          teamMaterial: 'TeamColor', targetSize: 3.5 },
+    unit_apc:             { path: 'assets/models/units/warzone-original/apc.glb',          teamMaterial: 'TeamColor', shading: 'standard', targetSize: 3.5 },
     unit_aahalftrack:     { path: 'assets/models/units/poly-pizza/ambulance-zsky.glb',      targetSize: 3.0 },
     unit_spg:             { path: 'assets/models/units/cannon-mobile.glb',                  targetSize: 3.5 },
     unit_mortarteam:      { path: 'assets/models/buildings/ithappy-military/Separate_assets_glb/mortar_001.glb', targetSize: 2.5 },  // ITHappy mortar
@@ -224,8 +224,8 @@ export class AssetManager {
       return null;
     }
 
-    // Apply toon shading to environment models (trees, props, etc.)
-    this.applyToonShading(clone);
+    // Detailed armor keeps authored roughness and metal response.
+    if (info?.shading !== 'standard') this.applyToonShading(clone);
 
     return clone;
   }
@@ -341,8 +341,8 @@ export class AssetManager {
       }
     });
 
-    // Convert to toon materials for cel-shaded look
-    this.applyToonShading(clone);
+    // Other assets retain the established cel-shaded look.
+    if (AssetManager.MANIFEST[key]?.shading !== 'standard') this.applyToonShading(clone);
 
     return clone;
   }

@@ -1,20 +1,20 @@
 [
   {
     "model": "tank",
-    "triangles": 1804,
-    "meshes": 6,
-    "bytes": 131572
+    "triangles": 12582,
+    "meshes": 8,
+    "bytes": 698708
   },
   {
     "model": "heavy-tank",
-    "triangles": 1876,
-    "meshes": 6,
-    "bytes": 136668
+    "triangles": 15690,
+    "meshes": 8,
+    "bytes": 892872
   },
   {
     "model": "apc",
-    "triangles": 1668,
-    "meshes": 6,
-    "bytes": 121408
+    "triangles": 12114,
+    "meshes": 8,
+    "bytes": 683960
   }
 ]
