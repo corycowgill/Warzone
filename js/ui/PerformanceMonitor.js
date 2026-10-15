@@ -30,6 +30,7 @@ export class PerformanceMonitor {
         <div class="perf-row"><span class="perf-label">Tris:</span><span id="perf-tris" class="perf-value">0</span></div>
         <div class="perf-row"><span class="perf-label">Ents:</span><span id="perf-ents" class="perf-value">0</span></div>
         <div class="perf-row"><span class="perf-label">P95:</span><span id="perf-p95" class="perf-value">--</span></div>
+        <div class="perf-row"><span class="perf-label">Max:</span><span id="perf-max" class="perf-value">--</span></div>
         <div class="perf-row"><span class="perf-label">Sim:</span><span id="perf-sim" class="perf-value">--</span></div>
         <div class="perf-row"><span class="perf-label">Visual:</span><span id="perf-visual" class="perf-value">--</span></div>
         <div class="perf-row"><span class="perf-label">Submit:</span><span id="perf-submit" class="perf-value">--</span></div>
@@ -96,7 +97,7 @@ export class PerformanceMonitor {
     memEl.textContent = `${this.memoryMB} MB`;
 
     if (this.metrics) {
-      for (const [id,key] of [['p95','p95Ms'],['sim','simulationMs'],['visual','visualMs'],['submit','renderMs']]) {
+      for (const [id,key] of [['p95','p95Ms'],['max','maxMs'],['sim','simulationMs'],['visual','visualMs'],['submit','renderMs']]) {
         this.container.querySelector('#perf-'+id).textContent = this.metrics[key].toFixed(1)+' ms';
       }
       this.container.querySelector('#perf-pixels').textContent = this.bufferSize + (this.quality?.graphics?.adaptiveResolution ? ` / ${Math.round(this.quality.scale*100)}% auto` : ' / manual');

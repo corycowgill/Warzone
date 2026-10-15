@@ -147,6 +147,10 @@ export class Game {
   init() {
     this.sceneManager = new SceneManager();
     this.renderQuality = new RenderQuality(this.sceneManager, () => this.postProcessing?.resize());
+    document.addEventListener('visibilitychange', () => {
+      this.frameMetrics.resetClock(document.hidden);
+      this.renderQuality.resetSampling();
+    });
     this.soundManager = new SoundManager(this);
 
     // Apply settings to renderer
@@ -1308,7 +1312,7 @@ export class Game {
   loop() {
     requestAnimationFrame(() => this.loop());
     const frameStart = performance.now();
-    this.frameMetrics.begin(frameStart);
+    this.frameMetrics.begin(frameStart, document.hidden);
     let frameDelta = this.clock.getDelta();
     const wallDelta = frameDelta;
 

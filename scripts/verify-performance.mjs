@@ -18,7 +18,11 @@ assert.equal(ratio,1.5);assert.equal(quality.scale,1);assert(resizes>2);
 const metrics=new FrameMetrics(2),renderer={info:{render:{calls:23,triangles:1000}}};
 for(const time of [100,116,132,148]){metrics.begin(time);metrics.stage('simulationMs',time+2);metrics.stage('visualMs',time+5);metrics.stage('renderMs',time+9);metrics.end(renderer);}
 const result=metrics.summary();assert.equal(result.frames,2);assert.equal(result.fps,62.5);assert.equal(result.p95Ms,16);assert.equal(result.simulationMs,2);assert.equal(result.visualMs,3);assert.equal(result.renderMs,4);assert.equal(result.draws,23);
-metrics.begin(1000);metrics.end(renderer);assert.equal(metrics.summary().frames,2);
+metrics.begin(1000);metrics.end(renderer);assert.equal(metrics.summary().maxMs,852,'foreground stalls must remain in metrics');
+metrics.begin(2000,true);metrics.end(renderer);metrics.begin(3000,false);metrics.end(renderer);
+assert.equal(metrics.summary().maxMs,852,'hidden and first resumed intervals are excluded');
+metrics.begin(3016);metrics.end(renderer);assert.equal(metrics.samples.at(-1).frameMs,16);
+metrics.resetClock();metrics.begin(20000);metrics.end(renderer);assert.equal(metrics.samples.at(-1).frameMs,16,'visibility events reset gaps even when hidden RAF stops');
 let scenes=0,compositions=0;
 const post={enabled:true,composer:{render:()=>compositions++},sceneManager:{render:()=>scenes++},bloomPass:{},vignettePass:{},toonPass:{},resize(){}};
 PostProcessing.prototype.configure.call(post,{quality:'medium',bloom:false,vignette:true});

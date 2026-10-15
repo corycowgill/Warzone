@@ -11,7 +11,7 @@ Target: stable frame pacing with a 60 FPS adaptive target; no guaranteed FPS cla
 
 ## Implemented and measured — October 15, 2026
 
-All six steps are implemented. F3 toggles a rolling monitor with FPS, p95 frame time, simulation CPU time, visual-update CPU time, render submission time, total draws/triangles and actual drawing-buffer dimensions. The monitor refreshes twice per second. Adaptive resolution waits four seconds, evaluates two-second windows, lowers scale only above 22 ms, and recovers slowly after ten seconds below 18.2 ms. Scale stays between 60–100% of the selected resolution, with a minimum pixel ratio of 0.5. Disable it in Settings → Display for manual resolution.
+All six steps are implemented. F3 toggles a rolling monitor with FPS, p95 and maximum frame time, simulation CPU time, visual-update CPU time, render submission time, total draws/triangles and actual drawing-buffer dimensions. The monitor refreshes twice per second. Adaptive resolution waits four seconds, evaluates two-second windows, lowers scale only above 22 ms, and recovers slowly after ten seconds below 18.2 ms. Scale stays between 60–100% of the selected resolution, with a minimum pixel ratio of 0.5. Disable it in Settings → Display for manual resolution.
 
 Post-processing consumes the primary scene pass depth texture. Bloom, vignette and outlines switch independently; outlines run for High/Ultra. Shadow quality selects 512/1024/2048 maps; shadows refresh at up to 30 Hz except Ultra. Medium/Low terrain uses four texture samples instead of eight. Minimap redraws at 10 Hz with a reusable grid-sized fog overlay, eliminating per-frame canvas readback. HUD values refresh at 10 Hz; control-group badges rebuild only when counts change. Scenery uses 16–64 material batches across the twelve tested map/biome combinations.
 
@@ -33,3 +33,5 @@ Both runs hit the browser's 60 Hz ceiling. Measured draw calls fell 48.6%, trian
 Validation: adaptive-control/telemetry regression checks, camera checks, environment checks and localhost interface smoke checks pass. Full gameplay suite: 99 pass, 12 existing failures (starting-resource expectation and resource/production mock fixtures).
 
 Live AI-battle smoke test: High preset at 1280×720 showed about 60 FPS, 16.9 ms rolling p95, 39–43 entities, approximately 0.2 ms simulation and 0.1–0.2 ms visual CPU work. Medium and High presets were switched in-session; no warning/error logs appeared. Preset changes can stall while shaders compile; this is not a late-game stress benchmark. High preset was restored after testing.
+
+Follow-up army scaling and sustained AI analysis: [PERFORMANCE_ANALYSIS.md](PERFORMANCE_ANALYSIS.md). Large armies remain limited by per-unit draw submission, and foreground stalls are now retained in telemetry instead of being discarded by a blanket 250 ms cutoff.

@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><base href="../">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <!-- Diagnostic fixture: index.html DOM scaffold, started by GameStress.js. -->
+  <title>WARZONE / Performance analysis</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/settings.css">
+  <link rel="stylesheet" href="css/achievements.css">
+  <link rel="stylesheet" href="css/art-direction.css">
+  <link rel="preload" as="image" href="assets/art/warzone-keyart.webp">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.172.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.172.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- Cinematic title menu. Existing action IDs remain stable. -->
+  <main id="main-menu" aria-label="Warzone main menu">
+    <div class="title-art" aria-hidden="true"></div>
+    <div class="title-vignette" aria-hidden="true"></div>
+    <header class="title-masthead"><span class="brand-mark" aria-hidden="true">W</span><span>STRATEGIC COMMAND</span><span class="masthead-rule"></span><span class="masthead-edition">LAND / SEA / AIR</span></header>
+    <section class="menu-content">
+      <p class="menu-eyebrow">SIX NATIONS. ONE BATTLEFIELD.</p>
+      <h1 class="menu-title">WARZONE<span class="title-rule"></span></h1>
+      <p class="menu-subtitle">Every order changes the front.</p>
+      <nav class="menu-buttons" aria-label="Play modes">
+        <button id="btn-1player" class="menu-btn deploy-btn"><span class="menu-index">01</span><span class="menu-action"><strong>Deploy to battle</strong><small>Skirmish / your army, your strategy</small></span><span class="menu-arrow" aria-hidden="true">&#8599;</span></button>
+        <button id="btn-campaign" class="menu-btn"><span class="menu-index">02</span><span class="menu-action"><strong>Campaign</strong><small>Fight your way through the war</small></span><span class="menu-arrow" aria-hidden="true">&#8594;</span></button>
+        <button id="btn-multiplayer" class="menu-btn"><span class="menu-index">03</span><span class="menu-action"><strong>Multiplayer</strong><small>Take command against a rival</small></span><span class="menu-arrow" aria-hidden="true">&#8594;</span></button>
+      </nav>
+      <div class="menu-secondary-actions"><button id="btn-tutorial">New commander? <b>Play the tutorial &#8594;</b></button><button id="btn-spectate">Watch AI battle</button></div>
+      <details class="operations-menu"><summary>More operations <span aria-hidden="true">+</span></summary><div class="operations-grid">
+        <button id="btn-challenges">Challenges</button><button id="btn-2player">Hot seat / 2P</button><button id="btn-map-editor">Map editor</button><button id="btn-replays">Replays</button><button id="btn-history">Match history</button><button id="btn-credits">Credits</button>
+      </div></details>
+      <button id="btn-spectate-quick" class="hidden">Watch AI battle</button>
+    </section>
+    <aside class="title-caption" aria-hidden="true"><span class="caption-line"></span><small>THE FRONT IS YOURS TO COMMAND</small><p>Outthink. Outmaneuver. Overwhelm.</p></aside>
+    <footer class="title-footer"><span>WARZONE <i>/</i> REAL-TIME STRATEGY</span><button id="btn-settings-menu">Settings <span aria-hidden="true">&#9881;</span></button></footer>
+  </main>
+
+  <!-- GD-134: Challenge Selection Screen -->
+  <div id="challenge-select" class="hidden">
+    <div class="nation-select-content" style="max-width:700px;">
+      <h2 class="nation-select-title">CHALLENGE SCENARIOS</h2>
+      <div id="challenge-list" style="display:flex;flex-direction:column;gap:10px;margin:20px 0;max-height:400px;overflow-y:auto;padding:0 10px;"></div>
+      <div class="nation-select-actions" style="margin-top:16px;">
+        <button id="btn-challenge-back" class="menu-btn menu-btn-secondary">Back</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Multiplayer Screen -->
+  <div id="multiplayer-screen" class="hidden">
+    <div class="mp-content">
+      <h2 class="mp-title">MULTIPLAYER</h2>
+
+      <!-- Browsing view (shown before joining a room) -->
+      <div id="mp-browse-view">
+        <div class="mp-actions">
+          <button id="mp-create-btn" class="menu-btn">Create Game</button>
+          <div class="mp-join-row">
+            <input id="mp-join-code" type="text" class="mp-input" placeholder="Room Code" maxlength="6" autocomplete="off" spellcheck="false">
+            <button id="mp-join-btn" class="menu-btn" style="width:auto;padding:14px 24px;">Join</button>
+          </div>
+          <button id="mp-browse-btn" class="menu-btn menu-btn-secondary">Browse Games</button>
+        </div>
+        <div id="mp-room-list" class="mp-room-list hidden"></div>
+        <div id="mp-status" class="mp-status"></div>
+        <button id="mp-back-btn" class="menu-btn menu-btn-secondary" style="margin-top:20px;">Back</button>
+      </div>
+
+      <!-- Lobby view (shown when in a room) -->
+      <div id="mp-lobby-view" class="hidden">
+        <div class="mp-room-header">
+          <span class="mp-room-label">ROOM CODE</span>
+          <span id="mp-room-code" class="mp-room-code" title="Click to copy">------</span>
+        </div>
+
+        <!-- Player Slots -->
+        <div class="mp-players">
+          <div class="mp-player-slot" id="mp-slot-0">
+            <div class="mp-slot-header">
+              <span class="mp-slot-label">Player 1 (Host)</span>
+              <span class="mp-slot-ready" id="mp-ready-0">NOT READY</span>
+            </div>
+            <div class="mp-slot-nation" id="mp-nation-0">No nation selected</div>
+          </div>
+          <div class="mp-vs">VS</div>
+          <div class="mp-player-slot" id="mp-slot-1">
+            <div class="mp-slot-header">
+              <span class="mp-slot-label">Player 2</span>
+              <span class="mp-slot-ready" id="mp-ready-1">NOT READY</span>
+            </div>
+            <div class="mp-slot-nation" id="mp-nation-1">Waiting for player...</div>
+          </div>
+        </div>
+
+        <!-- Nation Selector -->
+        <div class="mp-nation-select">
+          <h3 class="mp-section-title">Select Your Nation</h3>
+          <div class="mp-nation-grid">
+            <button class="mp-nation-btn" data-mp-nation="america"><span class="mp-flag" style="background-color:#3355ff;"></span>America</button>
+            <button class="mp-nation-btn" data-mp-nation="britain"><span class="mp-flag" style="background-color:#33aa33;"></span>Britain</button>
+            <button class="mp-nation-btn" data-mp-nation="france"><span class="mp-flag" style="background-color:#6666ff;"></span>France</button>
+            <button class="mp-nation-btn" data-mp-nation="japan"><span class="mp-flag" style="background-color:#ff3333;"></span>Japan</button>
+            <button class="mp-nation-btn" data-mp-nation="germany"><span class="mp-flag" style="background-color:#666666;"></span>Germany</button>
+            <button class="mp-nation-btn" data-mp-nation="austria"><span class="mp-flag" style="background-color:#cc6633;"></span>Austria</button>
+          </div>
+        </div>
+
+        <!-- Ready + Countdown -->
+        <div class="mp-ready-section">
+          <button id="mp-ready-btn" class="menu-btn">Ready</button>
+          <button id="mp-voice-btn" class="menu-btn voice-btn" title="Toggle microphone for voice chat">MIC</button>
+          <div id="mp-countdown" class="mp-countdown hidden"></div>
+        </div>
+
+        <!-- Chat -->
+        <div class="mp-chat">
+          <div id="mp-chat-messages" class="mp-chat-messages"></div>
+          <div class="mp-chat-input-row">
+            <input id="mp-chat-input" type="text" class="mp-input" placeholder="Type a message..." maxlength="500" autocomplete="off">
+            <button id="mp-chat-send" class="mp-chat-send-btn">Send</button>
+          </div>
+        </div>
+
+        <button id="mp-leave-btn" class="menu-btn menu-btn-secondary" style="margin-top:12px;">Leave Game</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Nation Select -->
+  <div id="nation-select" class="hidden">
+    <div class="nation-select-content">
+      <p class="menu-eyebrow">MISSION BRIEFING</p><h2 class="nation-select-title">Choose your command</h2><p class="briefing-intro">Select a nation, shape the battlefield, and deploy.</p>
+      <div class="nation-panels">
+        <div class="nation-panel allied-panel">
+          <h3 class="panel-header">Choose Your Nation</h3>
+          <div class="nation-grid" id="allied-nations">
+            <div class="nation-card" data-nation="america">
+              <div class="nation-flag" style="background-color: #3355ff;"></div>
+              <span class="nation-name">America</span>
+              <span class="nation-passive"></span>
+              <span class="nation-ability"></span>
+            </div>
+            <div class="nation-card" data-nation="britain">
+              <div class="nation-flag" style="background-color: #33aa33;"></div>
+              <span class="nation-name">Great Britain</span>
+              <span class="nation-passive"></span>
+              <span class="nation-ability"></span>
+            </div>
+            <div class="nation-card" data-nation="france">
+              <div class="nation-flag" style="background-color: #6666ff;"></div>
+              <span class="nation-name">France</span>
+              <span class="nation-passive"></span>
+              <span class="nation-ability"></span>
+            </div>
+          </div>
+        </div>
+        <div class="nation-panel enemy-panel">
+          <h3 class="panel-header">Enemy Nation</h3>
+          <div class="nation-grid" id="enemy-nations">
+            <div class="nation-card" data-nation="japan">
+              <div class="nation-flag" style="background-color: #ff3333;"></div>
+              <span class="nation-name">Japan</span>
+              <span class="nation-passive"></span>
+              <span class="nation-ability"></span>
+            </div>
+            <div class="nation-card" data-nation="germany">
+              <div class="nation-flag" style="background-color: #666666;"></div>
+              <span class="nation-name">Germany</span>
+              <span class="nation-passive"></span>
+              <span class="nation-ability"></span>
+            </div>
+            <div class="nation-card" data-nation="austria">
+              <div class="nation-flag" style="background-color: #cc6633;"></div>
+              <span class="nation-name">Austria</span>
+              <span class="nation-passive"></span>
+              <span class="nation-ability"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Difficulty Selection -->
+      <div id="difficulty-select" style="margin-bottom:20px;">
+        <h3 class="panel-header" style="color:#8a9aaa;margin-bottom:10px;">AI Difficulty</h3>
+        <div style="display:flex;gap:10px;justify-content:center;">
+          <button class="difficulty-btn" data-difficulty="kids" style="padding:10px 20px;background:rgba(22,33,62,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:3px;color:#88ddff;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;letter-spacing:1px;transition:all 0.2s;">Kids</button>
+          <button class="difficulty-btn" data-difficulty="easy" style="padding:10px 20px;background:rgba(22,33,62,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:3px;color:#88cc88;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;letter-spacing:1px;transition:all 0.2s;">Easy</button>
+          <button class="difficulty-btn selected" data-difficulty="normal" style="padding:10px 20px;background:rgba(0,255,65,0.1);border:1px solid #00ff41;border-radius:3px;color:#ffcc44;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;letter-spacing:1px;transition:all 0.2s;box-shadow:0 0 10px rgba(0,255,65,0.2);">Normal</button>
+          <button class="difficulty-btn" data-difficulty="hard" style="padding:10px 20px;background:rgba(22,33,62,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:3px;color:#ff6644;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;letter-spacing:1px;transition:all 0.2s;">Hard</button>
+        </div>
+        <div id="difficulty-desc" style="color:#6a8a7a;font-size:11px;margin-top:6px;min-height:16px;">Standard AI with varied strategies and smart targeting.</div>
+      </div>
+
+      <!-- Game Mode / Victory Condition Selection -->
+      <div id="gamemode-select" style="margin-bottom:20px;">
+        <h3 class="panel-header" style="color:#8a9aaa;margin-bottom:10px;">Victory Condition</h3>
+        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+          <button class="gamemode-btn selected" data-gamemode="hq_destruction" style="padding:8px 14px;background:rgba(0,255,65,0.1);border:1px solid #00ff41;border-radius:3px;color:#ccc;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;transition:all 0.2s;box-shadow:0 0 10px rgba(0,255,65,0.2);">HQ Destruction</button>
+          <button class="gamemode-btn" data-gamemode="annihilation" style="padding:8px 14px;background:rgba(22,33,62,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:3px;color:#ccc;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;transition:all 0.2s;">Annihilation</button>
+          <button class="gamemode-btn" data-gamemode="timed" style="padding:8px 14px;background:rgba(22,33,62,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:3px;color:#ccc;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;transition:all 0.2s;">Timed (15 min)</button>
+          <button class="gamemode-btn" data-gamemode="domination" style="padding:8px 14px;background:rgba(22,33,62,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:3px;color:#ccc;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;transition:all 0.2s;">Domination</button>
+          <button class="gamemode-btn" data-gamemode="survival" style="padding:8px 14px;background:rgba(22,33,62,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:3px;color:#ff8844;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;transition:all 0.2s;">Survival</button>
+        </div>
+        <div id="gamemode-desc" style="color:#6a8a7a;font-size:11px;margin-top:6px;min-height:16px;">Destroy the enemy Headquarters to win.</div>
+      </div>
+
+      <!-- Map Selection -->
+      <div id="map-select" style="margin-bottom:20px;">
+        <h3 class="panel-header" style="color:#8a9aaa;margin-bottom:10px;">Map</h3>
+        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+          <button class="map-btn" data-map="random" style="padding:8px 14px;background:rgba(22,33,62,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:3px;color:#ffcc44;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;transition:all 0.2s;">Random</button>
+          <button class="map-btn selected" data-map="continental" style="padding:8px 14px;background:rgba(0,255,65,0.1);border:1px solid #00ff41;border-radius:3px;color:#ccc;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;transition:all 0.2s;box-shadow:0 0 10px rgba(0,255,65,0.2);">Continental</button>
+          <button class="map-btn" data-map="islands" style="padding:8px 14px;background:rgba(22,33,62,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:3px;color:#ccc;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;transition:all 0.2s;">Islands</button>
+          <button class="map-btn" data-map="river" style="padding:8px 14px;background:rgba(22,33,62,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:3px;color:#ccc;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;transition:all 0.2s;">River Crossing</button>
+          <button class="map-btn" data-map="plains" style="padding:8px 14px;background:rgba(22,33,62,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:3px;color:#ccc;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;transition:all 0.2s;">Open Plains</button>
+        </div>
+        <div id="map-desc" style="color:#6a8a7a;font-size:11px;margin-top:6px;min-height:16px;">Large landmass with water on one side.</div>
+        <div style="margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px;">
+          <label style="color:#6a8a7a;font-size:11px;">Seed:</label>
+          <input id="map-seed-input" type="text" placeholder="(optional)" style="width:100px;padding:4px 8px;background:rgba(22,33,62,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:3px;color:#ccc;font-family:inherit;font-size:11px;">
+        </div>
+      </div>
+
+      <!-- Biome Selection -->
+      <div id="biome-select" style="margin-bottom:20px;">
+        <h3 class="panel-header" style="color:#8a9aaa;margin-bottom:10px;">Biome</h3>
+        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+          <button class="biome-btn selected" data-biome="temperate" style="padding:8px 14px;background:rgba(0,255,65,0.1);border:1px solid #00ff41;border-radius:3px;color:#88cc88;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;transition:all 0.2s;box-shadow:0 0 10px rgba(0,255,65,0.2);">Temperate</button>
+          <button class="biome-btn" data-biome="desert" style="padding:8px 14px;background:rgba(22,33,62,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:3px;color:#ccaa66;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;transition:all 0.2s;">Desert</button>
+          <button class="biome-btn" data-biome="arctic" style="padding:8px 14px;background:rgba(22,33,62,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:3px;color:#aaccdd;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;transition:all 0.2s;">Arctic</button>
+        </div>
+        <div id="biome-desc" style="color:#6a8a7a;font-size:11px;margin-top:6px;min-height:16px;">Green grass and blue water.</div>
+      </div>
+
+      <div class="nation-select-actions">
+        <button id="btn-start-game" class="menu-btn" disabled>Start Battle</button>
+        <button id="btn-back-menu" class="menu-btn menu-btn-secondary">Back</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <!-- Resource Bar (top) -->
+    <div id="resource-bar">
+      <div class="resource-item">
+        <span class="resource-label">Supplies</span>
+        <span id="sp-display" class="resource-value">500</span>
+      </div>
+      <div class="resource-item">
+        <span class="resource-label">Munitions</span>
+        <span id="mu-display" class="resource-value">100</span>
+      </div>
+      <div class="resource-item">
+        <span class="resource-label">Logistics</span>
+        <span id="income-display" class="resource-value">+10/s</span>
+      </div>
+      <div class="resource-item">
+        <span class="resource-label">Army</span>
+        <span id="unit-count-display" class="resource-value">0</span>
+      </div>
+      <div class="resource-item">
+        <span class="resource-label">Operation time</span>
+        <span id="game-timer-display" class="resource-value">0:00</span>
+      </div>
+      <div class="resource-item" style="margin-left:auto;">
+        <button id="btn-options" style="background:none;border:1px solid #555;color:#aaa;padding:4px 10px;cursor:pointer;border-radius:3px;font-size:12px;font-family:sans-serif;" title="Options">Options</button>
+        <button id="btn-help" style="background:none;border:1px solid #555;color:#aaa;padding:4px 10px;cursor:pointer;border-radius:3px;font-size:12px;font-family:sans-serif;margin-left:4px;" title="Controls (F1)">F1</button>
+        <button id="btn-techtree" style="background:none;border:1px solid #555;color:#aaa;padding:4px 10px;cursor:pointer;border-radius:3px;font-size:12px;font-family:sans-serif;margin-left:4px;" title="Tech Tree (T)">Tech</button>
+      </div>
+    </div>
+
+    <!-- Options Panel -->
+    <div id="options-panel" class="hidden" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.95);border:2px solid #555;border-radius:8px;padding:30px;z-index:10001;min-width:300px;font-family:sans-serif;">
+      <h3 style="color:#fff;margin:0 0 20px 0;text-align:center;">Options</h3>
+      <div style="margin-bottom:15px;">
+        <label style="color:#aaa;font-size:13px;display:block;margin-bottom:4px;">Master Volume</label>
+        <input type="range" id="opt-volume" min="0" max="100" value="30" style="width:100%;">
+      </div>
+      <div style="margin-bottom:15px;">
+        <label style="color:#aaa;font-size:13px;display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" id="opt-sound" checked>
+          Sound Effects
+        </label>
+      </div>
+      <div style="margin-bottom:15px;">
+        <label style="color:#aaa;font-size:13px;display:block;margin-bottom:4px;">Music Volume</label>
+        <input type="range" id="opt-music-volume" min="0" max="100" value="25" style="width:100%;">
+      </div>
+      <div style="margin-bottom:15px;">
+        <label style="color:#aaa;font-size:13px;display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" id="opt-music" checked>
+          Music
+        </label>
+      </div>
+      <div style="margin-bottom:15px;">
+        <label style="color:#aaa;font-size:13px;display:block;margin-bottom:4px;">Camera Speed</label>
+        <input type="range" id="opt-camspeed" min="50" max="200" value="100" style="width:100%;">
+      </div>
+      <div style="text-align:center;margin-top:20px;">
+        <button id="btn-close-options" style="padding:8px 24px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer;font-size:14px;">Close</button>
+      </div>
+    </div>
+
+    <!-- Selection Panel (bottom-left) -->
+    <div id="selection-panel">
+      <div class="hud-section-label">FIELD INTELLIGENCE</div>
+      <div id="selection-info">
+        <span class="selection-placeholder">Select a unit or structure to issue orders.</span>
+      </div>
+    </div>
+
+    <!-- GD-126: Command Card Panel (bottom-center, 3x4 grid) -->
+    <div id="command-card" class="hidden">
+      <div class="hud-section-label">TACTICAL ORDERS</div><div id="command-card-grid"></div>
+    </div>
+
+    <!-- Production Queue Overview Panel (Cycle 15) -->
+    <div id="prod-overview-panel">
+      <div class="po-header">PRODUCTION OVERVIEW</div>
+      <div id="po-entries"></div>
+    </div>
+
+    <!-- Hover Tooltip (Cycle 15) -->
+    <div id="entity-tooltip"></div>
+
+    <!-- Voice Chat Indicator -->
+    <div id="voice-indicator" class="voice-indicator hidden" title="Click to toggle mic">
+      <span id="voice-mic-icon">MIC</span>
+      <span id="voice-opponent-speaking" class="hidden">SPEAKING</span>
+    </div>
+
+    <!-- Speed Toggle (spectate mode) -->
+    <button id="speed-toggle-btn" class="hidden" style="position:fixed;bottom:220px;right:10px;z-index:101;background:rgba(0,0,0,0.8);border:1px solid #00ff41;color:#00ff41;padding:8px 14px;border-radius:4px;font-family:monospace;font-size:14px;font-weight:bold;cursor:pointer;">1x</button>
+
+    <!-- Minimap (bottom-right) -->
+    <div id="minimap-container">
+      <div class="hud-section-label minimap-heading">BATTLEFIELD <span>TACTICAL MAP</span></div><div class="camera-controls" role="group" aria-label="Camera rotation">
+        <button id="camera-rotate-left" title="Rotate left (Q). Middle-drag to orbit." aria-label="Rotate camera left">↶ <kbd>Q</kbd></button>
+        <button id="camera-reset" title="Reset north (Home)" aria-label="Reset camera to north">N / Reset</button>
+        <button id="camera-rotate-right" title="Rotate right (E). Middle-drag to orbit." aria-label="Rotate camera right">↷ <kbd>E</kbd></button>
+      </div><canvas id="minimap-canvas" width="200" height="200"></canvas>
+    </div>
+
+    <!-- Production Panel (right side) -->
+    <div id="production-panel" class="hidden">
+      <h4 class="production-title">Production</h4>
+      <div id="production-queue"></div>
+      <div id="production-options"></div>
+    </div>
+
+    <!-- Build Menu (right side, shown when building) -->
+    <div id="build-menu" class="hidden">
+      <h4 class="production-title">Build Structure</h4>
+      <div id="build-options"></div>
+    </div>
+  </div>
+
+  <!-- Pause Overlay -->
+  <div id="pause-overlay" class="hidden" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10005;font-family:sans-serif;">
+    <div style="text-align:center;">
+      <h1 style="color:#ffcc00;font-size:48px;letter-spacing:6px;margin:0;">PAUSED</h1>
+      <p style="color:#888;font-size:14px;margin-top:10px;">Press Ctrl+P or Pause to resume</p>
+      <div style="display:flex;gap:12px;justify-content:center;margin-top:20px;">
+        <button id="btn-save-game" style="padding:10px 24px;font-size:15px;font-weight:bold;background:#224422;color:#44ff44;border:2px solid #44ff44;border-radius:6px;cursor:pointer;font-family:sans-serif;letter-spacing:1px;transition:background 0.2s;">Save Game</button>
+        <button id="btn-load-game" style="padding:10px 24px;font-size:15px;font-weight:bold;background:#222244;color:#4488ff;border:2px solid #4488ff;border-radius:6px;cursor:pointer;font-family:sans-serif;letter-spacing:1px;transition:background 0.2s;">Load Game</button>
+        <button id="btn-export-save" style="padding:10px 24px;font-size:15px;font-weight:bold;background:#443322;color:#ffaa44;border:2px solid #ffaa44;border-radius:6px;cursor:pointer;font-family:sans-serif;letter-spacing:1px;transition:background 0.2s;">Export File</button>
+        <button id="btn-import-save" style="padding:10px 24px;font-size:15px;font-weight:bold;background:#443322;color:#ffaa44;border:2px solid #ffaa44;border-radius:6px;cursor:pointer;font-family:sans-serif;letter-spacing:1px;transition:background 0.2s;">Import File</button>
+      </div>
+      <input type="file" id="save-file-input" accept=".warzone,.json" style="display:none;">
+      <button id="btn-surrender" style="margin-top:16px;padding:10px 28px;font-size:16px;font-weight:bold;background:#552222;color:#ff4444;border:2px solid #ff4444;border-radius:6px;cursor:pointer;font-family:sans-serif;letter-spacing:1px;transition:background 0.2s;">Surrender</button>
+    </div>
+  </div>
+
+  <!-- Save/Load Slot Dialog -->
+  <div id="save-load-dialog" class="hidden" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:10008;font-family:sans-serif;">
+    <div style="background:rgba(20,20,30,0.97);border:2px solid #4488ff;border-radius:12px;padding:24px 32px;min-width:420px;max-width:520px;max-height:80vh;overflow-y:auto;">
+      <h2 id="save-load-title" style="color:#ffcc00;margin:0 0 16px 0;font-size:22px;text-align:center;">Save Game</h2>
+      <div id="save-slot-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+      <div style="text-align:center;margin-top:16px;">
+        <button id="btn-close-save-dialog" style="padding:8px 24px;font-size:14px;background:#333;color:#ccc;border:2px solid #555;border-radius:4px;cursor:pointer;">Close</button>
+      </div>
+    </div>
+  </div>
+  <!-- Surrender Confirmation Dialog -->
+  <div id="surrender-confirm" class="hidden" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:10010;font-family:sans-serif;">
+    <div style="text-align:center;background:rgba(30,10,10,0.95);border:2px solid #ff4444;border-radius:10px;padding:30px 40px;">
+      <h2 style="color:#ff4444;margin:0 0 12px 0;font-size:24px;">Surrender?</h2>
+      <p style="color:#ccc;margin:0 0 20px 0;">Are you sure you want to surrender?</p>
+      <div style="display:flex;gap:12px;justify-content:center;">
+        <button id="btn-surrender-yes" style="padding:8px 24px;font-size:14px;font-weight:bold;background:#772222;color:#ff6644;border:2px solid #ff6644;border-radius:4px;cursor:pointer;">Yes, Surrender</button>
+        <button id="btn-surrender-no" style="padding:8px 24px;font-size:14px;background:#333;color:#ccc;border:2px solid #555;border-radius:4px;cursor:pointer;">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Over -->
+  <div id="game-over" class="hidden">
+    <div class="game-over-content">
+      <h1 id="game-over-title" class="game-over-title">VICTORY</h1>
+      <p id="game-over-message" class="game-over-message">You have conquered the enemy!</p>
+      <div id="game-over-stats" style="margin:15px 0;font-size:13px;color:#aaa;text-align:left;max-width:300px;margin-left:auto;margin-right:auto;"></div>
+      <button id="btn-play-again" class="menu-btn">Play Again</button>
+    </div>
+  </div>
+
+  <!-- Match History Panel (shown from main menu) -->
+  <div id="match-history" class="hidden" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.95);border:2px solid #555;border-radius:12px;padding:30px;z-index:10003;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;font-family:sans-serif;color:#ccc;">
+    <h2 style="color:#ffcc00;margin:0 0 15px 0;text-align:center;letter-spacing:2px;">MATCH HISTORY</h2>
+    <div id="match-history-list"></div>
+    <div style="text-align:center;margin-top:15px;">
+      <button id="btn-close-history" style="padding:8px 24px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer;font-size:14px;">Close</button>
+    </div>
+  </div>
+
+  <script type="module" src="js/benchmarks/GameStress.js"></script>
+  <script type="module" src="js/ui/ArtDirection.js"></script>
+</body>
+</html>
