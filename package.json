@@ -16,6 +16,7 @@
     "test:camera": "node scripts/verify-camera.mjs",
     "test:environment": "node scripts/verify-environment.mjs",
     "test:performance": "node scripts/verify-performance.mjs",
+    "test:batching": "node scripts/verify-unit-batching.mjs",
     "analyze:assets": "node scripts/analyze-roster-budget.mjs"
   },
   "dependencies": {

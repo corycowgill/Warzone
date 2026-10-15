@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { UNIT_PICK_LAYER } from '../rendering/UnitModelBatcher.js';
 import { Vec3Pool } from '../core/Vec3Pool.js';
 
 export class SelectionManager {
@@ -6,6 +7,7 @@ export class SelectionManager {
     this.game = game;
     this.selected = [];
     this.raycaster = new THREE.Raycaster();
+    this.raycaster.layers.enable(UNIT_PICK_LAYER);
     this.selectionBoxEl = null;
 
     // Control groups: Ctrl+0-9 to save, 0-9 to recall, double-tap to center camera

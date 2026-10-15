@@ -35,3 +35,5 @@ Validation: adaptive-control/telemetry regression checks, camera checks, environ
 Live AI-battle smoke test: High preset at 1280×720 showed about 60 FPS, 16.9 ms rolling p95, 39–43 entities, approximately 0.2 ms simulation and 0.1–0.2 ms visual CPU work. Medium and High presets were switched in-session; no warning/error logs appeared. Preset changes can stall while shaders compile; this is not a late-game stress benchmark. High preset was restored after testing.
 
 Follow-up army scaling and sustained AI analysis: [PERFORMANCE_ANALYSIS.md](PERFORMANCE_ANALYSIS.md). Large armies remain limited by per-unit draw submission, and foreground stalls are now retained in telemetry instead of being discarded by a blanket 250 ms cutoff.
+
+Implemented follow-up: [UNIT_BATCHING.md](UNIT_BATCHING.md) describes unit/overlay instancing and paired benchmarks, reducing the measured 400-unit draw count from 11,445 to 1,165 while preserving gameplay picking and lifecycle behavior.

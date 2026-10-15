@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { UNIT_PICK_LAYER } from '../rendering/UnitModelBatcher.js';
 import { UNIT_STATS, UNIT_ABILITIES, FORMATION_CONFIG } from '../core/Constants.js';
 import { LockstepManager } from '../networking/LockstepManager.js';
 
@@ -11,6 +12,7 @@ export class CommandSystem {
     this.buildPlacementMode = false;
     this.buildPlacementType = null;
     this.raycaster = new THREE.Raycaster();
+    this.raycaster.layers.enable(UNIT_PICK_LAYER);
     this.formationType = FORMATION_CONFIG.defaultType;
   }
 

@@ -31,7 +31,8 @@ import { PostProcessing } from '../rendering/PostProcessing.js';
 import { assetManager } from '../rendering/AssetManager.js';
 import { WeatherSystem } from '../systems/WeatherSystem.js';
 import { StrategicOverlay } from '../rendering/StrategicOverlay.js';
-import { InstancedRenderer } from '../rendering/InstancedRenderer.js';
+import { UnitModelBatcher } from '../rendering/UnitModelBatcher.js';
+import { warmupUnitShaders } from '../rendering/UnitShaderWarmup.js';
 import { SaveSystem } from './SaveSystem.js';
 import { settingsManager } from './SettingsManager.js';
 import { AchievementSystem } from './AchievementSystem.js';
@@ -261,11 +262,13 @@ export class Game {
       this.aiController2 = null;
 
       this.setState('LOADING');
+      this.loadingScreen?.show({message:'Preparing your battlefield…'});
 
       // Preload 3D model assets (non-blocking — game starts even if some fail)
       if (!assetManager.ready) {
         await assetManager.preloadAll();
       }
+      this.loadingScreen?.setProgress(35,'Building the battlefield…');
 
       this.environmentTextures ??= await loadGroundTextures(this.sceneManager.renderer);
 
@@ -412,10 +415,11 @@ export class Game {
       this.mapEventSystem = new MapEventSystem(this);
 
       // Instanced rendering system for draw call batching
-      this.instancedRenderer = new InstancedRenderer(
+      this.instancedRenderer = new UnitModelBatcher(
         this.sceneManager.scene,
         this.sceneManager.camera
       );
+      for (const entity of this.entities) this.instancedRenderer.addEntity(entity);
 
       // Place resource nodes on the map
       this.placeResourceNodes();
@@ -529,7 +533,23 @@ export class Game {
         this.tutorialSystem.start();
       }
 
+      // Move first-use unit/corpse shader work into loading, before gameplay.
+      this.loadingScreen?.setProgress(85,'Preparing forces…');
+      try {
+        this._unitShaderWarmup = await warmupUnitShaders(this.sceneManager.renderer,
+          this.sceneManager.camera,this.sceneManager.scene,assetManager,this.effectsManager,
+          this.postProcessing?.composer?.readBuffer);
+        this.renderUpdate(0);
+        this.postProcessing?.render();
+      } catch (error) {
+        console.warn('Unit shader warmup unavailable:', error.message);
+      }
+      this.clock.getDelta();this._accumulator=0;
+      this.frameMetrics.samples.length=0;this.frameMetrics.resetClock();
+      this.performanceMonitor.frames=0;this.performanceMonitor.lastTime=performance.now();
       this.setState('PLAYING');
+      this.loadingScreen?.setProgress(100,'Ready to deploy');
+      this.loadingScreen?.hide();
 
       // Enable lockstep after all systems are initialized
       if (this.isMultiplayer && this.lockstepManager) {
@@ -555,6 +575,7 @@ export class Game {
       }
     } catch (err) {
       console.error('Failed to start game:', err);
+      this.loadingScreen?.hide();
       // Show error visually
       const errDiv = document.createElement('div');
       errDiv.style.cssText = 'position:fixed;top:10px;left:10px;right:10px;background:red;color:white;padding:20px;z-index:99999;font-family:monospace;white-space:pre-wrap;';
@@ -899,6 +920,7 @@ export class Game {
     this._addToCache(entity);
     // Performance: register with EntityManager spatial hash
     if (this.entityManager) this.entityManager.add(entity);
+    this.instancedRenderer?.addEntity(entity);
   }
 
   _addToCache(entity) {
@@ -931,6 +953,7 @@ export class Game {
   }
 
   removeEntity(entity) {
+    this.instancedRenderer?.removeEntity(entity);
     const idx = this.entities.indexOf(entity);
     if (idx !== -1) this.entities.splice(idx, 1);
     // Performance: update cached entity lists
@@ -956,6 +979,7 @@ export class Game {
   // GD-076: Create a corpse from a dead land unit
   _createCorpse(entity) {
     if (!entity.mesh) return;
+    this.instancedRenderer?.removeEntity(entity);
     if (!this._corpses) this._corpses = [];
 
     // Clone the mesh position but detach from entity management
@@ -964,7 +988,7 @@ export class Game {
     // Remove health bar, selection ring, rank indicator, status badge
     const toRemove = [];
     corpseGroup.traverse(child => {
-      if (child === entity.healthBar || child === entity.selectionRing ||
+      if (child === entity.healthBar || child === entity.selectionRing || child === entity._typeLabel ||
           child === entity.rankIndicator || child === entity._statusBadge) {
         toRemove.push(child);
       }
@@ -972,7 +996,8 @@ export class Game {
     for (const child of toRemove) {
       corpseGroup.remove(child);
       child.traverse(c => {
-        if (c.geometry) c.geometry.dispose();
+        if (c.isMesh && c.geometry) c.geometry.dispose();
+        if (child === entity._typeLabel) c.material?.map?.dispose();
         if (c.material) c.material.dispose();
       });
     }
@@ -980,6 +1005,8 @@ export class Game {
     // Tint dark grey (but do NOT lay flat instantly - animate it)
     corpseGroup.traverse(child => {
       if (child.isMesh && child.material) {
+        // Corpse cleanup owns these geometries; live GLBs share cached geometry.
+        child.geometry = child.geometry.clone();
         child.material = child.material.clone();
         child.material.color.setHex(0x444444);
         child.material.transparent = true;
@@ -1019,7 +1046,7 @@ export class Game {
       _dustSpawned: false
     });
 
-    // Prevent removeEntity from removing the mesh (we still need it)
+    // The corpse now owns this group; the dead entity no longer owns a live mesh.
     entity.mesh = null;
   }
 
@@ -1107,12 +1134,11 @@ export class Game {
           entity._shadow = null;
         }
 
-        // GD-076: Unit corpses for land units (lay flat and fade out)
+        this.removeEntity(entity);
+        // Detach the live entity before reattaching its corpse to the scene.
         if (entity.isUnit && entity.domain === 'land' && entity.mesh) {
           this._createCorpse(entity);
         }
-
-        this.removeEntity(entity);
         this.eventBus.emit(entity.isUnit ? 'unit:destroyed' : 'building:destroyed', { entity });
       }
     }
@@ -1841,6 +1867,7 @@ export class Game {
       this.strategicOverlay = null;
     }
     // Clean up instanced renderer
+    this._unitShaderWarmup?.dispose();this._unitShaderWarmup=null;
     if (this.instancedRenderer) {
       this.instancedRenderer.dispose();
       this.instancedRenderer = null;

@@ -2,6 +2,8 @@
 
 The next optimization priority is batching repeated unit meshes and their tactical overlays. Local measurements show rendering cost growing much faster than simulation cost. This analysis adds a repeatable real-game diagnostic, without changing normal gameplay rendering.
 
+**Follow-up implemented:** [UNIT_BATCHING.md](UNIT_BATCHING.md) documents active unit/overlay batching, gameplay compatibility and the paired 200/400-unit benchmark. The source findings and measurements below describe the pre-batching baseline.
+
 ## Method
 
 Open `/docs/performance-stress.html`. The page uses the actual Game, UnitFactory, GLB roster, terrain, fog, minimap, HUD and fixed-step simulation. The HTML contains the normal game's DOM scaffold with a diagnostic startup module instead of `main.js`. Use a disposable tab; it starts its own game. Saved graphics preferences are copied and restored in memory, never saved. The diagnostic disables autosave and match-history writes.

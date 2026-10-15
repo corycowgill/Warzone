@@ -319,7 +319,12 @@ export class SaveSystem {
 
     // --- Clear existing entities ---
     for (const e of [...game.entities]) {
-      if (e.mesh) game.sceneManager.scene.remove(e.mesh);
+      game.removeEntity(e);
+      if (e._shadow) {
+        game.sceneManager.scene.remove(e._shadow);
+        e._shadow.geometry.dispose();e._shadow.material.dispose();e._shadow=null;
+      }
+      e.alive=false;
     }
     game.entities = [];
     game.projectiles = [];
@@ -471,7 +476,11 @@ export class SaveSystem {
         entity.maxHealth = eData.maxHealth;
 
         // Override the auto-assigned ID with saved ID
+        game.instancedRenderer?.removeEntity(entity);
+        game.entityManager?.remove(entity);
         entity.id = eData.id;
+        game.entityManager?.add(entity);
+        game.instancedRenderer?.addEntity(entity);
         idMap.set(eData.id, entity);
       }
     }
