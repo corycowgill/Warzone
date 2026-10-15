@@ -76,7 +76,7 @@ export class BuildPanel {
       }
       btn.innerHTML = `
         <strong>${this.hud.formatName(type)}</strong>
-        <span style="color:#ffcc00;float:right;">${stats.cost} SP</span>
+        <span style="color:#d6b36d;float:right;">${stats.cost} SP</span>
         <br><small style="color:#999;">${descStr}</small>
         ${reqStr}
       `;
@@ -85,7 +85,7 @@ export class BuildPanel {
       });
       btn.addEventListener('mouseenter', () => {
         btn.style.background = '#444';
-        btn.style.borderColor = '#00ff44';
+        btn.style.borderColor = '#a4bf92';
       });
       btn.addEventListener('mouseleave', () => {
         btn.style.background = '#333';
@@ -188,7 +188,7 @@ export class BuildPanel {
       const teamBuildings = this.game.getBuildings(activeTeam);
       for (const req of stats.requires) {
         if (!teamBuildings.some(b => b.type === req && b.alive)) {
-          this.hud.showNotification(`Requires ${this.hud.formatName(req)} first`, '#ff4444');
+          this.hud.showNotification(`Requires ${this.hud.formatName(req)} first`, '#db8378');
           if (this.game.soundManager) this.game.soundManager.play('error');
           return;
         }
@@ -201,7 +201,7 @@ export class BuildPanel {
     if (this.buildMenu) this.buildMenu.classList.add('hidden');
     this.buildMenuOpen = false;
     document.body.style.cursor = 'crosshair';
-    this.hud.showNotification(`Click to place ${this.hud.formatName(buildingType)}. ESC to cancel.`, '#ffcc00');
+    this.hud.showNotification(`Click to place ${this.hud.formatName(buildingType)}. ESC to cancel.`, '#d6b36d');
 
     // Create ghost preview mesh
     this.createGhostMesh(buildingType);
@@ -234,7 +234,7 @@ export class BuildPanel {
         this.game.lockstepManager.queueCommand(
           LockstepManager.buildCommand(this.buildPlacementType, worldPos)
         );
-        this.hud.showNotification(`${this.hud.formatName(this.buildPlacementType)} queued!`, '#00ff88');
+        this.hud.showNotification(`${this.hud.formatName(this.buildPlacementType)} queued!`, '#a4bf92');
       }
     } else {
       const result = this.game.productionSystem.requestBuilding(
@@ -243,7 +243,7 @@ export class BuildPanel {
         worldPos
       );
       if (result) {
-        this.hud.showNotification(`${this.hud.formatName(this.buildPlacementType)} placed!`, '#00ff88');
+        this.hud.showNotification(`${this.hud.formatName(this.buildPlacementType)} placed!`, '#a4bf92');
       }
     }
 

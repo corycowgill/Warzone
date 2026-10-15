@@ -1,3 +1,4 @@
+import { unitIcon } from './UIIcons.js';
 import { UNIT_STATS, TECH_TREE, RESEARCH_UPGRADES, TECH_BRANCHES, FACTION_UNITS } from '../core/Constants.js';
 
 export class ProductionPanel {
@@ -76,13 +77,13 @@ export class ProductionPanel {
       const effectiveCost = factionOverride?.statsOverride?.cost || stats.cost;
 
       btn.innerHTML = `
-        <div>
+        <span class="production-emblem" aria-hidden="true">${unitIcon(unitType)}</span><div class="production-copy">
           <strong>${displayName}</strong>
           ${factionDesc}
           ${reqHtml}
         </div>
         <div style="text-align:right;">
-          <span style="color:${canAfford ? '#ffcc00' : '#ff4444'};">${effectiveCost} SP</span>
+          <span style="color:${canAfford ? '#d6b36d' : '#db8378'};">${effectiveCost} SP</span>
           <div style="color:#888;font-size:10px;">${stats.buildTime}s</div>
         </div>
       `;
@@ -101,16 +102,16 @@ export class ProductionPanel {
           }
           this.showProductionButtons(building);
         } else if (!clickCanAfford) {
-          this.hud.showNotification('Not enough resources!', '#ff4444');
+          this.hud.showNotification('Not enough resources!', '#db8378');
         } else {
-          this.hud.showNotification('Missing tech requirements!', '#ff4444');
+          this.hud.showNotification('Missing tech requirements!', '#db8378');
         }
       });
 
       btn.addEventListener('mouseenter', () => {
         if (available) {
           btn.style.background = '#3a4a3a';
-          btn.style.borderColor = '#00ff44';
+          btn.style.borderColor = '#a4bf92';
         }
       });
       btn.addEventListener('mouseleave', () => {
@@ -148,8 +149,8 @@ export class ProductionPanel {
         position: relative;
         width: 42px;
         height: 36px;
-        background: ${item.isCurrent ? '#2a3a2a' : '#1a2a1a'};
-        border: 1px solid ${item.isCurrent ? '#00ff88' : '#445544'};
+        background: ${item.isCurrent ? '#2a3a2a' : '#22382f'};
+        border: 1px solid ${item.isCurrent ? '#a4bf92' : '#445544'};
         border-radius: 3px;
         cursor: pointer;
         display: flex;
@@ -176,7 +177,7 @@ export class ProductionPanel {
           left: 0;
           height: 3px;
           width: ${Math.round(item.progress * 100)}%;
-          background: #00ff88;
+          background: #a4bf92;
         `;
         icon.appendChild(progressBar);
       }
@@ -189,7 +190,7 @@ export class ProductionPanel {
           top: 1px;
           right: 2px;
           font-size: 8px;
-          color: #00ff88;
+          color: #a4bf92;
           pointer-events: none;
         `;
         indicator.textContent = '\u25B6'; // play symbol
@@ -223,7 +224,7 @@ export class ProductionPanel {
         }
       });
       icon.addEventListener('mouseleave', () => {
-        icon.style.borderColor = item.isCurrent ? '#00ff88' : '#445544';
+        icon.style.borderColor = item.isCurrent ? '#a4bf92' : '#445544';
       });
 
       container.appendChild(icon);
@@ -298,11 +299,11 @@ export class ProductionPanel {
     }
 
     const state = this.game.research?.player;
-    let html = '<h4 style="color:#00ffcc;margin:0 0 8px 0;font-size:13px;">Research (R)</h4>';
+    let html = '<h4 style="color:#9fc5c2;margin:0 0 8px 0;font-size:13px;">Research (R)</h4>';
 
     if (state?.inProgress) {
       const upg = RESEARCH_UPGRADES[state.inProgress];
-      html += `<div style="color:#ffcc00;font-size:12px;margin-bottom:8px;">Researching: ${upg.name} (${Math.ceil(state.timer)}s)</div>`;
+      html += `<div style="color:#d6b36d;font-size:12px;margin-bottom:8px;">Researching: ${upg.name} (${Math.ceil(state.timer)}s)</div>`;
     }
 
     for (const [id, upg] of available) {
@@ -317,11 +318,11 @@ export class ProductionPanel {
       let status = '';
       let color = '#ccc';
       let bg = '#333';
-      if (completed) { status = 'DONE'; color = '#00ff44'; bg = '#1a331a'; }
-      else if (inProgress) { status = `${Math.ceil(state.timer)}s`; color = '#ffcc00'; bg = '#332a00'; }
+      if (completed) { status = 'DONE'; color = '#a4bf92'; bg = '#1a331a'; }
+      else if (inProgress) { status = `${Math.ceil(state.timer)}s`; color = '#d6b36d'; bg = '#332a00'; }
       else if (alreadyResearching) { status = costStr; color = '#666'; }
-      else if (!canAfford) { status = costStr; color = '#ff4444'; }
-      else { status = costStr; color = '#88ff88'; }
+      else if (!canAfford) { status = costStr; color = '#db8378'; }
+      else { status = costStr; color = '#b9cfa8'; }
 
       html += `<div class="research-item" data-research="${id}" style="
         padding:6px 8px;margin-bottom:4px;background:${bg};border:1px solid #444;
@@ -336,7 +337,7 @@ export class ProductionPanel {
       </div>`;
     }
 
-    html += '<div style="color:#666;font-size:10px;margin-top:4px;">Click to start research</div>';
+    html += '<div style="color:#8b9e97;font-size:10px;margin-top:4px;">Click to start research</div>';
     panel.innerHTML = html;
     panel.style.display = 'block';
 
@@ -345,7 +346,7 @@ export class ProductionPanel {
       item.addEventListener('click', () => {
         const resId = item.dataset.research;
         if (this.game.startResearch('player', resId)) {
-          this.hud.showNotification(`Researching: ${RESEARCH_UPGRADES[resId].name}`, '#00ffcc');
+          this.hud.showNotification(`Researching: ${RESEARCH_UPGRADES[resId].name}`, '#9fc5c2');
           this.toggleResearchPanel(); // refresh
           this.toggleResearchPanel();
         }
@@ -398,7 +399,7 @@ export class ProductionPanel {
       if (hasProd) {
         const progress = b.getProductionProgress ? Math.round(b.getProductionProgress() * 100) : 0;
         const unitName = this.hud.formatName(b.currentProduction);
-        html += `<div style="font-size:10px;color:#88ff88;">${unitName} - ${progress}%</div>`;
+        html += `<div style="font-size:10px;color:#b9cfa8;">${unitName} - ${progress}%</div>`;
         html += `<div class="po-progress-bar"><div class="po-progress-fill" style="width:${progress}%"></div></div>`;
 
         // Queue items
@@ -419,7 +420,7 @@ export class ProductionPanel {
     }
 
     if (buildings.length === 0) {
-      html = '<div style="padding:10px;color:#666;text-align:center;">No production buildings</div>';
+      html = '<div style="padding:10px;color:#8b9e97;text-align:center;">No production buildings</div>';
     }
 
     this._prodOverviewEntries.innerHTML = html;

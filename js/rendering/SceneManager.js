@@ -13,6 +13,8 @@ export class SceneManager {
     });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.05;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -32,6 +34,7 @@ export class SceneManager {
     this.dirLight.castShadow = true;
     this.dirLight.shadow.mapSize.width = 2048;
     this.dirLight.shadow.mapSize.height = 2048;
+    this.dirLight.shadow.normalBias = 0.035;
     this.dirLight.shadow.camera.near = 1;
     this.dirLight.shadow.camera.far = 500;
     this.dirLight.shadow.camera.left = -150;
@@ -91,7 +94,7 @@ export class SceneManager {
 
     // Smooth sine-based interpolation
     const sunAngle = this.dayNightTime * Math.PI * 2; // 0 to 2*PI
-    const sunHeight = Math.sin(sunAngle); // 1 at noon, -1 at midnight
+    const sunHeight = Math.cos(sunAngle); // 1 at noon, -1 at midnight
 
     // Normalize to 0-1 where 0 = darkest, 1 = brightest
     const brightness = (sunHeight + 1) / 2; // 0 to 1
@@ -104,7 +107,7 @@ export class SceneManager {
     // Directional light: warm during day, slightly dimmer at night
     s.copy(this._dnDayColor).lerp(this._dnNightColor, t);
     this.dirLight.color.copy(s);
-    this.dirLight.intensity = 0.7 + brightness * 0.3;
+    this.dirLight.intensity = 0.65 + brightness * 0.65;
 
     // Move directional light with sun position
     const sunX = Math.cos(sunAngle) * 150;
@@ -114,12 +117,12 @@ export class SceneManager {
     // Ambient light: slightly blue-tinted at night but still bright
     s.copy(this._dnDayAmbient).lerp(this._dnNightAmbient, t);
     this.ambientLight.color.copy(s);
-    this.ambientLight.intensity = 0.5 + brightness * 0.15;
+    this.ambientLight.intensity = 0.4 + brightness * 0.25;
 
     // Hemisphere light
     s.copy(this._dnDaySky).lerp(this._dnNightSky, t);
     this.hemiLight.color.copy(s);
-    this.hemiLight.intensity = 0.3 + brightness * 0.1;
+    this.hemiLight.intensity = 0.3 + brightness * 0.25;
 
     // Scene background and fog color
     s.copy(this._dnDayBg).lerp(this._dnNightBg, t);

@@ -14,11 +14,12 @@ export class CameraController {
     this.edgePanSize = 50; // pixels from edge
     this.minZoom = 30;
     this.maxZoom = 200;
-    this.zoom = 80;
+    this.zoom = 60;
     this.rotation = 0; // Camera rotation angle around target (radians)
 
     this.keys = {};
-    this.mousePos = { x: 0, y: 0 };
+    this.mousePos = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    this.pointerOverBattlefield = false;
     this.isPanning = false;
     this.lastMouse = { x: 0, y: 0 };
 
@@ -47,6 +48,7 @@ export class CameraController {
     window.addEventListener('mousemove', e => {
       this.mousePos.x = e.clientX;
       this.mousePos.y = e.clientY;
+      this.pointerOverBattlefield = e.target === this.domElement;
       if (this.isPanning) {
         const dx = e.clientX - this.lastMouse.x;
         const dy = e.clientY - this.lastMouse.y;
@@ -180,10 +182,10 @@ export class CameraController {
 
     // Edge panning
     if (!this.isPanning) {
-      if (this.mousePos.x < this.edgePanSize) dx += 1;
-      if (this.mousePos.x > window.innerWidth - this.edgePanSize) dx -= 1;
-      if (this.mousePos.y < this.edgePanSize) dz += 1;
-      if (this.mousePos.y > window.innerHeight - this.edgePanSize) dz -= 1;
+      if (this.pointerOverBattlefield && this.mousePos.x < this.edgePanSize) dx += 1;
+      if (this.pointerOverBattlefield && this.mousePos.x > window.innerWidth - this.edgePanSize) dx -= 1;
+      if (this.pointerOverBattlefield && this.mousePos.y < this.edgePanSize) dz += 1;
+      if (this.pointerOverBattlefield && this.mousePos.y > window.innerHeight - this.edgePanSize) dz -= 1;
     }
 
     // Move relative to camera rotation

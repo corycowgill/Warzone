@@ -7,6 +7,8 @@
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/settings.css">
   <link rel="stylesheet" href="css/achievements.css">
+  <link rel="stylesheet" href="css/art-direction.css">
+  <link rel="preload" as="image" href="assets/art/warzone-keyart.webp">
   <script type="importmap">
   {
     "imports": {
@@ -19,30 +21,29 @@
 <body>
   <canvas id="gameCanvas"></canvas>
 
-  <!-- Main Menu -->
-  <div id="main-menu">
-    <div class="menu-content">
-      <h1 class="menu-title">WARZONE</h1>
-      <p class="menu-subtitle">Strategic Command &amp; Control</p>
-      <div class="menu-buttons">
-        <button id="btn-tutorial" class="menu-btn menu-btn-featured" style="background:rgba(0,255,65,0.15);border-color:#00ff41;">Tutorial</button>
-        <button id="btn-campaign" class="menu-btn menu-btn-featured">Campaign</button>
-        <button id="btn-1player" class="menu-btn">Skirmish</button>
-        <button id="btn-multiplayer" class="menu-btn">Multiplayer</button>
-        <button id="btn-2player" class="menu-btn menu-btn-secondary" style="margin-top:8px;">Hot Seat (2P)</button>
-        <button id="btn-spectate" class="menu-btn menu-btn-secondary">Watch AI Battle</button>
-        <button id="btn-spectate-quick" class="menu-btn menu-btn-featured mobile-spectate-btn hidden">Watch AI Battle</button>
-        <button id="btn-challenges" class="menu-btn menu-btn-secondary">Challenges</button>
-        <div class="menu-divider"></div>
-        <button id="btn-map-editor" class="menu-btn menu-btn-secondary">Map Editor</button>
-        <button id="btn-replays" class="menu-btn menu-btn-secondary">Replays</button>
-        <button id="btn-history" class="menu-btn menu-btn-secondary" style="font-size:13px;">Match History</button>
-        <div class="menu-divider"></div>
-        <button id="btn-settings-menu" class="menu-btn menu-btn-secondary" style="font-size:13px;">Settings</button>
-        <button id="btn-credits" class="menu-btn menu-btn-secondary" style="font-size:13px;">Credits</button>
-      </div>
-    </div>
-  </div>
+  <!-- Cinematic title menu. Existing action IDs remain stable. -->
+  <main id="main-menu" aria-label="Warzone main menu">
+    <div class="title-art" aria-hidden="true"></div>
+    <div class="title-vignette" aria-hidden="true"></div>
+    <header class="title-masthead"><span class="brand-mark" aria-hidden="true">W</span><span>STRATEGIC COMMAND</span><span class="masthead-rule"></span><span class="masthead-edition">LAND / SEA / AIR</span></header>
+    <section class="menu-content">
+      <p class="menu-eyebrow">SIX NATIONS. ONE BATTLEFIELD.</p>
+      <h1 class="menu-title">WARZONE<span class="title-rule"></span></h1>
+      <p class="menu-subtitle">Every order changes the front.</p>
+      <nav class="menu-buttons" aria-label="Play modes">
+        <button id="btn-1player" class="menu-btn deploy-btn"><span class="menu-index">01</span><span class="menu-action"><strong>Deploy to battle</strong><small>Skirmish / your army, your strategy</small></span><span class="menu-arrow" aria-hidden="true">&#8599;</span></button>
+        <button id="btn-campaign" class="menu-btn"><span class="menu-index">02</span><span class="menu-action"><strong>Campaign</strong><small>Fight your way through the war</small></span><span class="menu-arrow" aria-hidden="true">&#8594;</span></button>
+        <button id="btn-multiplayer" class="menu-btn"><span class="menu-index">03</span><span class="menu-action"><strong>Multiplayer</strong><small>Take command against a rival</small></span><span class="menu-arrow" aria-hidden="true">&#8594;</span></button>
+      </nav>
+      <div class="menu-secondary-actions"><button id="btn-tutorial">New commander? <b>Play the tutorial &#8594;</b></button><button id="btn-spectate">Watch AI battle</button></div>
+      <details class="operations-menu"><summary>More operations <span aria-hidden="true">+</span></summary><div class="operations-grid">
+        <button id="btn-challenges">Challenges</button><button id="btn-2player">Hot seat / 2P</button><button id="btn-map-editor">Map editor</button><button id="btn-replays">Replays</button><button id="btn-history">Match history</button><button id="btn-credits">Credits</button>
+      </div></details>
+      <button id="btn-spectate-quick" class="hidden">Watch AI battle</button>
+    </section>
+    <aside class="title-caption" aria-hidden="true"><span class="caption-line"></span><small>THE FRONT IS YOURS TO COMMAND</small><p>Outthink. Outmaneuver. Overwhelm.</p></aside>
+    <footer class="title-footer"><span>WARZONE <i>/</i> REAL-TIME STRATEGY</span><button id="btn-settings-menu">Settings <span aria-hidden="true">&#9881;</span></button></footer>
+  </main>
 
   <!-- GD-134: Challenge Selection Screen -->
   <div id="challenge-select" class="hidden">
@@ -138,7 +139,7 @@
   <!-- Nation Select -->
   <div id="nation-select" class="hidden">
     <div class="nation-select-content">
-      <h2 class="nation-select-title">SELECT NATIONS</h2>
+      <p class="menu-eyebrow">MISSION BRIEFING</p><h2 class="nation-select-title">Choose your command</h2><p class="briefing-intro">Select a nation, shape the battlefield, and deploy.</p>
       <div class="nation-panels">
         <div class="nation-panel allied-panel">
           <h3 class="panel-header">Choose Your Nation</h3>
@@ -252,23 +253,23 @@
     <!-- Resource Bar (top) -->
     <div id="resource-bar">
       <div class="resource-item">
-        <span class="resource-label">SP:</span>
+        <span class="resource-label">Supplies</span>
         <span id="sp-display" class="resource-value">500</span>
       </div>
       <div class="resource-item">
-        <span class="resource-label">MU:</span>
+        <span class="resource-label">Munitions</span>
         <span id="mu-display" class="resource-value">100</span>
       </div>
       <div class="resource-item">
-        <span class="resource-label">Income:</span>
+        <span class="resource-label">Logistics</span>
         <span id="income-display" class="resource-value">+10/s</span>
       </div>
       <div class="resource-item">
-        <span class="resource-label">Units:</span>
+        <span class="resource-label">Army</span>
         <span id="unit-count-display" class="resource-value">0</span>
       </div>
       <div class="resource-item">
-        <span class="resource-label">Time:</span>
+        <span class="resource-label">Operation time</span>
         <span id="game-timer-display" class="resource-value">0:00</span>
       </div>
       <div class="resource-item" style="margin-left:auto;">
@@ -312,14 +313,15 @@
 
     <!-- Selection Panel (bottom-left) -->
     <div id="selection-panel">
+      <div class="hud-section-label">FIELD INTELLIGENCE</div>
       <div id="selection-info">
-        <span class="selection-placeholder">No selection</span>
+        <span class="selection-placeholder">Select a unit or structure to issue orders.</span>
       </div>
     </div>
 
     <!-- GD-126: Command Card Panel (bottom-center, 3x4 grid) -->
     <div id="command-card" class="hidden">
-      <div id="command-card-grid"></div>
+      <div class="hud-section-label">TACTICAL ORDERS</div><div id="command-card-grid"></div>
     </div>
 
     <!-- Production Queue Overview Panel (Cycle 15) -->
@@ -342,7 +344,7 @@
 
     <!-- Minimap (bottom-right) -->
     <div id="minimap-container">
-      <canvas id="minimap-canvas" width="200" height="200"></canvas>
+      <div class="hud-section-label minimap-heading">BATTLEFIELD <span>TACTICAL MAP</span></div><canvas id="minimap-canvas" width="200" height="200"></canvas>
     </div>
 
     <!-- Production Panel (right side) -->
@@ -417,5 +419,6 @@
   </div>
 
   <script type="module" src="js/main.js"></script>
+  <script type="module" src="js/ui/ArtDirection.js"></script>
 </body>
 </html>

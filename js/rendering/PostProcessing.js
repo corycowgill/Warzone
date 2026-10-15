@@ -1,6 +1,7 @@
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import * as THREE from 'three';
 
@@ -12,9 +13,9 @@ const ToonOutlineShader = {
     tDepth: { value: null },
     resolution: { value: new THREE.Vector2(1, 1) },
     outlineColor: { value: new THREE.Color(0x1a1a2e) }, // Dark blue-black
-    outlineThickness: { value: 1.5 },
-    outlineStrength: { value: 0.8 },
-    colorBands: { value: 6.0 }, // Number of color quantization levels
+    outlineThickness: { value: 1.0 },
+    outlineStrength: { value: 0.4 },
+    colorBands: { value: 8.0 }, // Number of color quantization levels
     cameraNear: { value: 1.0 },
     cameraFar: { value: 500.0 }
   },
@@ -111,7 +112,7 @@ const VignetteShader = {
       vec4 texel = texture2D(tDiffuse, vUv);
       vec2 uv = (vUv - vec2(0.5)) * vec2(offset);
       float dist = length(uv);
-      float vig = smoothstep(0.8, offset * 0.6, dist * (darkness + offset));
+      float vig = 1.0 - darkness * smoothstep(0.20, 0.80, dist);
       texel.rgb *= vig;
       gl_FragColor = texel;
     }
@@ -173,9 +174,12 @@ export class PostProcessing {
 
     // Vignette pass
     this.vignettePass = new ShaderPass(VignetteShader);
-    this.vignettePass.uniforms.offset.value = 1.3;
-    this.vignettePass.uniforms.darkness.value = 0.5;
+    this.vignettePass.uniforms.offset.value = 1.0;
+    this.vignettePass.uniforms.darkness.value = 0.22;
     this.composer.addPass(this.vignettePass);
+
+    // Present linear render targets in the display color space exactly once.
+    this.composer.addPass(new OutputPass());
 
     // Handle resize
     this._onResize = () => {
@@ -229,6 +233,10 @@ export class PostProcessing {
       this.depthTarget.dispose();
       if (this.depthTarget.depthTexture) this.depthTarget.depthTexture.dispose();
       this.depthTarget = null;
+    }
+    if (this.composer) {
+      for (const pass of this.composer.passes) pass.dispose?.();
+      this.composer.dispose();
     }
     this.composer = null;
     this.bloomPass = null;

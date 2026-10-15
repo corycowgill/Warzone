@@ -1028,6 +1028,13 @@ export class UIManager {
       }
     }
 
+    // Auto-selected enemy nations should not appear keyboard-interactive.
+    enemyPanel?.querySelectorAll('.nation-card').forEach(card => {
+      const disabled = this.game.mode !== '2P';
+      card.setAttribute('aria-disabled', String(disabled));
+      card.tabIndex = disabled ? -1 : 0;
+    });
+
     // Reset selections when re-entering nation select
     this.selectedPlayerNation = null;
     this.selectedEnemyNation = null;

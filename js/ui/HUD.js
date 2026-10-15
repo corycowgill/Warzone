@@ -437,7 +437,7 @@ export class HUD {
       this._scoreDisplay.className = 'resource-value';
       this._scoreDisplay.style.cssText = 'font-size:11px;margin-left:8px;';
       const scoreItem = document.createElement('div');
-      scoreItem.className = 'resource-item';
+      scoreItem.className = 'resource-item hud-score';
       scoreItem.innerHTML = '<span class="resource-label">Score:</span>';
       scoreItem.appendChild(this._scoreDisplay);
       const bar = document.getElementById('resource-bar');

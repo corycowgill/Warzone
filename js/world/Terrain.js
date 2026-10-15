@@ -20,10 +20,10 @@ export class Terrain {
       label: 'Temperate',
       seafloor:    [0.08, 0.15, 0.25],
       beach:       [0.76, 0.68, 0.45],
-      grassLow:    [0.25, 0.55, 0.18],
-      grassDirt:   [0.52, 0.40, 0.25],
-      grassOlive:  [0.35, 0.45, 0.20],
-      grassHigh:   [0.28, 0.52, 0.22],
+      grassLow:    [0.39, 0.48, 0.28],
+      grassDirt:   [0.44, 0.37, 0.26],
+      grassOlive:  [0.37, 0.43, 0.27],
+      grassHigh:   [0.33, 0.43, 0.25],
       rock:        [0.40, 0.38, 0.30],
       shoreBlend:  [0.85, 0.82, 0.75],
       waterShallow: 0x22aaaa,
@@ -470,6 +470,14 @@ export class Terrain {
       }
     }
 
+    // Palette entries are authored in display RGB; vertex colors must be linear.
+    const paletteColor = new THREE.Color();
+    for (let i = 0; i < colors.length; i += 3) {
+      paletteColor.setRGB(colors[i], colors[i + 1], colors[i + 2]).convertSRGBToLinear();
+      colors[i] = paletteColor.r;
+      colors[i + 1] = paletteColor.g;
+      colors[i + 2] = paletteColor.b;
+    }
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     geometry.computeVertexNormals();
     geometry.translate(this.worldSize / 2, 0, this.worldSize / 2);

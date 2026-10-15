@@ -1,3 +1,4 @@
+import { unitIcon } from './UIIcons.js';
 import { UNIT_STATS, BUILDING_STATS, UNIT_COUNTERS, VETERANCY, BUILDING_UPGRADES } from '../core/Constants.js';
 
 export class SelectionPanel {
@@ -15,7 +16,7 @@ export class SelectionPanel {
     this.hud.commandCard.updateCommandCard(entities);
 
     if (!entities || entities.length === 0) {
-      this.selectionInfo.innerHTML = '<span class="selection-placeholder">No selection</span>';
+      this.selectionInfo.innerHTML = '<span class="selection-placeholder">Select a unit or structure to inspect it.<br>Drag to select / Right-click to give orders.</span>';
       this.hud.productionPanel.hideProductionOptions();
       return;
     }
@@ -29,12 +30,12 @@ export class SelectionPanel {
 
   showSingleEntityInfo(entity) {
     const hpPercent = Math.round((entity.health / entity.maxHealth) * 100);
-    const hpColor = hpPercent > 50 ? '#00ff00' : hpPercent > 25 ? '#ffaa00' : '#ff0000';
+    const hpColor = hpPercent > 50 ? '#98b98a' : hpPercent > 25 ? '#d6b26a' : '#de8074';
 
     let statsHtml = '';
 
     if (entity.isUnit) {
-      const stanceColors = { aggressive: '#ff4444', defensive: '#4488ff', holdfire: '#ffcc00' };
+      const stanceColors = { aggressive: '#db8378', defensive: '#4488ff', holdfire: '#d6b36d' };
       const stanceLabels = { aggressive: 'AGG', defensive: 'DEF', holdfire: 'HOLD' };
       const stanceColor = stanceColors[entity.stance] || '#888';
       const stanceLabel = stanceLabels[entity.stance] || entity.stance;
@@ -43,7 +44,7 @@ export class SelectionPanel {
         <div style="display:flex;gap:12px;margin-top:6px;font-size:12px;flex-wrap:wrap;">
           <span><span style="color:#888;">ATK:</span> <span style="color:#ff8866;">${entity.damage}</span></span>
           <span><span style="color:#888;">RNG:</span> <span style="color:#66aaff;">${entity.range}</span></span>
-          <span><span style="color:#888;">SPD:</span> <span style="color:#88ff88;">${entity.speed}</span></span>
+          <span><span style="color:#888;">SPD:</span> <span style="color:#b9cfa8;">${entity.speed}</span></span>
           <span><span style="color:#888;">ARM:</span> <span style="color:#cccccc;">${entity.armor || 0}</span></span>
           <span><span style="color:#888;">Rate:</span> <span style="color:#cccc88;">${entity.attackRate}/s</span></span>
           <span style="border:1px solid ${stanceColor};padding:0 4px;border-radius:2px;color:${stanceColor};font-weight:bold;">[V] ${stanceLabel}</span>
@@ -55,19 +56,19 @@ export class SelectionPanel {
         const ab = entity.ability;
         const cdPercent = entity.getAbilityCooldownPercent();
         const ready = cdPercent >= 1;
-        const cdColor = ready ? '#00ff44' : '#ff8844';
+        const cdColor = ready ? '#a4bf92' : '#ff8844';
         const cdWidth = Math.round(cdPercent * 100);
 
         statsHtml += `
-          <div style="margin-top:8px;padding:6px 8px;background:#1a2a1a;border:1px solid ${ready ? '#00ff44' : '#445544'};border-radius:4px;">
+          <div style="margin-top:8px;padding:6px 8px;background:#22382f;border:1px solid ${ready ? '#a4bf92' : '#445544'};border-radius:4px;">
             <div style="display:flex;justify-content:space-between;align-items:center;">
-              <span style="color:${ready ? '#00ff44' : '#888'};font-weight:bold;font-size:12px;">[G] ${ab.name}</span>
+              <span style="color:${ready ? '#a4bf92' : '#888'};font-weight:bold;font-size:12px;">[G] ${ab.name}</span>
               <span style="color:${cdColor};font-size:11px;">${ready ? 'READY' : Math.ceil(entity.abilityCooldown) + 's'}</span>
             </div>
             <div style="background:#333;height:4px;border-radius:2px;margin-top:4px;overflow:hidden;">
               <div style="background:${cdColor};height:100%;width:${cdWidth}%;transition:width 0.3s;"></div>
             </div>
-            <div style="color:#666;font-size:10px;margin-top:3px;">${ab.description}</div>
+            <div style="color:#8b9e97;font-size:10px;margin-top:3px;">${ab.description}</div>
           </div>
         `;
       }
@@ -79,8 +80,8 @@ export class SelectionPanel {
         const weakList = counters.weak.map(t => this.hud.formatName(t)).join(', ');
         statsHtml += `
           <div style="margin-top:6px;font-size:11px;display:flex;gap:12px;">
-            <span><span style="color:#00ff44;">Strong vs:</span> <span style="color:#88ff88;">${strongList}</span></span>
-            <span><span style="color:#ff4444;">Weak vs:</span> <span style="color:#ff8888;">${weakList}</span></span>
+            <span><span style="color:#a4bf92;">Strong vs:</span> <span style="color:#b9cfa8;">${strongList}</span></span>
+            <span><span style="color:#db8378;">Weak vs:</span> <span style="color:#ff8888;">${weakList}</span></span>
           </div>
         `;
       }
@@ -90,34 +91,34 @@ export class SelectionPanel {
         const count = entity.garrisoned ? entity.garrisoned.length : 0;
         statsHtml += `<div style="margin-top:6px;font-size:12px;"><span style="color:#66aaff;">Garrison:</span> ${count}/${entity.garrisonSlots} infantry`;
         if (count > 0) {
-          statsHtml += ` <span style="color:#88ff88;">(firing)</span>`;
+          statsHtml += ` <span style="color:#b9cfa8;">(firing)</span>`;
           statsHtml += `</div><div style="margin-top:4px;"><button id="btn-eject-apc" style="padding:4px 10px;background:#553333;color:#eee;border:1px solid #774444;border-radius:3px;cursor:pointer;font-size:11px;font-family:sans-serif;">[U] Unload All</button></div>`;
         } else {
-          statsHtml += `</div><div style="font-size:10px;color:#666;margin-top:2px;">Right-click with infantry to load</div>`;
+          statsHtml += `</div><div style="font-size:10px;color:#8b9e97;margin-top:2px;">Right-click with infantry to load</div>`;
         }
       }
 
       // SPG deploy status
       if (entity.type === 'spg') {
         const deployed = entity._deployed;
-        statsHtml += `<div style="margin-top:6px;font-size:12px;padding:4px 8px;background:${deployed ? '#2a3a2a' : '#3a2a2a'};border:1px solid ${deployed ? '#00ff44' : '#ff4444'};border-radius:4px;">
-          <span style="color:${deployed ? '#00ff44' : '#ff4444'};">${deployed ? 'DEPLOYED - Can fire' : 'MOBILE - Must deploy to fire [G]'}</span>
+        statsHtml += `<div style="margin-top:6px;font-size:12px;padding:4px 8px;background:${deployed ? '#2a3a2a' : '#3a2a2a'};border:1px solid ${deployed ? '#a4bf92' : '#db8378'};border-radius:4px;">
+          <span style="color:${deployed ? '#a4bf92' : '#db8378'};">${deployed ? 'DEPLOYED - Can fire' : 'MOBILE - Must deploy to fire [G]'}</span>
         </div>`;
       }
 
       // GD-111: Commander abilities display
       if (entity.type === 'commander' && entity.commanderAbilities && entity.commanderAbilities.length > 0) {
-        statsHtml += `<div style="margin-top:8px;color:#ffcc00;font-size:12px;font-weight:bold;">Commander Abilities</div>`;
+        statsHtml += `<div style="margin-top:8px;color:#d6b36d;font-size:12px;font-weight:bold;">Commander Abilities</div>`;
         for (let i = 0; i < entity.commanderAbilities.length; i++) {
           const ab = entity.commanderAbilities[i];
           const cd = entity.commanderCooldowns[i];
           const ready = cd <= 0;
-          const cdColor = ready ? '#00ff44' : '#ff8844';
+          const cdColor = ready ? '#a4bf92' : '#ff8844';
           statsHtml += `
-            <div style="margin-top:4px;padding:4px 6px;background:#1a2a1a;border:1px solid ${ready ? '#336633' : '#333'};border-radius:3px;font-size:11px;">
+            <div style="margin-top:4px;padding:4px 6px;background:#22382f;border:1px solid ${ready ? '#596d50' : '#333'};border-radius:3px;font-size:11px;">
               <span style="color:${cdColor};font-weight:bold;">[${i+1}] ${ab.name}</span>
               <span style="float:right;color:${cdColor};">${ready ? 'READY' : Math.ceil(cd) + 's'}</span>
-              <div style="color:#666;font-size:10px;">${ab.description}</div>
+              <div style="color:#8b9e97;font-size:10px;">${ab.description}</div>
             </div>
           `;
         }
@@ -134,17 +135,17 @@ export class SelectionPanel {
         const count = entity.garrisoned ? entity.garrisoned.length : 0;
         statsHtml += `<div style="margin-top:6px;font-size:12px;"><span style="color:#66aaff;">Garrison:</span> ${count}/${entity.garrisonSlots} infantry`;
         if (count > 0) {
-          statsHtml += ` <span style="color:#88ff88;">(+${count * 10} DMG)</span>`;
+          statsHtml += ` <span style="color:#b9cfa8;">(+${count * 10} DMG)</span>`;
           statsHtml += `</div><div style="margin-top:4px;"><button id="btn-eject-garrison" style="padding:4px 10px;background:#553333;color:#eee;border:1px solid #774444;border-radius:3px;cursor:pointer;font-size:11px;font-family:sans-serif;">Eject All</button></div>`;
         } else {
-          statsHtml += `</div><div style="font-size:10px;color:#666;margin-top:2px;">Right-click with infantry to garrison</div>`;
+          statsHtml += `</div><div style="font-size:10px;color:#8b9e97;margin-top:2px;">Right-click with infantry to garrison</div>`;
         }
       }
 
       // Show production queue as interactive icons
       const fullQueue = entity.getFullQueue();
       if (fullQueue.length > 0) {
-        statsHtml += `<div style="margin-top:6px;"><span style="color:#ffcc00;font-size:12px;">Production Queue</span><span style="color:#666;font-size:10px;margin-left:6px;">(right-click to cancel)</span></div>`;
+        statsHtml += `<div style="margin-top:6px;"><span style="color:#d6b36d;font-size:12px;">Production Queue</span><span style="color:#8b9e97;font-size:10px;margin-left:6px;">(right-click to cancel)</span></div>`;
         statsHtml += `<div id="prod-queue-icons" style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;"></div>`;
         // Show queue summary
         const totalCost = entity.getTotalQueueCost();
@@ -152,7 +153,7 @@ export class SelectionPanel {
         const minutes = Math.floor(totalTime / 60);
         const seconds = totalTime % 60;
         const timeStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
-        statsHtml += `<div style="margin-top:4px;font-size:11px;color:#888;">Queue: <span style="color:#ffcc00;">${totalCost} SP</span> over <span style="color:#88ff88;">${timeStr}</span></div>`;
+        statsHtml += `<div style="margin-top:4px;font-size:11px;color:#888;">Queue: <span style="color:#d6b36d;">${totalCost} SP</span> over <span style="color:#b9cfa8;">${timeStr}</span></div>`;
       }
 
       // Show tier and upgrade option
@@ -170,8 +171,8 @@ export class SelectionPanel {
             <button id="btn-upgrade-building" style="
               padding:6px 14px;
               background:${canAfford ? '#2a3a2a' : '#333'};
-              color:${canAfford ? '#ffcc00' : '#666'};
-              border:1px solid ${canAfford ? '#ffcc00' : '#555'};
+              color:${canAfford ? '#d6b36d' : '#666'};
+              border:1px solid ${canAfford ? '#d6b36d' : '#555'};
               border-radius:4px;
               cursor:${canAfford ? 'pointer' : 'not-allowed'};
               font-family:sans-serif;
@@ -186,14 +187,14 @@ export class SelectionPanel {
       if (entity.tier > 1) {
         const currentTierBonus = entity.getTierBonus ? entity.getTierBonus() : null;
         if (currentTierBonus) {
-          statsHtml += `<div style="margin-top:4px;font-size:11px;color:#ffcc00;">Tier ${entity.tier}: ${currentTierBonus.label}</div>`;
+          statsHtml += `<div style="margin-top:4px;font-size:11px;color:#d6b36d;">Tier ${entity.tier}: ${currentTierBonus.label}</div>`;
         }
       }
 
       // GD-059: Superweapon info and fire button
       if (entity.type === 'superweapon' && entity.weaponConfig) {
         const chargePercent = Math.round((entity.chargeProgress / entity.chargeTime) * 100);
-        const chargeColor = entity.isCharged ? '#00ff44' : '#ff8800';
+        const chargeColor = entity.isCharged ? '#a4bf92' : '#ff8800';
         statsHtml += `
           <div style="margin-top:8px;padding:6px 8px;background:#2a1a0a;border:1px solid ${chargeColor};border-radius:4px;">
             <div style="color:#ff8800;font-weight:bold;font-size:13px;">${entity.weaponConfig.name}</div>
@@ -220,6 +221,7 @@ export class SelectionPanel {
     }
 
     this.selectionInfo.innerHTML = `
+      <div class="selection-portrait" aria-hidden="true">${unitIcon(entity.type)}</div>
       <div style="display:flex;align-items:center;gap:10px;">
         <div style="font-weight:bold;font-size:14px;color:#fff;">${entity.factionName || this.hud.formatName(entity.type)}${entity.isUnit && entity.veterancyRank > 0 ? ` <span style="color:${VETERANCY.ranks[entity.veterancyRank].color};font-size:12px;">${VETERANCY.ranks[entity.veterancyRank].symbol} ${VETERANCY.ranks[entity.veterancyRank].name}</span>` : ''}${entity.factionDescription ? `<div style="font-size:10px;color:#88ddff;">${entity.factionDescription}</div>` : ''}</div>
         <div style="font-size:11px;color:#888;">${entity.domain || ''}</div>
@@ -230,7 +232,7 @@ export class SelectionPanel {
         </div>
         <span style="color:${hpColor};font-size:11px;">${Math.round(entity.health)} / ${entity.maxHealth} HP</span>
       </div>
-      ${statsHtml}
+      <div class="selection-stats">${statsHtml}</div>
     `;
 
     // Wire up eject button for bunkers
@@ -267,15 +269,15 @@ export class SelectionPanel {
         if (this.game.resourceSystem && this.game.resourceSystem.canAffordBoth(activeTeam, cost, muCost)) {
           this.game.resourceSystem.spendBoth(activeTeam, cost, muCost);
           entity.upgrade();
-          this.hud.showNotification(`Upgraded to Tier ${entity.tier}!`, '#ffcc00');
+          this.hud.showNotification(`Upgraded to Tier ${entity.tier}!`, '#d6b36d');
           if (this.game.soundManager) this.game.soundManager.play('build');
           this.showSingleEntityInfo(entity);
         } else {
           const mu = this.game.teams[activeTeam].mu || 0;
           if (this.game.teams[activeTeam].sp < cost) {
-            this.hud.showNotification('Not enough SP!', '#ff4444');
+            this.hud.showNotification('Not enough SP!', '#db8378');
           } else {
-            this.hud.showNotification(`Not enough MU! (need ${muCost})`, '#ff4444');
+            this.hud.showNotification(`Not enough MU! (need ${muCost})`, '#db8378');
           }
         }
       });
@@ -335,7 +337,7 @@ export class SelectionPanel {
     }
 
     const avgHP = Math.round((totalHP / totalMaxHP) * 100);
-    const hpColor = avgHP > 50 ? '#00ff00' : avgHP > 25 ? '#ffaa00' : '#ff0000';
+    const hpColor = avgHP > 50 ? '#98b98a' : avgHP > 25 ? '#d6b26a' : '#de8074';
 
     this.selectionInfo.innerHTML = `
       <div style="font-weight:bold;font-size:14px;color:#fff;margin-bottom:4px;">${entities.length} Units Selected</div>

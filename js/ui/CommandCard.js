@@ -1,3 +1,4 @@
+import { commandIcon, unitIcon } from './UIIcons.js';
 import { UNIT_STATS } from '../core/Constants.js';
 
 export class CommandCard {
@@ -104,8 +105,9 @@ export class CommandCard {
       btn.className = 'cc-btn';
       if (buttons[i]) {
         const b = buttons[i];
-        btn.innerHTML = `<span class="cc-icon">${b.icon}</span><span class="cc-key">${b.key}</span>`;
-        btn.title = b.label;
+        btn.innerHTML = `<span class="cc-icon">${commandIcon(b.label, b.icon)}</span><span class="cc-label">${b.label.split(" (")[0]}</span><span class="cc-key">${b.key}</span>`;
+        btn.title = `${b.label} [${b.key}]`;
+        btn.setAttribute('aria-label', b.label);
         btn.addEventListener('click', b.action);
       } else {
         btn.disabled = true;
@@ -168,8 +170,9 @@ export class CommandCard {
       btn.className = 'cc-btn';
       if (buttons[i]) {
         const b = buttons[i];
-        btn.innerHTML = `<span class="cc-icon">${b.icon}</span><span class="cc-key">${b.key}${b.label ? '' : ''}</span>`;
-        btn.title = b.label;
+        btn.innerHTML = `<span class="cc-icon">${commandIcon(b.label, b.icon)}</span><span class="cc-label">${b.label.split(" (")[0]}</span><span class="cc-key">${b.key}${b.label ? '' : ''}</span>`;
+        btn.title = `${b.label} [${b.key}]`;
+        btn.setAttribute('aria-label', b.label);
         if (b.disabled) {
           btn.disabled = true;
         } else {
@@ -183,15 +186,7 @@ export class CommandCard {
   }
 
   _getUnitIcon(type) {
-    const icons = {
-      infantry: '\uD83D\uDC82', tank: '\uD83D\uDE8C', drone: '\uD83D\uDEE9',
-      plane: '\u2708', battleship: '\u26F5', carrier: '\uD83D\uDEA2',
-      submarine: '\uD83E\uDE7C', mortar: '\uD83D\uDCA3', scoutcar: '\uD83D\uDE97',
-      aahalftrack: '\uD83D\uDEBB', apc: '\uD83D\uDE8D', heavytank: '\uD83C\uDFF0',
-      spg: '\uD83C\uDFAF', bomber: '\uD83D\uDCA5', patrolboat: '\u26F5',
-      engineer: '\uD83D\uDD27', commander: '\u2605'
-    };
-    return icons[type] || '\u25CF';
+    return unitIcon(type);
   }
 
   _triggerAbility(units) {
