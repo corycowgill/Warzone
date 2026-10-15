@@ -12,7 +12,13 @@ export function createGroundMaterial(terrain, textures) {
     shader.fragmentShader = `varying vec3 vTerrainPos; varying vec3 vTerrainNormal;
       uniform sampler2D ugrass,udirt,urock,usand; uniform float uBiome;
       float field(vec2 p){return sin(p.x*.19+sin(p.y*.13))*sin(p.y*.17+cos(p.x*.11))*.5+.5;}
-      vec3 surface(sampler2D tex,vec2 p){return mix(texture2D(tex,p).rgb,texture2D(tex,mat2(.8,-.6,.6,.8)*p*.73+vec2(.32,.57)).rgb,.45);}
+      vec3 surface(sampler2D tex,vec2 p){
+        #ifdef TERRAIN_SIMPLE
+        return texture2D(tex,p).rgb;
+        #else
+        return mix(texture2D(tex,p).rgb,texture2D(tex,mat2(.8,-.6,.6,.8)*p*.73+vec2(.32,.57)).rgb,.45);
+        #endif
+      }
     ` + shader.fragmentShader;
     shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>', `
       vec2 p=vTerrainPos.xz*.21;

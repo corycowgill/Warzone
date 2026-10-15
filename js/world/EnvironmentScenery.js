@@ -7,8 +7,11 @@ export function addEnvironmentScenery(terrain, group) {
   const random=()=>{state=(Math.imul(state,1664525)+1013904223)>>>0;return state/4294967296;};
   const placements=new Map();
   const add=(key,x,z,scale=1,angle=random()*Math.PI*2,y=null)=>{
-    if(!placements.has(key))placements.set(key,[]);
-    placements.get(key).push({x,z,y:y??terrain.getHeightAt(x,z),scale,angle});
+    // Only dense ground dressing benefits from subdivision; preserve cheap tree batches.
+    const chunk = key==='env_grass'||key==='env_reeds'
+      ? `${key}:${Math.floor(x/64)}:${Math.floor(z/64)}` : key;
+    if(!placements.has(chunk))placements.set(chunk,{key,items:[]});
+    placements.get(chunk).items.push({x,z,y:y??terrain.getHeightAt(x,z),scale,angle});
   };
   const treeKeys=terrain.biome==='desert'?['tree_palm']:terrain.biome==='arctic'?['tree_cone','tree_fat']:['tree_oak','tree_default','tree_detailed','tree_cone'];
   for(const tree of terrain.treePositions){const p=terrain.gridToWorld(tree.x,tree.z);add(treeKeys[Math.floor(random()*treeKeys.length)],p.x,p.z,tree.scale);}
@@ -33,13 +36,15 @@ export function addEnvironmentScenery(terrain, group) {
     }else if(h>-.05&&h<.5&&terrain.biome!=='arctic'&&i%3===0)add('env_reeds',x,z,.55+random()*.4);
   }
   const dummy=new THREE.Object3D();let draws=0,instances=0;
-  for(const [key,items] of placements){
-    const model=assetManager.getScaledModel(key);if(!model)continue;
+  const templates = new Map();
+  for(const {key,items} of placements.values()){
+    if (!templates.has(key)) templates.set(key,assetManager.getScaledModel(key));
+    const model=templates.get(key);if(!model)continue;
     model.updateMatrixWorld(true);
     model.traverse(part=>{
       if(!part.isMesh)return;
       const geometry=part.geometry.clone().applyMatrix4(part.matrixWorld);
-      const material=part.material;
+      const material=part.material.clone();
       if(key==='env_grass'||key==='env_reeds')material.side=THREE.DoubleSide;
       if(terrain.biome==='arctic'&&material.name.startsWith('Foliage'))material.color.lerp(new THREE.Color(0xb7c7c3),.58);
       const batch=new THREE.InstancedMesh(geometry,material,items.length);batch.name='Scenery / '+key;batch.userData.environmentAsset=key;
@@ -48,7 +53,8 @@ export function addEnvironmentScenery(terrain, group) {
       batch.instanceMatrix.needsUpdate=true;batch.computeBoundingSphere();group.add(batch);draws++;instances+=items.length;
     });
   }
-  group.userData.scenery={draws,instances,assets:[...placements.keys()]};
+  group.userData.scenery={draws,instances,assets:[...new Set([...placements.values()].map(p=>p.key))]};
+  for (const model of templates.values()) model?.traverse(part=>{if(part.isMesh)part.material.dispose();});
   addForestFloor(terrain,group);
 }
 

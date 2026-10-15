@@ -1,0 +1,36 @@
+<!doctype html><html><head><meta charset="utf-8"><base href="../"><title>Warzone performance benchmark</title>
+<style>body{margin:0;background:#14272c;color:#eee;font:14px system-ui}header{padding:12px}button{padding:10px;background:#bba572;cursor:pointer}canvas{display:block;width:960px;height:540px}pre{white-space:pre-wrap}</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.172.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.172.0/examples/jsm/"}}</script></head><body><header><button id="run" disabled>Run comparison</button> <span id="status">Loading…</span><pre id="results"></pre></header><canvas id="gameCanvas"></canvas>
+<script type="module">
+import {SceneManager} from './js/rendering/SceneManager.js';
+import {PostProcessing} from './js/rendering/PostProcessing.js';
+import {PostProcessing as Legacy} from './docs/benchmarks/LegacyPostProcessing.js';
+import {Terrain} from './js/world/Terrain.js';
+import {loadGroundTextures} from './js/world/TerrainMaterials.js';
+import {assetManager,AssetManager} from './js/rendering/AssetManager.js';
+const status=document.querySelector('#status'),button=document.querySelector('#run'),output=document.querySelector('#results');
+try {
+const manager=new SceneManager(),{renderer,scene,camera}=manager;
+renderer.setPixelRatio(1);renderer.setSize(960,540);camera.aspect=960/540;camera.position.set(100,65,178);camera.lookAt(100,0,115);camera.updateProjectionMatrix();manager.dirLight.shadow.mapSize.set(1024,1024);
+let shaderErrors=0;renderer.debug.onShaderError=()=>{shaderErrors++;status.textContent='Shader compilation failed';};
+await Promise.all(Object.entries(AssetManager.MANIFEST).filter(([key])=>/^(tree_|env_|unit_tank)/.test(key)).map(([key,value])=>assetManager.load(key,value.path)));
+const textures=await loadGroundTextures(renderer),terrain=new Terrain({environmentTextures:textures},'continental',6819,'temperate');scene.add(terrain.mesh);
+for(let i=0;i<24;i++){const model=assetManager.getScaledModel('unit_tank');model.position.set(75+(i%6)*8,terrain.getHeightAt(75+(i%6)*8,100+Math.floor(i/6)*9),100+Math.floor(i/6)*9);scene.add(model);}
+const old=new Legacy(manager),current=new PostProcessing(manager);
+// Legacy used window dimensions for its extra depth target; normalize both to 960×540.
+old.composer.setPixelRatio(1);old.composer.setSize(960,540);old.depthTarget.setSize(960,540);old.toonPass.uniforms.resolution.value.set(960,540);
+current.configure({quality:'high',bloom:true,vignette:true});
+const frame=()=>new Promise(resolve=>requestAnimationFrame(resolve));
+async function measure(pipeline,label){
+ status.textContent=label+' / warming up';
+ for(let i=0;i<45;i++){await frame();renderer.info.reset();pipeline.render();}
+ const samples=[];let previous=await frame(),start=previous;
+ status.textContent=label+' / measuring';
+ while(previous-start<5000){const now=await frame();renderer.info.reset();const submit=performance.now();pipeline.render();samples.push({ms:now-previous,cpu:performance.now()-submit,draws:renderer.info.render.calls,triangles:renderer.info.render.triangles});previous=now;}
+ const mean=key=>samples.reduce((sum,s)=>sum+s[key],0)/samples.length,sorted=samples.map(s=>s.ms).sort((a,b)=>a-b);
+ return {label,frames:samples.length,fps:+(1000/mean('ms')).toFixed(1),p95Ms:+sorted[Math.floor(sorted.length*.95)].toFixed(2),submitMs:+mean('cpu').toFixed(2),draws:Math.round(mean('draws')),triangles:Math.round(mean('triangles')),buffer:'960×540',shaderErrors};
+}
+button.disabled=false;status.textContent='Ready / identical scene, seed 6819, 24 tanks, 1024 shadows, 1× pixels';current.render();
+button.onclick=async()=>{button.disabled=true;try{const baseline=await measure(old,'7107e85 pipeline');output.textContent=JSON.stringify([baseline],null,2);const optimized=await measure(current,'Optimized pipeline');output.textContent=JSON.stringify([baseline,optimized],null,2);status.textContent=shaderErrors?'FAIL / shader errors':'PASS / comparison complete';}catch(error){status.textContent='FAIL / '+error.message;}finally{button.disabled=false;}};
+}catch(error){status.textContent='FAIL / '+error.message;console.error(error);}
+</script></body></html>

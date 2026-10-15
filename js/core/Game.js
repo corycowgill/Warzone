@@ -1,3 +1,5 @@
+import { RenderQuality } from '../rendering/RenderQuality.js';
+import { FrameMetrics } from './FrameMetrics.js';
 import { loadGroundTextures } from '../world/TerrainMaterials.js';
 import * as THREE from 'three';
 import { EventBus } from './EventBus.js';
@@ -139,10 +141,12 @@ export class Game {
     this.loadingScreen = new LoadingScreen();
     this.settingsUI = new SettingsUI();
     this.performanceMonitor = new PerformanceMonitor();
+    this.frameMetrics = new FrameMetrics();
   }
 
   init() {
     this.sceneManager = new SceneManager();
+    this.renderQuality = new RenderQuality(this.sceneManager, () => this.postProcessing?.resize());
     this.soundManager = new SoundManager(this);
 
     // Apply settings to renderer
@@ -154,6 +158,7 @@ export class Game {
 
     // Global key handlers (pause, quick save/load)
     window.addEventListener('keydown', (e) => {
+      if (e.key === 'F3') { e.preventDefault(); this.performanceMonitor.toggle(); }
       if ((e.key === 'Pause' || (e.key === 'p' && e.ctrlKey)) && (this.state === 'PLAYING' || this.state === 'PAUSED')) {
         e.preventDefault();
         this.togglePause();
@@ -269,6 +274,7 @@ export class Game {
       const biome = config.biome || 'temperate';
       this.terrain = new Terrain(this, mapTemplate, mapSeed, biome);
       this.sceneManager.scene.add(this.terrain.mesh);
+      this.terrain.setDetail(settingsManager.settings.graphics.terrainDetail);
 
       const mapSize = GAME_CONFIG.mapSize * GAME_CONFIG.worldScale;
       this.cameraController = new CameraController(this.sceneManager.camera, this.sceneManager.renderer.domElement);
@@ -284,6 +290,7 @@ export class Game {
       // GD-061: Post-processing (bloom + vignette)
       try {
         this.postProcessing = new PostProcessing(this.sceneManager);
+        this._applyGraphicsSettings();
       } catch (e) {
         console.warn('Post-processing not available:', e.message);
       }
@@ -1300,7 +1307,10 @@ export class Game {
 
   loop() {
     requestAnimationFrame(() => this.loop());
+    const frameStart = performance.now();
+    this.frameMetrics.begin(frameStart);
     let frameDelta = this.clock.getDelta();
+    const wallDelta = frameDelta;
 
     // GD-139: Slow motion effect for victory/defeat
     if (this._slowMotion) {
@@ -1338,20 +1348,27 @@ export class Game {
         }
       }
 
-      // Render-phase updates (run every frame, not at fixed rate)
+      this.frameMetrics.stage('simulationMs', performance.now());
       this.renderUpdate(frameDelta);
+      this.frameMetrics.stage('visualMs', performance.now());
+      if (!document.hidden) this.renderQuality.sample(wallDelta);
     }
 
     if (this.sceneManager) {
+      this.sceneManager.renderer.info.reset();
+      this.frameMetrics.mark = performance.now();
       if (this.postProcessing && this.postProcessing.enabled) {
         this.postProcessing.render();
       } else {
         this.sceneManager.render();
       }
 
+      this.frameMetrics.stage('renderMs', performance.now());
+      this.frameMetrics.end(this.sceneManager.renderer);
+
       // Performance monitor update
       if (this.performanceMonitor) {
-        this.performanceMonitor.update(this.sceneManager.renderer, this.entities.length);
+        this.performanceMonitor.update(this.sceneManager.renderer, this.entities.length, this.frameMetrics, this.renderQuality);
       }
     }
   }
@@ -1371,7 +1388,13 @@ export class Game {
     if (this.cameraController) this.cameraController.update(frameDelta);
 
     // Minimap
-    if (this.minimap) this.minimap.update(frameDelta);
+    if (this.minimap) this.minimap.update(Math.min(frameDelta, .1));
+    const shadowInterval = settingsManager.settings.graphics.quality === 'ultra' ? 0 : 1/30;
+    this._shadowElapsed = (this._shadowElapsed || 0) + Math.min(frameDelta, .1);
+    if (this._shadowElapsed >= shadowInterval) {
+      this.sceneManager.renderer.shadowMap.needsUpdate = true;
+      this._shadowElapsed = shadowInterval ? this._shadowElapsed % shadowInterval : 0;
+    }
 
     // Sound
     if (this.soundManager) this.soundManager.update(frameDelta);
@@ -1462,7 +1485,8 @@ export class Game {
     }
 
     // UI update
-    this.uiManager.updateHUD();
+    this._hudElapsed = (this._hudElapsed || 0) + Math.min(frameDelta, .1);
+    if (this._hudElapsed >= .1) { this.uiManager.updateHUD(); this._hudElapsed %= .1; }
   }
 
   _applyGraphicsSettings() {
@@ -1471,11 +1495,17 @@ export class Game {
     const r = this.sceneManager.renderer;
     if (r) {
       r.shadowMap.enabled = g.shadows;
-      r.setPixelRatio(Math.min(window.devicePixelRatio, 2) * g.resolution);
+      r.shadowMap.autoUpdate = false;
+      r.shadowMap.needsUpdate = true;
+      const size = {low:512, medium:1024, high:2048}[g.shadowQuality] || 1024;
+      const shadow = this.sceneManager.dirLight.shadow;
+      if (shadow.mapSize.x !== size) {
+        shadow.mapSize.set(size,size);shadow.map?.dispose();shadow.map=null;
+      }
+      this.renderQuality?.configure(g, window.devicePixelRatio || 1);
     }
-    if (this.postProcessing) {
-      this.postProcessing.enabled = g.bloom || g.vignette;
-    }
+    this.postProcessing?.configure(g);
+    this.terrain?.setDetail(g.terrainDetail);
     this.sceneManager.dayNightEnabled = g.dayNightCycle;
     if (this.performanceMonitor) {
       if (g.showFPS) this.performanceMonitor.show();

@@ -14,7 +14,8 @@
     "test:interface": "node scripts/verify-interface.mjs",
     "test:roster": "node scripts/verify-roster.mjs",
     "test:camera": "node scripts/verify-camera.mjs",
-    "test:environment": "node scripts/verify-environment.mjs"
+    "test:environment": "node scripts/verify-environment.mjs",
+    "test:performance": "node scripts/verify-performance.mjs"
   },
   "dependencies": {
     "@gltf-transform/core": "^4.3.0",

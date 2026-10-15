@@ -29,6 +29,11 @@ export class PerformanceMonitor {
         <div class="perf-row"><span class="perf-label">Draw:</span><span id="perf-draws" class="perf-value">0</span></div>
         <div class="perf-row"><span class="perf-label">Tris:</span><span id="perf-tris" class="perf-value">0</span></div>
         <div class="perf-row"><span class="perf-label">Ents:</span><span id="perf-ents" class="perf-value">0</span></div>
+        <div class="perf-row"><span class="perf-label">P95:</span><span id="perf-p95" class="perf-value">--</span></div>
+        <div class="perf-row"><span class="perf-label">Sim:</span><span id="perf-sim" class="perf-value">--</span></div>
+        <div class="perf-row"><span class="perf-label">Visual:</span><span id="perf-visual" class="perf-value">--</span></div>
+        <div class="perf-row"><span class="perf-label">Submit:</span><span id="perf-submit" class="perf-value">--</span></div>
+        <div class="perf-row"><span class="perf-label">Pixels:</span><span id="perf-pixels" class="perf-value">--</span></div>
         <div class="perf-row"><span class="perf-label">Mem:</span><span id="perf-mem" class="perf-value">0 MB</span></div>
       </div>
     `;
@@ -41,7 +46,7 @@ export class PerformanceMonitor {
   hide() { this.visible = false; this.container.classList.add('hidden'); }
   toggle() { this.visible ? this.hide() : this.show(); }
 
-  update(renderer, entityCount) {
+  update(renderer, entityCount, metrics = null, quality = null) {
     this.frames++;
     const now = performance.now();
     const elapsed = now - this.lastTime;
@@ -61,6 +66,9 @@ export class PerformanceMonitor {
           this.triangles = info.render?.triangles || 0;
         }
         this.entities = entityCount || 0;
+        this.metrics = metrics?.summary();
+        this.quality = quality;
+        this.bufferSize = `${renderer.domElement.width}×${renderer.domElement.height}`;
 
         // Memory (if available)
         if (performance.memory) {
@@ -86,6 +94,13 @@ export class PerformanceMonitor {
     trisEl.textContent = this.triangles > 1000 ? `${(this.triangles / 1000).toFixed(1)}K` : this.triangles;
     entsEl.textContent = this.entities;
     memEl.textContent = `${this.memoryMB} MB`;
+
+    if (this.metrics) {
+      for (const [id,key] of [['p95','p95Ms'],['sim','simulationMs'],['visual','visualMs'],['submit','renderMs']]) {
+        this.container.querySelector('#perf-'+id).textContent = this.metrics[key].toFixed(1)+' ms';
+      }
+      this.container.querySelector('#perf-pixels').textContent = this.bufferSize + (this.quality?.graphics?.adaptiveResolution ? ` / ${Math.round(this.quality.scale*100)}% auto` : ' / manual');
+    }
 
     // Draw FPS graph
     const ctx = this.ctx;

@@ -573,6 +573,15 @@ export class Terrain {
     return this._forestGrid[gz * this.mapSize + gx] === 1;
   }
 
+  setDetail(detail) {
+    const material = this.mesh.children[0].material;
+    const simple = detail !== 'high';
+    if (!!material.defines?.TERRAIN_SIMPLE !== simple) {
+      material.defines = simple ? {TERRAIN_SIMPLE:1} : {};
+      material.needsUpdate = true;
+    }
+  }
+
   dispose() {
     const materials = new Set(), geometries = new Set();
     this.mesh.traverse(o => {

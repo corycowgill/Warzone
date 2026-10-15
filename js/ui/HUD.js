@@ -48,6 +48,9 @@ export class HUD {
 
   _updateControlGroupBadges(groups) {
     if (!this._controlGroupBar) return;
+    const signature = (groups || []).map(group=>group.filter(e=>e.alive).length).join(',');
+    if (this._controlGroupSignature === signature) return;
+    this._controlGroupSignature = signature;
     this._controlGroupBar.innerHTML = '';
     if (!groups) return;
     for (let i = 0; i < groups.length; i++) {

@@ -15,6 +15,7 @@ export class SettingsManager {
         vignette: true,
         particles: 'high',      // 'low', 'medium', 'high'
         waterQuality: 'high',   // 'low', 'medium', 'high'
+        adaptiveResolution: true,
         resolution: 1.0,        // 0.5, 0.75, 1.0, 1.5
         vsync: true,
         showFPS: false,

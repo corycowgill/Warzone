@@ -118,6 +118,7 @@ export class SettingsUI {
         <h3>Display</h3>
         ${this._renderSlider('Resolution Scale', 'graphics.resolution', g.resolution, 0.5, 2.0, 0.25, v => `${Math.round(v * 100)}%`)}
         ${this._renderToggle('V-Sync', 'graphics.vsync', g.vsync)}
+        ${this._renderToggle('Adaptive Resolution (60 FPS target)', 'graphics.adaptiveResolution', g.adaptiveResolution)}
         ${this._renderToggle('Show FPS Counter', 'graphics.showFPS', g.showFPS)}
         ${this._renderToggle('Anti-Aliasing', 'graphics.antialiasing', g.antialiasing)}
       </div>

@@ -22,6 +22,11 @@ export class Minimap {
 
     // Combat ping markers
     this._pings = [];
+    this._redrawElapsed = .1;
+    this._fogCanvas = document.createElement('canvas');
+    this._fogCanvas.width = this._fogCanvas.height = this.mapSize;
+    this._fogCtx = this._fogCanvas.getContext('2d');
+    this._fogPixels = this._fogCtx.createImageData(this.mapSize, this.mapSize);
 
     this.setupListeners();
     this.setupCombatPings();
@@ -245,6 +250,10 @@ export class Minimap {
   }
 
   update(delta) {
+    this._redrawElapsed += delta || 0;
+    if (this._redrawElapsed < .1 && !this._drawingActive) return;
+    delta = this._redrawElapsed;
+    this._redrawElapsed = 0;
     // Render terrain background once
     if (!this.terrainRendered) {
       this.renderTerrain();
@@ -263,29 +272,14 @@ export class Minimap {
     // Draw fog of war overlay on minimap
     const fog = this.game.fogOfWar;
     if (fog) {
-      const fogImageData = ctx.getImageData(0, 0, this.size, this.size);
-      const fogData = fogImageData.data;
-      for (let py = 0; py < this.size; py++) {
-        for (let px = 0; px < this.size; px++) {
-          const gx = Math.floor((px / this.size) * this.mapSize);
-          const gz = Math.floor((py / this.size) * this.mapSize);
-          const state = fog.getStateAtGrid(gx, gz);
-          const idx = (py * this.size + px) * 4;
-          if (state === 0) {
-            // Unexplored: darken to near black
-            fogData[idx] = Math.floor(fogData[idx] * 0.1);
-            fogData[idx + 1] = Math.floor(fogData[idx + 1] * 0.1);
-            fogData[idx + 2] = Math.floor(fogData[idx + 2] * 0.1);
-          } else if (state === 1) {
-            // Explored but not visible: darken somewhat
-            fogData[idx] = Math.floor(fogData[idx] * 0.45);
-            fogData[idx + 1] = Math.floor(fogData[idx + 1] * 0.45);
-            fogData[idx + 2] = Math.floor(fogData[idx + 2] * 0.45);
-          }
-          // state === 2: visible, no change
-        }
+      const data = this._fogPixels.data;
+      for (let z=0;z<this.mapSize;z++) for(let x=0;x<this.mapSize;x++) {
+        const state=fog.getStateAtGrid(x,z),i=(z*this.mapSize+x)*4;
+        data[i]=data[i+1]=data[i+2]=0;
+        data[i+3]=state===0?230:state===1?140:0;
       }
-      ctx.putImageData(fogImageData, 0, 0);
+      this._fogCtx.putImageData(this._fogPixels,0,0);
+      ctx.drawImage(this._fogCanvas,0,0,this.size,this.size);
     }
 
     // Draw entities

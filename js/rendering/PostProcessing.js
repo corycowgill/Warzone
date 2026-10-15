@@ -142,35 +142,30 @@ export class PostProcessing {
     const scene = this.sceneManager.scene;
     const camera = this.sceneManager.camera;
 
-    // Create depth render target for outline detection
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    this.depthTarget = new THREE.WebGLRenderTarget(w, h, {
-      depthTexture: new THREE.DepthTexture(w, h),
-      depthBuffer: true
-    });
-    this.depthTarget.depthTexture.format = THREE.DepthFormat;
-    this.depthTarget.depthTexture.type = THREE.UnsignedIntType;
-
-    // Create composer
+    const w = window.innerWidth, h = window.innerHeight;
     this.composer = new EffectComposer(renderer);
+    // The main scene pass supplies depth directly. No second scene/shadow render.
+    for (const target of [this.composer.renderTarget1, this.composer.renderTarget2]) {
+      target.depthBuffer = true;
+      target.depthTexture = new THREE.DepthTexture(target.width, target.height);
+      target.depthTexture.type = THREE.UnsignedIntType;
+    }
 
     // Render pass
     const renderPass = new RenderPass(scene, camera);
     this.composer.addPass(renderPass);
 
-    // Bloom pass - subtle glow for emissive materials
-    const resolution = new THREE.Vector2(w, h);
-    this.bloomPass = new UnrealBloomPass(resolution, 0.25, 0.4, 0.85);
-    this.composer.addPass(this.bloomPass);
-
-    // Toon outline pass — depth-based outlines + color quantization
     this.toonPass = new ShaderPass(ToonOutlineShader);
-    this.toonPass.uniforms.resolution.value.set(w, h);
-    this.toonPass.uniforms.tDepth.value = this.depthTarget.depthTexture;
     this.toonPass.uniforms.cameraNear.value = camera.near;
     this.toonPass.uniforms.cameraFar.value = camera.far;
+    const renderOutline = this.toonPass.render.bind(this.toonPass);
+    this.toonPass.render = (renderer, writeBuffer, readBuffer, ...args) => {
+      this.toonPass.uniforms.tDepth.value = readBuffer.depthTexture;
+      renderOutline(renderer, writeBuffer, readBuffer, ...args);
+    };
     this.composer.addPass(this.toonPass);
+    this.bloomPass = new UnrealBloomPass(new THREE.Vector2(w,h), 0.25, 0.4, 0.85);
+    this.composer.addPass(this.bloomPass);
 
     // Vignette pass
     this.vignettePass = new ShaderPass(VignetteShader);
@@ -181,37 +176,32 @@ export class PostProcessing {
     // Present linear render targets in the display color space exactly once.
     this.composer.addPass(new OutputPass());
 
-    // Handle resize
-    this._onResize = () => {
-      const rw = window.innerWidth;
-      const rh = window.innerHeight;
-      if (this.composer) {
-        this.composer.setSize(rw, rh);
-      }
-      if (this.depthTarget) {
-        this.depthTarget.setSize(rw, rh);
-      }
-      if (this.toonPass) {
-        this.toonPass.uniforms.resolution.value.set(rw, rh);
-      }
-    };
+    this._onResize = () => this.resize();
     window.addEventListener('resize', this._onResize);
+    this.resize();
+  }
+
+  resize() {
+    if (!this.composer) return;
+    const renderer = this.sceneManager.renderer;
+    const size = renderer.getSize(new THREE.Vector2());
+    const ratio = renderer.getPixelRatio();
+    this.composer.setPixelRatio(ratio);
+    this.composer.setSize(size.x, size.y);
+    this.toonPass?.uniforms.resolution.value.set(size.x * ratio, size.y * ratio);
+  }
+
+  configure(graphics) {
+    if (this.bloomPass) this.bloomPass.enabled = !!graphics.bloom;
+    if (this.vignettePass) this.vignettePass.enabled = !!graphics.vignette;
+    if (this.toonPass) this.toonPass.enabled = graphics.quality === 'high' || graphics.quality === 'ultra';
+    this.enabled = !!(this.bloomPass?.enabled || this.vignettePass?.enabled || this.toonPass?.enabled);
+    this.resize();
   }
 
   render() {
-    if (this.enabled && this.composer) {
-      // Render scene to depth target first (for outline detection)
-      if (this.depthTarget && this.toonPass) {
-        const renderer = this.sceneManager.renderer;
-        renderer.setRenderTarget(this.depthTarget);
-        renderer.render(this.sceneManager.scene, this.sceneManager.camera);
-        renderer.setRenderTarget(null);
-        this.toonPass.uniforms.tDepth.value = this.depthTarget.depthTexture;
-      }
-      this.composer.render();
-    } else {
-      this.sceneManager.render();
-    }
+    if (this.enabled && this.composer) this.composer.render();
+    else this.sceneManager.render();
   }
 
   setEnabled(enabled) {
