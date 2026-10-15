@@ -344,7 +344,11 @@
 
     <!-- Minimap (bottom-right) -->
     <div id="minimap-container">
-      <div class="hud-section-label minimap-heading">BATTLEFIELD <span>TACTICAL MAP</span></div><canvas id="minimap-canvas" width="200" height="200"></canvas>
+      <div class="hud-section-label minimap-heading">BATTLEFIELD <span>TACTICAL MAP</span></div><div class="camera-controls" role="group" aria-label="Camera rotation">
+        <button id="camera-rotate-left" title="Rotate left (Q). Middle-drag to orbit." aria-label="Rotate camera left">↶ <kbd>Q</kbd></button>
+        <button id="camera-reset" title="Reset north (Home)" aria-label="Reset camera to north">N / Reset</button>
+        <button id="camera-rotate-right" title="Rotate right (E). Middle-drag to orbit." aria-label="Rotate camera right">↷ <kbd>E</kbd></button>
+      </div><canvas id="minimap-canvas" width="200" height="200"></canvas>
     </div>
 
     <!-- Production Panel (right side) -->

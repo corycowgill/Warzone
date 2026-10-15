@@ -15,12 +15,13 @@ export class CameraController {
     this.minZoom = 30;
     this.maxZoom = 200;
     this.zoom = 60;
-    this.rotation = 0; // Camera rotation angle around target (radians)
+    this.rotation = Math.PI; // North-up: +X points right, -Z points up, matching the minimap.
 
     this.keys = {};
     this.mousePos = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
     this.pointerOverBattlefield = false;
     this.isPanning = false;
+    this.isRotating = false;
     this.lastMouse = { x: 0, y: 0 };
 
     // Camera shake
@@ -37,37 +38,53 @@ export class CameraController {
     this._lastTouchCenter = { x: 0, y: 0 };
     this._isTouching = false;
 
+    this._listeners = [];
     this.setupListeners();
     this.setupTouchListeners();
     this.updateCamera();
   }
 
   setupListeners() {
-    window.addEventListener('keydown', e => this.keys[e.key.toLowerCase()] = true);
-    window.addEventListener('keyup', e => this.keys[e.key.toLowerCase()] = false);
-    window.addEventListener('mousemove', e => {
+    this.listen(window, 'keydown', e => {
+      if (e.target?.closest?.('input, textarea, select, [contenteditable=true]') || e.ctrlKey || e.metaKey || e.altKey) return;
+      const key = e.key.toLowerCase();
+      this.keys[key] = true;
+      if (['arrowup','arrowdown','arrowleft','arrowright'].includes(key)) e.preventDefault();
+      if (key === 'home') { e.preventDefault(); this.resetOrientation(); }
+    });
+    this.listen(window, 'keyup', e => this.keys[e.key.toLowerCase()] = false);
+    this.listen(window, 'mousemove', e => {
       this.mousePos.x = e.clientX;
       this.mousePos.y = e.clientY;
       this.pointerOverBattlefield = e.target === this.domElement;
-      if (this.isPanning) {
+      if (this.isRotating) {
+        this.rotateBy(-(e.clientX - this.lastMouse.x) * 0.008);
+        this.lastMouse = { x: e.clientX, y: e.clientY };
+      } else if (this.isPanning) {
         const dx = e.clientX - this.lastMouse.x;
         const dy = e.clientY - this.lastMouse.y;
-        // Pan relative to camera rotation
-        const cos = Math.cos(this.rotation);
-        const sin = Math.sin(this.rotation);
-        this.target.x -= (dx * cos - dy * sin) * 0.5;
-        this.target.z -= (dx * sin + dy * cos) * 0.5;
+        this.panBy(dx, dy, 0.5);
         this.lastMouse.x = e.clientX;
         this.lastMouse.y = e.clientY;
       }
     });
-    this.domElement.addEventListener('mousedown', e => {
-      if (e.button === 1) { this.isPanning = true; this.lastMouse = { x: e.clientX, y: e.clientY }; }
+    this.listen(this.domElement, 'mousedown', e => {
+      if (e.button === 1) { e.preventDefault(); this.isRotating = !e.shiftKey; this.isPanning = e.shiftKey; this.lastMouse = { x: e.clientX, y: e.clientY }; }
     });
-    window.addEventListener('mouseup', e => {
-      if (e.button === 1) this.isPanning = false;
+    this.listen(window, 'mouseup', e => {
+      if (e.button === 1) { this.isPanning = false; this.isRotating = false; }
     });
-    this.domElement.addEventListener('wheel', e => {
+    this.listen(this.domElement, 'auxclick', e => { if (e.button === 1) e.preventDefault(); });
+    this.listen(window, 'blur', () => { this.keys = {}; this.isPanning = false; this.isRotating = false; this.pointerOverBattlefield = false; });
+    for (const [id, action] of [
+      ['camera-rotate-left', () => this.rotateBy(-Math.PI / 4)],
+      ['camera-rotate-right', () => this.rotateBy(Math.PI / 4)],
+      ['camera-reset', () => this.resetOrientation()]
+    ]) {
+      const button = document.getElementById(id);
+      if (button) this.listen(button, 'click', action);
+    }
+    this.listen(this.domElement, 'wheel', e => {
       this.zoom += e.deltaY * 0.05;
       this.zoom = Math.max(this.minZoom, Math.min(this.maxZoom, this.zoom));
       e.preventDefault();
@@ -77,7 +94,7 @@ export class CameraController {
   setupTouchListeners() {
     const el = this.domElement;
 
-    el.addEventListener('touchstart', (e) => {
+    this.listen(el, 'touchstart', (e) => {
       e.preventDefault();
       this._isTouching = true;
       this._touches = Array.from(e.touches);
@@ -97,7 +114,7 @@ export class CameraController {
       }
     }, { passive: false });
 
-    el.addEventListener('touchmove', (e) => {
+    this.listen(el, 'touchmove', (e) => {
       e.preventDefault();
       const touches = e.touches;
 
@@ -105,11 +122,8 @@ export class CameraController {
         // Single finger drag = pan
         const dx = touches[0].clientX - this._lastTouchCenter.x;
         const dy = touches[0].clientY - this._lastTouchCenter.y;
-        const cos = Math.cos(this.rotation);
-        const sin = Math.sin(this.rotation);
         const panScale = this.zoom * 0.005;
-        this.target.x -= (dx * cos - dy * sin) * panScale;
-        this.target.z -= (dx * sin + dy * cos) * panScale;
+        this.panBy(dx, dy, panScale);
         this._lastTouchCenter = { x: touches[0].clientX, y: touches[0].clientY };
       } else if (touches.length === 2) {
         const t0 = touches[0], t1 = touches[1];
@@ -138,11 +152,8 @@ export class CameraController {
         // Two-finger pan
         const panDx = center.x - this._lastTouchCenter.x;
         const panDy = center.y - this._lastTouchCenter.y;
-        const cos = Math.cos(this.rotation);
-        const sin = Math.sin(this.rotation);
         const panScale = this.zoom * 0.003;
-        this.target.x -= (panDx * cos - panDy * sin) * panScale;
-        this.target.z -= (panDx * sin + panDy * cos) * panScale;
+        this.panBy(panDx, panDy, panScale);
 
         this._lastTouchDist = dist;
         this._lastTouchAngle = angle;
@@ -155,7 +166,7 @@ export class CameraController {
       this.updateCamera();
     }, { passive: false });
 
-    el.addEventListener('touchend', (e) => {
+    this.listen(el, 'touchend', (e) => {
       this._touches = Array.from(e.touches);
       if (e.touches.length === 0) {
         this._isTouching = false;
@@ -181,9 +192,9 @@ export class CameraController {
     if (this.keys['e']) this.rotation += this.rotateSpeed * delta;
 
     // Edge panning
-    if (!this.isPanning) {
-      if (this.pointerOverBattlefield && this.mousePos.x < this.edgePanSize) dx += 1;
-      if (this.pointerOverBattlefield && this.mousePos.x > window.innerWidth - this.edgePanSize) dx -= 1;
+    if (!this.isPanning && !this.isRotating && !this._isTouching) {
+      if (this.pointerOverBattlefield && this.mousePos.x < this.edgePanSize) dx -= 1;
+      if (this.pointerOverBattlefield && this.mousePos.x > window.innerWidth - this.edgePanSize) dx += 1;
       if (this.pointerOverBattlefield && this.mousePos.y < this.edgePanSize) dz += 1;
       if (this.pointerOverBattlefield && this.mousePos.y > window.innerHeight - this.edgePanSize) dz -= 1;
     }
@@ -191,7 +202,7 @@ export class CameraController {
     // Move relative to camera rotation
     const cos = Math.cos(this.rotation);
     const sin = Math.sin(this.rotation);
-    const moveX = (dx * cos - dz * sin) * this.moveSpeed * delta;
+    const moveX = (-dx * cos + dz * sin) * this.moveSpeed * delta;
     const moveZ = (dx * sin + dz * cos) * this.moveSpeed * delta;
 
     this.target.x += moveX;
@@ -213,6 +224,33 @@ export class CameraController {
     }
   }
 
+  listen(target, type, handler, options) {
+    target.addEventListener(type, handler, options);
+    this._listeners.push(() => target.removeEventListener(type, handler, options));
+  }
+
+  dispose() {
+    for (const remove of this._listeners) remove();
+    this._listeners = [];
+    this.keys = {};
+  }
+
+  panBy(dx, dy, scale) {
+    const cos = Math.cos(this.rotation), sin = Math.sin(this.rotation);
+    this.target.x += (dx * cos + dy * sin) * scale;
+    this.target.z += (-dx * sin + dy * cos) * scale;
+  }
+
+  rotateBy(angle) {
+    this.rotation += angle;
+    this.updateCamera();
+  }
+
+  resetOrientation() {
+    this.rotation = Math.PI;
+    this.updateCamera();
+  }
+
   shake(intensity) {
     this._shakeIntensity = Math.max(this._shakeIntensity, intensity);
   }
@@ -226,6 +264,14 @@ export class CameraController {
       this.target.z - Math.cos(this.rotation) * distance
     );
     this.camera.lookAt(this.target);
+    const heading = document.getElementById('camera-reset');
+    const degrees = ((this.rotation - Math.PI) * 180 / Math.PI % 360 + 360) % 360;
+    if (heading) {
+      const text = degrees < 0.5 || degrees > 359.5 ? 'N / Reset' : `${Math.round(degrees)}° / Reset`;
+      if (heading.textContent !== text) heading.textContent = text;
+      const label = `Reset camera to north. Current rotation ${Math.round(degrees)} degrees`;
+      if (heading.getAttribute('aria-label') !== label) heading.setAttribute('aria-label', label);
+    }
   }
 
   moveTo(x, z) {

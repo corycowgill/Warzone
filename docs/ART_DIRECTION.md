@@ -64,3 +64,10 @@ and interface overhaul, not a claim that every legacy game asset is AAA quality.
 All unit and building manifest entries now use original Blender GLBs (see ROSTER_ASSETS.md). Environment trees and props retain mixed-source art;
 large-army performance is not benchmarked. Existing gameplay test failures are
 tracked separately from the graphics and interface work.
+
+
+## Camera orientation and view controls
+
+The default battlefield view is north-up and matches the tactical map (+X right, -Z up). Rotate continuously with Q/E or middle-mouse drag; the buttons above the minimap step by 45 degrees. Home or N / Reset restores north without changing focus or zoom. Shift + middle-drag pans; arrow keys and edge panning follow screen directions at every heading. Touch twist/pinch controls remain available. The minimap stays north-up while its projected camera footprint rotates, and minimap picking respects its displayed size.
+
+Run `npm run test:camera` for real Three.js projection and input checks. Browser testing verified rotation to 45 degrees, reset to north, and the fully visible tactical map in a separate tutorial session.

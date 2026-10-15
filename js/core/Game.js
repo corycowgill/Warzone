@@ -1673,6 +1673,8 @@ export class Game {
     const resDisplay = document.getElementById('hud-research-display');
     if (resDisplay) resDisplay.remove();
 
+    this.cameraController?.dispose();
+
     // Clean up minimap event listeners
     if (this.minimap && this.minimap.dispose) {
       this.minimap.dispose();

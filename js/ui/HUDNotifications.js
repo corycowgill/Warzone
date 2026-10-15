@@ -98,7 +98,7 @@ export class HUDNotifications {
     this.helpEl.innerHTML = `
       <div style="color:#00ff44;font-weight:bold;margin-bottom:4px;">Controls</div>
       <div>Arrows/W/S: Pan camera</div>
-      <div>Q/E: Rotate camera</div>
+      <div>Q/E or middle-drag: Rotate camera</div><div>Home or N / Reset: North-up view</div><div>Shift + middle-drag: Pan camera</div>
       <div>Scroll: Zoom</div>
       <div>Middle drag: Pan</div>
       <div style="margin-top:4px;color:#ffcc00;">Commands</div>

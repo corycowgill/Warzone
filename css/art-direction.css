@@ -1380,3 +1380,12 @@ button {
     transform: none;
   }
 }
+
+.camera-controls{display:flex;gap:4px;margin:5px 0 8px;pointer-events:auto}
+.camera-controls button{flex:1;min-height:32px;background:#24353b;border:1px solid #71827e;color:#e9e4ce;border-radius:3px;cursor:pointer;font:12px system-ui}
+.camera-controls button:hover,.camera-controls button:focus-visible{background:#3d555c;border-color:#dac184;outline:2px solid #dac184;outline-offset:1px}
+.camera-controls kbd{font:10px system-ui;color:#cbbd96}
+
+/* Fit rotation controls without clipping the tactical map. */
+#minimap-container{height:286px}
+@media(max-width:900px){#minimap-container{height:222px}.camera-controls{gap:2px}.camera-controls button{font-size:10px;min-height:30px}}

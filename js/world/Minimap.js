@@ -103,8 +103,8 @@ export class Minimap {
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
     return {
-      x: (mx / this.size) * this.worldSize,
-      z: (my / this.size) * this.worldSize
+      x: Math.max(0, Math.min(1, mx / rect.width)) * this.worldSize,
+      z: Math.max(0, Math.min(1, my / rect.height)) * this.worldSize
     };
   }
 
@@ -379,27 +379,21 @@ export class Minimap {
       }
     }
 
-    // Draw camera view frustum as white rectangle
+    // Project the actual screen corners onto the ground so the indicator follows rotation.
     if (this.game.cameraController) {
-      const camCtrl = this.game.cameraController;
-      const target = camCtrl.target;
-      const zoom = camCtrl.zoom;
-
-      // Approximate visible area based on zoom level
-      // Higher zoom = more visible area
-      const viewWidth = zoom * 2.0;
-      const viewHeight = zoom * 1.5;
-
-      const topLeft = this.worldToMinimap(
-        target.x - viewWidth / 2,
-        target.z - viewHeight / 2
-      );
-      const rectW = (viewWidth / this.worldSize) * this.size;
-      const rectH = (viewHeight / this.worldSize) * this.size;
-
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(topLeft.x, topLeft.y, rectW, rectH);
+      const camera = this.game.cameraController.camera;
+      camera.updateMatrixWorld();
+      const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+      const raycaster = new THREE.Raycaster();
+      const corners = [[-1,1],[1,1],[1,-1],[-1,-1]].map(([x,y]) => {
+        raycaster.setFromCamera(new THREE.Vector2(x,y), camera);
+        return raycaster.ray.intersectPlane(plane, new THREE.Vector3());
+      });
+      if (corners.every(Boolean)) {
+        ctx.beginPath();
+        corners.forEach((p,i) => { const m=this.worldToMinimap(p.x,p.z); if(i===0)ctx.moveTo(m.x,m.y);else ctx.lineTo(m.x,m.y); });
+        ctx.closePath(); ctx.strokeStyle='#ffffff'; ctx.lineWidth=1.5; ctx.stroke();
+      }
     }
 
     // Draw combat pings
