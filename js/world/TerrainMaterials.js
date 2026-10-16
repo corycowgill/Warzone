@@ -6,11 +6,14 @@ export function createGroundMaterial(terrain, textures) {
   material.userData.preservePBR = true;
   material.onBeforeCompile = shader => {
     for (const name of ['grass','dirt','rock','sand']) shader.uniforms['u'+name] = {value:textures[name]};
+    shader.uniforms.uLayout={value:terrain.layoutVersion>=2?1:0};
+    shader.uniforms.uMapSize={value:terrain.mapSize};
+    shader.uniforms.uScale={value:terrain.worldScale};
     shader.uniforms.uBiome = {value: terrain.biome === 'arctic' ? 2 : terrain.biome === 'desert' ? 1 : 0};
     shader.vertexShader = 'varying vec3 vTerrainPos; varying vec3 vTerrainNormal;\n'+shader.vertexShader;
     shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvTerrainPos=position; vTerrainNormal=normal;');
     shader.fragmentShader = `varying vec3 vTerrainPos; varying vec3 vTerrainNormal;
-      uniform sampler2D ugrass,udirt,urock,usand; uniform float uBiome;
+      uniform sampler2D ugrass,udirt,urock,usand; uniform float uBiome,uLayout,uMapSize,uScale;
       float field(vec2 p){return sin(p.x*.19+sin(p.y*.13))*sin(p.y*.17+cos(p.x*.11))*.5+.5;}
       vec3 surface(sampler2D tex,vec2 p){
         #ifdef TERRAIN_SIMPLE
@@ -56,6 +59,21 @@ export function createGroundMaterial(terrain, textures) {
       // Broad meadow patches break up repetition without more texture fetches.
       float meadow=field(vTerrainPos.xz*.21);
       if(uBiome<.5)ground*=mix(vec3(.83,.94,.82),vec3(1.07,1.04,.89),meadow);
+      if(uLayout>.5){
+        vec2 grid=vTerrainPos.xz/uScale;
+        float t=clamp((grid.x-15.)/(uMapSize-45.),0.,1.);
+        float offset=uMapSize*(.205*sin(t*3.14159265)+.022*sin(t*9.42477796)+.01*sin(t*21.99114858));
+        float distanceToTrail=min(abs(grid.y-uMapSize*.5-offset),abs(grid.y-uMapSize*.5+offset));
+        float edgeNoise=(variation-.5)*.65;
+        float trail=(1.-smoothstep(.65,1.6,distanceToTrail+edgeNoise));
+        trail*=smoothstep(12.,16.,grid.x)*(1.-smoothstep(uMapSize-31.,uMapSize-27.,grid.x));
+        trail*=smoothstep(.1,.7,vTerrainPos.y);
+        vec3 trailColor=uBiome>1.5?vec3(.53,.59,.60):uBiome>.5?sandColor*.82:dirtColor*vec3(1.08,.96,.78);
+        ground=mix(ground,trailColor,trail*.85);
+        // Pair of worn wheel tracks gives the route a human scale.
+        float tracks=(1.-smoothstep(.08,.22,abs(distanceToTrail-.38)))*trail;
+        ground*=1.-tracks*.13;
+      }
       float wet=1.-smoothstep(-.1,.65,vTerrainPos.y);
       ground*=mix(1.,.72,wet);
       diffuseColor.rgb*=ground;
@@ -65,7 +83,7 @@ export function createGroundMaterial(terrain, textures) {
       roughnessFactor=mix(roughnessFactor,.38,1.-smoothstep(-.1,.65,vTerrainPos.y));
     `);
   };
-  material.customProgramCacheKey=()=> 'warzone-ground-v3';
+  material.customProgramCacheKey=()=> 'warzone-ground-v4';
   return material;
 }
 

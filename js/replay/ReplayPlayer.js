@@ -58,6 +58,8 @@ export class ReplayPlayer {
       difficulty: init.difficulty,
       mapTemplate: init.mapTemplate,
       mapSeed: init.mapSeed,
+      layoutVersion: init.layoutVersion ?? 1,
+      biome: init.biome ?? 'temperate',
       gameMode: init.gameMode
     });
 

@@ -451,9 +451,9 @@ export class PathfindingSystem {
 
         const isDiagonal = neighbor.x !== current.x && neighbor.y !== current.y;
         const moveCost = isDiagonal ? 1.414 : 1.0;
-        const tentativeG = (gScore.get(currentKey) || Infinity) + moveCost;
+        const tentativeG = (gScore.get(currentKey) ?? Infinity) + moveCost;
 
-        if (tentativeG < (gScore.get(neighborKey) || Infinity)) {
+        if (tentativeG < (gScore.get(neighborKey) ?? Infinity)) {
           cameFrom.set(neighborKey, current);
           gScore.set(neighborKey, tentativeG);
           const f = tentativeG + this.heuristic(neighbor, end);

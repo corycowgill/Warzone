@@ -1,6 +1,6 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="../"><title>Warzone / Environment Review</title>
 <style>body{margin:0;background:#18292f;color:#e6e2ce;font:14px system-ui}canvas{display:block}header{position:absolute;left:24px;top:20px;max-width:650px;padding:16px 20px;background:#14272ce8;border-top:2px solid #b8a16c;border-radius:4px}h1{font-size:21px;letter-spacing:2px;margin:0 0 7px}p{margin:7px 0;color:#b9c5bf}nav{display:flex;gap:7px;flex-wrap:wrap}button,select{background:#2c4245;color:#eee8d7;padding:8px 12px;border:1px solid #71837a;border-radius:3px;cursor:pointer}button:hover{background:#45605b}#status{font-size:12px;color:#c9bf94}footer{position:absolute;bottom:18px;left:24px;color:#d5d3bd}</style>
-<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.172.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.172.0/examples/jsm/"}}</script></head><body><header><h1>WARZONE / LIVING BATTLEFIELD</h1><p>Original scenery / Ground materials / Shore-aware water</p><nav><button data-view="coast">Coast</button><button data-view="forest">Forest</button><button data-view="river">River</button><button data-view="highlands">Highlands</button><label>Biome <select id="biome"><option>temperate</option><option>desert</option><option>arctic</option></select></label></nav><p id="status" role="status">Loading environment assets...</p></header><footer>Drag to orbit / Scroll to zoom / Right-drag to pan</footer>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.172.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.172.0/examples/jsm/"}}</script></head><body><header><h1>WARZONE / LIVING BATTLEFIELD</h1><p>Original scenery / Ground materials / Shore-aware water</p><nav><button data-view="coast">Coast</button><button data-view="forest">Forest</button><button data-view="river">River</button><button data-view="highlands">Highlands</button><button data-view="overview">Overview</button><label>Layout <select id="layout"><option>continental</option><option>river</option><option>islands</option><option>plains</option></select></label><label>Biome <select id="biome"><option>temperate</option><option>desert</option><option>arctic</option></select></label></nav><p id="status" role="status">Loading environment assets...</p></header><footer>Drag to orbit / Scroll to zoom / Right-drag to pan</footer>
 <script type="module">
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
@@ -18,15 +18,16 @@ const detail=document.createElement('button');detail.textContent='Terrain: high'
 try{
  const keys=Object.keys(AssetManager.MANIFEST).filter(k=>/^(tree_|env_|prop_)/.test(k));await Promise.all(keys.map(k=>assetManager.load(k,AssetManager.MANIFEST[k].path)));const textures=await loadGroundTextures(renderer);
  function show(name){view=name;if(terrain){scene.remove(terrain.mesh);terrain.dispose();}
- terrain=new Terrain({environmentTextures:textures},name==='river'?'river':'continental',6819,document.querySelector('#biome').value);scene.add(terrain.mesh);terrain.setDetail(detail.textContent==='Terrain: low'?'low':'high');
+ if(name==='river')document.querySelector('#layout').value='river';
+ terrain=new Terrain({environmentTextures:textures},document.querySelector('#layout').value,6819,document.querySelector('#biome').value);scene.add(terrain.mesh);terrain.setDetail(detail.textContent==='Terrain: low'?'low':'high');
  let x=222,z=128;
  if(name==='forest'&&terrain.treePositions.length){const p=terrain.treePositions[Math.floor(terrain.treePositions.length/2)];x=p.x*2;z=p.z*2;}
  if(name==='river'){x=128;z=90;}
  if(name==='highlands'){let highest={h:-99,x:80,z:80};for(let zz=20;zz<110;zz++)for(let xx=20;xx<110;xx++)if(terrain.heightData[zz][xx]>highest.h)highest={h:terrain.heightData[zz][xx],x:xx*2,z:zz*2};x=highest.x;z=highest.z;}
- controls.target.set(x,1,z);camera.position.set(x+36,42,z+48);controls.update();renderer.info.reset();renderer.render(scene,camera);
+ controls.target.set(x,1,z);camera.position.set(x+36,42,z+48);if(name==='overview'){controls.target.set(128,0,128);camera.position.set(128,175,265);}controls.update();renderer.info.reset();renderer.render(scene,camera);
  const info=terrain.mesh.userData.scenery;status.textContent=shaderError?status.textContent:`PASS / ${keys.length} scenery GLBs loaded / ${info.draws} instanced material batches / ${renderer.info.render.triangles.toLocaleString()} visible triangles`;
  }
- document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>show(b.dataset.view)));document.querySelector('#biome').addEventListener('change',()=>show(view));show(view);
+ document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>show(b.dataset.view)));document.querySelector('#biome').addEventListener('change',()=>show(view));document.querySelector('#layout').addEventListener('change',()=>show('overview'));show(view);
  renderer.setAnimationLoop(()=>{terrain.updateWater(.016,camera,sun);controls.update();renderer.info.reset();renderer.render(scene,camera);});
 }catch(e){status.textContent='FAILED: '+e.message;console.error(e);}
 addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});

@@ -69,6 +69,8 @@ export class SaveSystem {
         playerNation: game.teams.player.nation,
         enemyNation: game.teams.enemy.nation,
         mapTemplate: game.terrain?.mapTemplate || 'continental',
+        layoutVersion: game.terrain?.layoutVersion ?? 1,
+        biome: game.terrain?.biome ?? 'temperate',
         mapSeed: game.terrain?.seed ?? null,
       },
 
@@ -789,6 +791,8 @@ export class SaveSystem {
       enemyNation: saveData.meta.enemyNation,
       difficulty: saveData.meta.aiDifficulty,
       mapTemplate: saveData.meta.mapTemplate,
+      layoutVersion: saveData.meta.layoutVersion ?? 1,
+      biome: saveData.meta.biome ?? 'temperate',
       mapSeed: saveData.meta.mapSeed,
       gameMode: saveData.meta.gameMode,
     });

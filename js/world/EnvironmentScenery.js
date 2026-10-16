@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {trailDistance} from './BattlefieldLayout.js';
 import {assetManager} from '../rendering/AssetManager.js';
 
 // Each material part becomes one instanced draw, rather than a clone per tree/blade.
@@ -15,7 +16,15 @@ export function addEnvironmentScenery(terrain, group) {
     placements.get(chunk).items.push({x,z,y:y??terrain.getHeightAt(x,z),scale,angle});
   };
   const treeKeys=terrain.biome==='desert'?['tree_palm']:terrain.biome==='arctic'?['tree_cone','tree_fat']:['tree_oak','tree_default','tree_detailed','tree_cone'];
-  for(const tree of terrain.treePositions){const p=terrain.gridToWorld(tree.x,tree.z);add(treeKeys[Math.floor(random()*treeKeys.length)],p.x,p.z,tree.scale*1.22);}
+  for(const tree of terrain.treePositions){const p=terrain.gridToWorld(tree.x,tree.z);add(treeKeys[Math.floor(random()*treeKeys.length)],p.x,p.z,tree.scale*(terrain.layoutVersion>=2?1.45:1.22));}
+  // Sparse rock crowns make the large landforms recognizable from the game camera.
+  for(const landmark of terrain.landmarks??[]){
+    const x=landmark.x*terrain.worldScale,z=landmark.z*terrain.worldScale;
+    for(let i=0;i<3;i++){
+      const angle=i*Math.PI*2/3;
+      add('env_cliff',x+Math.cos(angle)*3,z+Math.sin(angle)*3,1.1+random()*.55);
+    }
+  }
   const cliffs=[];
   for(const cliff of terrain.cliffPositions){
     if(cliffs.length>=48)break;
@@ -30,6 +39,7 @@ export function addEnvironmentScenery(terrain, group) {
   const suitable=(x,z,min=.4,max=5)=>{
     if(x<3||z<3||x>terrain.worldSize-3||z>terrain.worldSize-3)return false;
     if(Math.hypot(x-30,z-terrain.worldSize/2)<24||Math.hypot(x-(terrain.mapSize-30)*terrain.worldScale,z-terrain.worldSize/2)<24)return false;
+    if(terrain.layoutVersion>=2&&trailDistance(x/terrain.worldScale,z/terrain.worldScale,terrain.mapSize)<1.9)return false;
     const h=terrain.getHeightAt(x,z);
     return h>min&&h<max&&Math.abs(h-terrain.getHeightAt(x+1,z))+Math.abs(h-terrain.getHeightAt(x,z+1))<.7;
   };
@@ -38,7 +48,7 @@ export function addEnvironmentScenery(terrain, group) {
     const shore=suitable(x,z,-.12,.5);
     const meadow=suitable(x,z)&&terrain.walkableGrid[Math.floor(z/terrain.worldScale)]?.[Math.floor(x/terrain.worldScale)];
     if(!shore&&!meadow)continue;
-    const count=terrain.biome==='arctic'?2:shore?7:12;
+    const count=terrain.biome==='arctic'?1:shore?7:12;
     for(let j=0;j<count;j++){
       const angle=random()*Math.PI*2,r=Math.sqrt(random())*(shore?2.4:4.5);
       const px=x+Math.cos(angle)*r,pz=z+Math.sin(angle)*r;

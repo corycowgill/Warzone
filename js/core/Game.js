@@ -279,7 +279,7 @@ export class Game {
       const mapTemplate = config.mapTemplate || 'continental';
       const mapSeed = config.mapSeed || null;
       const biome = config.biome || 'temperate';
-      this.terrain = new Terrain(this, mapTemplate, mapSeed, biome);
+      this.terrain = new Terrain(this, mapTemplate, mapSeed, biome, config.layoutVersion ?? 2);
       this.sceneManager.scene.add(this.terrain.mesh);
       this.terrain.setDetail(settingsManager.settings.graphics.terrainDetail);
 

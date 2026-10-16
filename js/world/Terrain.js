@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GAME_CONFIG } from '../core/Constants.js';
 import { assetManager } from '../rendering/AssetManager.js';
 import { createGroundMaterial, createWater } from './TerrainMaterials.js';
+import { generateBattlefield, trailDistance } from './BattlefieldLayout.js';
 import { addEnvironmentScenery } from './EnvironmentScenery.js';
 
 // Simple seeded PRNG (mulberry32)
@@ -62,7 +63,7 @@ export class Terrain {
     }
   };
 
-  constructor(game, mapTemplate = 'continental', seed = null, biome = 'temperate') {
+  constructor(game, mapTemplate = 'continental', seed = null, biome = 'temperate', layoutVersion = 2) {
     this.game = game;
     this.mapSize = GAME_CONFIG.mapSize;
     this.worldScale = GAME_CONFIG.worldScale;
@@ -70,6 +71,7 @@ export class Terrain {
     this.heightData = [];
     this.walkableGrid = [];
     this.mapTemplate = mapTemplate;
+    this.layoutVersion = layoutVersion;
     this.biome = Terrain.BIOMES[biome] ? biome : 'temperate';
     this.biomeData = Terrain.BIOMES[this.biome];
     this.seed = seed !== null ? seed : Math.floor(Math.random() * 999999);
@@ -136,6 +138,7 @@ export class Terrain {
       if (z < this.mapSize) this.walkableGrid[z] = new Uint8Array(this.mapSize);
     }
 
+    if(this.layoutVersion>=2){generateBattlefield(this);return;}
     switch (this.mapTemplate) {
       case 'islands': this.generateIslands(); break;
       case 'river': this.generateRiver(); break;
@@ -331,13 +334,13 @@ export class Terrain {
         for (let x = Math.max(0, area.cx - area.r); x <= Math.min(this.mapSize, area.cx + area.r); x++) {
           const dist = Math.sqrt((x - area.cx) ** 2 + (z - area.cz) ** 2);
           if (dist < area.r) {
-            const t = dist / area.r;
+            const t = this.layoutVersion>=2?THREE.MathUtils.smoothstep(dist,9,area.r):dist / area.r;
             const targetHeight = 2.0;
             const currentHeight = this.heightData[z][x];
             // Blend toward flat ground
             this.heightData[z][x] = currentHeight * t + targetHeight * (1 - t);
             if (z < this.mapSize && x < this.mapSize) {
-              this.walkableGrid[z][x] = 1;
+              this.walkableGrid[z][x] = this.layoutVersion>=2?(this.heightData[z][x]>-.5?1:0):1;
             }
           }
         }
@@ -347,7 +350,7 @@ export class Terrain {
 
   generateProps() {
     // Generate tree cluster positions (on walkable land, away from starting areas)
-    const numClusters = 8 + Math.floor(this.rng() * 8);
+    const numClusters = this.layoutVersion>=2?18:8 + Math.floor(this.rng() * 8);
     for (let i = 0; i < numClusters; i++) {
       const cx = Math.floor(this.rng() * (this.mapSize - 20)) + 10;
       const cz = Math.floor(this.rng() * (this.mapSize - 20)) + 10;
@@ -360,12 +363,12 @@ export class Terrain {
       // Skip if in water
       if (this.heightData[cz] && this.heightData[cz][cx] < 0) continue;
 
-      const clusterSize = 3 + Math.floor(this.rng() * 5);
+      const clusterSize = (this.layoutVersion>=2?5:3) + Math.floor(this.rng() * 5);
       for (let t = 0; t < clusterSize; t++) {
-        const tx = cx + Math.floor((this.rng() - 0.5) * 6);
-        const tz = cz + Math.floor((this.rng() - 0.5) * 6);
+        const tx = cx + Math.floor((this.rng() - 0.5) * (this.layoutVersion>=2?14:6));
+        const tz = cz + Math.floor((this.rng() - 0.5) * (this.layoutVersion>=2?14:6));
         if (tx >= 0 && tx < this.mapSize && tz >= 0 && tz < this.mapSize) {
-          if (this.heightData[tz] && this.heightData[tz][tx] > 0.5) {
+          if (this.heightData[tz] && this.heightData[tz][tx] > 0.5 && (this.layoutVersion<2||trailDistance(tx,tz,this.mapSize)>4)) {
             this.treePositions.push({ x: tx, z: tz, scale: 0.6 + this.rng() * 0.8 });
           }
         }

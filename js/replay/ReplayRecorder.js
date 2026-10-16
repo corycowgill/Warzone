@@ -30,7 +30,9 @@ export class ReplayRecorder {
       enemyNation: config.enemyNation,
       difficulty: config.difficulty || 'normal',
       mapTemplate: config.mapTemplate || 'continental',
-      mapSeed: config.mapSeed || null,
+      mapSeed: this.game.terrain?.seed ?? config.mapSeed ?? null,
+      layoutVersion: this.game.terrain?.layoutVersion ?? config.layoutVersion ?? 2,
+      biome: this.game.terrain?.biome ?? config.biome ?? 'temperate',
       gameMode: config.gameMode || 'annihilation'
     };
 
