@@ -43,7 +43,15 @@ export function createGroundMaterial(terrain, textures) {
       ground=mix(ground,rockColor,stone);
       ground=mix(ground,sandColor,shore*.92);
       if(uBiome>0.5&&uBiome<1.5)ground=mix(sandColor,dirtColor,variation*.42+stone*.2);
-      if(uBiome>1.5)ground=mix(vec3(.72,.79,.82),rockColor,clamp(stone*.8+dirt*.23,0.,.8));
+      if(uBiome>1.5){
+        float grain=dot(sandColor,vec3(.299,.587,.114));
+        ground=mix(vec3(.78,.85,.88)*mix(.86,1.08,grain),rockColor,clamp(stone*.8+dirt*.23,0.,.8));
+      }
+      #ifndef TERRAIN_SIMPLE
+      // Fine wind-carved bands follow the biome without additional texture reads.
+      float ridges=sin(vTerrainPos.x*.85+sin(vTerrainPos.z*.22)*2.8);
+      if(uBiome>.5)ground*=mix(.96,1.04,ridges*.5+.5);
+      #endif
       ground*=mix(.88,1.08,field(vTerrainPos.xz*.37));
       // Broad meadow patches break up repetition without more texture fetches.
       float meadow=field(vTerrainPos.xz*.21);
@@ -57,7 +65,7 @@ export function createGroundMaterial(terrain, textures) {
       roughnessFactor=mix(roughnessFactor,.38,1.-smoothstep(-.1,.65,vTerrainPos.y));
     `);
   };
-  material.customProgramCacheKey=()=> 'warzone-ground-v2';
+  material.customProgramCacheKey=()=> 'warzone-ground-v3';
   return material;
 }
 

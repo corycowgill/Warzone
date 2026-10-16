@@ -20,3 +20,12 @@ that water follows sun color and intensity. Performance regression checks pass.
 Browser review covered day, dusk, night, temperate, arctic, desert, and low-detail
 shader variants, plus a live river match without browser errors. The environment
 preview uses actual game lighting and includes time-of-day/detail controls.
+
+
+## Terrain detail pass
+
+Vegetation now grows in seeded meadow and shoreline clusters. Forests have larger canopies, wider leaf-litter decals, bushes, stumps and fallen logs. Small stone groups mark shores and cliff bases. Dressing avoids the two initial base clearings and does not modify pathfinding or cover grids.
+
+Grass and reeds sway in a root-anchored vertex shader with one shared clock, with no per-instance CPU animation. Low terrain detail disables wind and fine desert/snow bands. Arctic ground uses sand texture grain to break up snow; desert and snow get subtle wind-carved bands in high mode.
+
+Existing GLBs and instanced material batches are reused; no extra asset downloads or per-prop draw calls. The 12 map/biome regression cases remain below 75 scenery batches (14–64 in seed 6819). More instances can still increase vertex/shadow cost; these checks are budgets, not a frame-rate benchmark. Verification also checks deterministic instance matrices, finite bounds, water updates and detail-mode wind controls.

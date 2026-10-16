@@ -8,6 +8,7 @@ let total=0;
 for(const [key,info] of entries){assert.ok(info.path.includes('environment/warzone-original/'));const b=await readFile(new URL('../'+info.path,import.meta.url));total+=b.length;const gltf=await assetManager.loader.parseAsync(b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength),'');assetManager.cache.set(key,{scene:gltf.scene,animations:[]});const model=assetManager.getScaledModel(key);assetManager.applyToonShading(model);let tris=0;model.traverse(o=>{if(o.isMesh){assert.ok(o.material.isMeshStandardMaterial);tris+=(o.geometry.index?.count??o.geometry.attributes.position.count)/3;assert.ok([...o.geometry.attributes.position.array].every(Number.isFinite));}});assert.ok(tris<=12000&&b.length<1500000,key);}
 for(const map of ['continental','river','islands','plains'])for(const biome of ['temperate','desert','arctic']){
  const terrain=new Terrain({},map,6819,biome);assert.ok(terrain.mesh.userData.scenery.draws>0&&terrain.mesh.userData.scenery.draws<75);
+ let triangles=0;terrain.mesh.traverse(o=>{if(o.isInstancedMesh)triangles+=(o.geometry.index?.count??o.geometry.attributes.position.count)/3*o.count;});assert.ok(triangles<600000,`${map}/${biome} scenery triangle budget: ${triangles}`);
  let batches=0;terrain.mesh.traverse(o=>{if(o.isInstancedMesh){batches++;assert.ok(Number.isFinite(o.boundingSphere.radius));for(let i=0;i<o.count;i++){const m=new THREE.Matrix4();o.getMatrixAt(i,m);assert.ok(m.elements.every(Number.isFinite));}}});assert.equal(batches,terrain.mesh.userData.scenery.draws);
  const before=terrain.waterMaterial.uniforms.uTime.value;terrain.updateWater(.5,new THREE.PerspectiveCamera());assert.equal(terrain.waterMaterial.uniforms.uTime.value,before+.5);
  assert.equal(terrain.waterMaterial.uniforms.uHeight.value.image.width,129);
@@ -19,11 +20,16 @@ for(const map of ['continental','river','islands','plains'])for(const biome of [
  sun.intensity=.65;sun.color.set(0x8899bb);terrain.updateWater(0,null,sun);
  assert.ok(uniforms.uLight.value<daylight,'water dims with the day/night sun');
  assert.ok(uniforms.uSunColor.value.equals(sun.color));
+ assert.equal(terrain.sceneryWind.time.value,.5,'wind advances once per terrain update');
+ terrain.setDetail('low');assert.equal(terrain.sceneryWind.strength.value,0,'low detail disables vegetation animation');
+ terrain.setDetail('high');assert.equal(terrain.sceneryWind.strength.value,1);
  const same=new Terrain({},map,6819,biome);
+ const matrices=t=>{const result=[];t.mesh.traverse(o=>{if(o.isInstancedMesh)result.push(Array.from(o.instanceMatrix.array));});return result;};
+ assert.deepEqual(matrices(same),matrices(terrain),'all scenery placements reproduce from the map seed');
  assert.deepEqual(same.heightData,terrain.heightData,'seeded terrain remains deterministic');
  assert.deepEqual(same.walkableGrid,terrain.walkableGrid,'scenery does not change collision');
  same.dispose();terrain.dispose();
- console.log(map,biome,batches+' batches');
+ console.log(map,biome,batches+' batches',triangles+' scenery triangles');
 }
 console.log(`PASS: 26 environment GLBs (${(total/1048576).toFixed(2)} MiB), 12 terrain/biome combinations, instancing and height-driven water.`);
 

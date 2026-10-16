@@ -576,6 +576,7 @@ export class Terrain {
   setDetail(detail) {
     const material = this.mesh.children[0].material;
     const simple = detail !== 'high';
+    if(this.sceneryWind)this.sceneryWind.strength.value=simple?0:1;
     if (!!material.defines?.TERRAIN_SIMPLE !== simple) {
       material.defines = simple ? {TERRAIN_SIMPLE:1} : {};
       material.needsUpdate = true;
@@ -596,6 +597,7 @@ export class Terrain {
 
   // Update water shader uniforms each frame
   updateWater(deltaTime, camera, sun) {
+    if(this.sceneryWind)this.sceneryWind.time.value+=deltaTime;
     if (!this.waterMaterial || !this.waterMaterial.uniforms) return;
     this.waterMaterial.uniforms.uTime.value += deltaTime;
     if (sun) {
