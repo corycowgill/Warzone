@@ -7,23 +7,27 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {assetManager,AssetManager} from './js/rendering/AssetManager.js';
 import {Terrain} from './js/world/Terrain.js';
 import {loadGroundTextures} from './js/world/TerrainMaterials.js';
-const status=document.querySelector('#status'),renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;document.body.append(renderer.domElement);
+import {SceneManager} from './js/rendering/SceneManager.js';
+const canvas=document.createElement('canvas');canvas.id='gameCanvas';document.body.append(canvas);
+const status=document.querySelector('#status'),lighting=new SceneManager(),renderer=lighting.renderer;
 let shaderError=false;renderer.debug.onShaderError=(gl,program,vs,fs)=>{shaderError=true;status.textContent='SHADER ERROR: '+gl.getShaderInfoLog(fs);console.error(status.textContent);};
-const scene=new THREE.Scene();scene.background=new THREE.Color(0x829a9b);scene.fog=new THREE.Fog(0x829a9b,180,420);scene.add(new THREE.HemisphereLight(0xd4e2e1,0x665b3e,2));const sun=new THREE.DirectionalLight(0xffe7b6,3);sun.position.set(60,120,35);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-150,right:150,top:150,bottom:-150,far:400});sun.shadow.normalBias=.04;scene.add(sun);
+const scene=lighting.scene,sun=lighting.dirLight;
+for(const [label,time] of [['Day',0],['Dusk',120],['Night',240]]){const button=document.createElement('button');button.textContent=label;button.onclick=()=>lighting.updateDayNight(0,time);document.querySelector('nav').append(button);}
 const camera=new THREE.PerspectiveCamera(46,innerWidth/innerHeight,.2,800),controls=new OrbitControls(camera,renderer.domElement);controls.maxPolarAngle=Math.PI*.47;let terrain,view='coast';
+const detail=document.createElement('button');detail.textContent='Terrain: high';detail.onclick=()=>{const low=detail.textContent==='Terrain: high';terrain?.setDetail(low?'low':'high');detail.textContent=low?'Terrain: low':'Terrain: high';};document.querySelector('nav').append(detail);
 try{
  const keys=Object.keys(AssetManager.MANIFEST).filter(k=>/^(tree_|env_|prop_)/.test(k));await Promise.all(keys.map(k=>assetManager.load(k,AssetManager.MANIFEST[k].path)));const textures=await loadGroundTextures(renderer);
  function show(name){view=name;if(terrain){scene.remove(terrain.mesh);terrain.dispose();}
- terrain=new Terrain({environmentTextures:textures},name==='river'?'river':'continental',6819,document.querySelector('#biome').value);scene.add(terrain.mesh);
- let x=175,z=128;
+ terrain=new Terrain({environmentTextures:textures},name==='river'?'river':'continental',6819,document.querySelector('#biome').value);scene.add(terrain.mesh);terrain.setDetail(detail.textContent==='Terrain: low'?'low':'high');
+ let x=222,z=128;
  if(name==='forest'&&terrain.treePositions.length){const p=terrain.treePositions[Math.floor(terrain.treePositions.length/2)];x=p.x*2;z=p.z*2;}
  if(name==='river'){x=128;z=90;}
  if(name==='highlands'){let highest={h:-99,x:80,z:80};for(let zz=20;zz<110;zz++)for(let xx=20;xx<110;xx++)if(terrain.heightData[zz][xx]>highest.h)highest={h:terrain.heightData[zz][xx],x:xx*2,z:zz*2};x=highest.x;z=highest.z;}
- controls.target.set(x,1,z);camera.position.set(x+36,42,z+48);controls.update();renderer.render(scene,camera);
+ controls.target.set(x,1,z);camera.position.set(x+36,42,z+48);controls.update();renderer.info.reset();renderer.render(scene,camera);
  const info=terrain.mesh.userData.scenery;status.textContent=shaderError?status.textContent:`PASS / ${keys.length} scenery GLBs loaded / ${info.draws} instanced material batches / ${renderer.info.render.triangles.toLocaleString()} visible triangles`;
  }
  document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>show(b.dataset.view)));document.querySelector('#biome').addEventListener('change',()=>show(view));show(view);
- renderer.setAnimationLoop(()=>{terrain.updateWater(.016,camera);controls.update();renderer.render(scene,camera);});
+ renderer.setAnimationLoop(()=>{terrain.updateWater(.016,camera,sun);controls.update();renderer.info.reset();renderer.render(scene,camera);});
 }catch(e){status.textContent='FAILED: '+e.message;console.error(e);}
 addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});
 </script></body></html>

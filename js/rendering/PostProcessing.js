@@ -15,7 +15,7 @@ const ToonOutlineShader = {
     outlineColor: { value: new THREE.Color(0x1a1a2e) }, // Dark blue-black
     outlineThickness: { value: 1.0 },
     outlineStrength: { value: 0.4 },
-    colorBands: { value: 8.0 }, // Number of color quantization levels
+    colorBands: { value: 12.0 }, // Preserve painted material detail between bands.
     cameraNear: { value: 1.0 },
     cameraFar: { value: 500.0 }
   },
@@ -72,14 +72,14 @@ const ToonOutlineShader = {
       float lU = getLuminance(texture2D(tDiffuse, vUv + vec2(0.0,  texel.y)).rgb);
       float lD = getLuminance(texture2D(tDiffuse, vUv + vec2(0.0, -texel.y)).rgb);
       float colorEdge = abs(lL - lC) + abs(lR - lC) + abs(lU - lC) + abs(lD - lC);
-      colorEdge = smoothstep(0.15, 0.5, colorEdge);
+      colorEdge = smoothstep(0.22, 0.65, colorEdge);
 
-      float edge = max(depthEdge, colorEdge * 0.6) * outlineStrength;
+      float edge = max(depthEdge, colorEdge * 0.22) * outlineStrength;
 
       // --- Subtle color quantization (cel-shading bands) ---
       vec3 quantized = floor(center.rgb * colorBands + 0.5) / colorBands;
-      // Blend 40% toward quantized for subtle banding (not full cartoon)
-      vec3 finalColor = mix(center.rgb, quantized, 0.35);
+      // Keep broad stylized shapes without outlining every grass texture fleck.
+      vec3 finalColor = mix(center.rgb, quantized, 0.18);
 
       // --- Apply outline ---
       finalColor = mix(finalColor, outlineColor, clamp(edge, 0.0, 1.0));

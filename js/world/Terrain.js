@@ -595,9 +595,15 @@ export class Terrain {
   }
 
   // Update water shader uniforms each frame
-  updateWater(deltaTime, camera) {
+  updateWater(deltaTime, camera, sun) {
     if (!this.waterMaterial || !this.waterMaterial.uniforms) return;
     this.waterMaterial.uniforms.uTime.value += deltaTime;
+    if (sun) {
+      const uniforms = this.waterMaterial.uniforms;
+      uniforms.uSunDirection.value.copy(sun.position).sub(sun.target.position).normalize();
+      uniforms.uSunColor.value.copy(sun.color);
+      uniforms.uLight.value = Math.min(1.15, .1 + sun.intensity * .54);
+    }
     if (camera) {
       this.waterMaterial.uniforms.uCameraPos.value.copy(camera.position);
     }

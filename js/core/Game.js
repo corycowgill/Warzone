@@ -1436,7 +1436,7 @@ export class Game {
 
     // Water shader animation (visual only)
     if (this.terrain && this.terrain.updateWater) {
-      this.terrain.updateWater(frameDelta, this.sceneManager?.camera);
+      this.terrain.updateWater(frameDelta, this.sceneManager?.camera, this.sceneManager?.dirLight);
     }
 
     // Weather visuals (particles, fog color)

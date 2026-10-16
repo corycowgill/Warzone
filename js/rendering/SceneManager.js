@@ -3,8 +3,8 @@ import * as THREE from 'three';
 export class SceneManager {
   constructor() {
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x87CEEB); // sky blue
-    this.scene.fog = new THREE.Fog(0x87CEEB, 200, 500);
+    this.scene.background = new THREE.Color(0xa3b9b9);
+    this.scene.fog = new THREE.Fog(0xa3b9b9, 200, 500);
 
     // Renderer
     this.renderer = new THREE.WebGLRenderer({
@@ -44,13 +44,13 @@ export class SceneManager {
     this.dirLight.shadow.camera.bottom = -150;
     this.scene.add(this.dirLight);
 
-    // Secondary fill light from opposite side to eliminate dark shadows
-    this.fillLight = new THREE.DirectionalLight(0xaabbcc, 0.8);
+    // Cool fill keeps silhouettes readable without flattening the sun shadows.
+    this.fillLight = new THREE.DirectionalLight(0xaabbcc, 0.32);
     this.fillLight.position.set(-80, 100, -60);
     this.scene.add(this.fillLight);
 
     // Back light for rim lighting effect
-    this.backLight = new THREE.DirectionalLight(0xffeedd, 0.4);
+    this.backLight = new THREE.DirectionalLight(0xffeedd, 0.28);
     this.backLight.position.set(0, 50, -150);
     this.scene.add(this.backLight);
 
@@ -66,6 +66,7 @@ export class SceneManager {
 
     // Building night lights
     this._buildingLights = [];
+    this.updateDayNight(0, 0);
 
     window.addEventListener('resize', () => this.onResize());
   }
@@ -77,13 +78,14 @@ export class SceneManager {
   }
 
   // Performance: pre-allocated Color objects for day/night cycle (avoids 8+ allocations per frame)
-  _dnDayColor = new THREE.Color(0xffffee);
+  _dnDayColor = new THREE.Color(0xffe5bc);
+  _dnDuskColor = new THREE.Color(0xffb477);
   _dnNightColor = new THREE.Color(0x8899bb);
   _dnDayAmbient = new THREE.Color(0x8899cc);
-  _dnNightAmbient = new THREE.Color(0x556688);
-  _dnDaySky = new THREE.Color(0x87CEEB);
+  _dnNightAmbient = new THREE.Color(0x879ab1);
+  _dnDaySky = new THREE.Color(0xb6d0d7);
   _dnNightSky = new THREE.Color(0x334466);
-  _dnDayBg = new THREE.Color(0x87CEEB);
+  _dnDayBg = new THREE.Color(0xa3b9b9);
   _dnNightBg = new THREE.Color(0x1a2540);
   _dnScratch = new THREE.Color();
 
@@ -107,8 +109,11 @@ export class SceneManager {
 
     // Directional light: warm during day, slightly dimmer at night
     s.copy(this._dnDayColor).lerp(this._dnNightColor, t);
+    s.lerp(this._dnDuskColor, Math.pow(1 - Math.abs(sunHeight), 5) * .55);
     this.dirLight.color.copy(s);
-    this.dirLight.intensity = 0.65 + brightness * 0.65;
+    this.dirLight.intensity = 0.65 + brightness * 1.2;
+    this.fillLight.intensity = .42 - brightness * .10;
+    this.backLight.intensity = .25 + brightness * .03;
 
     // Move directional light with sun position
     const sunX = Math.cos(sunAngle) * 150;
@@ -118,12 +123,12 @@ export class SceneManager {
     // Ambient light: slightly blue-tinted at night but still bright
     s.copy(this._dnDayAmbient).lerp(this._dnNightAmbient, t);
     this.ambientLight.color.copy(s);
-    this.ambientLight.intensity = 0.4 + brightness * 0.25;
+    this.ambientLight.intensity = 0.55;
 
     // Hemisphere light
     s.copy(this._dnDaySky).lerp(this._dnNightSky, t);
     this.hemiLight.color.copy(s);
-    this.hemiLight.intensity = 0.3 + brightness * 0.25;
+    this.hemiLight.intensity = 0.45 + brightness * 0.1;
 
     // Scene background and fog color
     s.copy(this._dnDayBg).lerp(this._dnNightBg, t);
