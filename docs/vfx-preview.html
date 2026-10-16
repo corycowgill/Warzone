@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="../"><title>Warzone / Battle VFX Review</title>
+<style>body{margin:0;background:#13252c;color:#eee3ca;font:14px system-ui}canvas{display:block}header{position:absolute;top:20px;left:20px;right:20px;padding:16px;background:#15292eef;border-top:2px solid #d8ba7c}h1{margin:0 0 8px;font-size:20px}nav{display:flex;gap:8px;flex-wrap:wrap}button,select{background:#304347;color:#eee3ca;border:1px solid #8d9f8d;padding:9px;cursor:pointer}p{margin:10px 0 0;font-size:12px}#status{color:#b7cfb8}</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.172.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.172.0/examples/jsm/"}}</script></head>
+<body><header><h1>WARZONE / BATTLE VFX</h1><nav><button data-weapon="bullet">Rifle</button><button data-weapon="shell">Tank cannon</button><button data-weapon="artillery">Artillery</button><button data-weapon="torpedo">Water impact</button><button id="death">Destruction</button><button id="stress">Stress burst</button><label>Particles <select id="quality"><option>high</option><option>medium</option><option>low</option></select></label><button id="pause">Pause</button><button id="clear">Clear</button></nav><p>Short tracers / delayed impacts / rising smoke / pooled particles. Click a weapon to replay.</p><p id="status" role="status">Loading…</p></header><canvas id="gameCanvas"></canvas>
+<script type="module">
+import * as THREE from 'three';
+import {SceneManager} from './js/rendering/SceneManager.js';
+import {EffectsManager} from './js/rendering/EffectsManager.js';
+import {assetManager,AssetManager} from './js/rendering/AssetManager.js';
+const manager=new SceneManager(),{scene,renderer,camera}=manager;
+camera.position.set(19,21,29);camera.lookAt(0,1,0);
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(100,100),new THREE.MeshStandardMaterial({color:0x647352,roughness:.95}));ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+const game={sceneManager:manager,terrain:{getHeightAt:()=>0,isWater:()=>false},settingsManager:{settings:{graphics:{particles:'high'}}}};
+let effects=new EffectsManager(game),pending=[],paused=false;
+const start=new THREE.Vector3(-8,0,0),end=new THREE.Vector3(7,0,0);
+function fire(type){effects.createMuzzleFlash(start,end,type);effects.createProjectileTrail(start,end,type);pending.push({time:0,delay:start.distanceTo(end)/80,type});}
+document.querySelectorAll('[data-weapon]').forEach(b=>b.onclick=()=>fire(b.dataset.weapon));
+document.querySelector('#death').onclick=()=>effects.createDeathExplosion(end);
+document.querySelector('#stress').onclick=()=>{for(let i=0;i<30;i++)effects.createDeathExplosion(new THREE.Vector3((i%6-3)*4,0,(Math.floor(i/6)-2)*4));};
+document.querySelector('#quality').onchange=e=>game.settingsManager.settings.graphics.particles=e.target.value;
+document.querySelector('#pause').onclick=e=>{paused=!paused;e.target.textContent=paused?'Resume':'Pause';};
+document.querySelector('#clear').onclick=()=>{effects.dispose();effects=new EffectsManager(game);pending=[];};
+const status=document.querySelector('#status');let shaderError=false;
+renderer.debug.onShaderError=()=>{shaderError=true;status.textContent='FAIL / shader error';};
+try{await assetManager.load('unit_tank',AssetManager.MANIFEST.unit_tank.path);for(const [team,x] of [['player',-8],['enemy',7]]){const model=assetManager.getTeamTintedModel('unit_tank',team);model.position.set(x,0,0);scene.add(model);}}catch(error){status.textContent='Asset error: '+error.message;}
+let previous=performance.now(),report=0;
+renderer.setAnimationLoop(now=>{const dt=Math.min(.05,(now-previous)/1000);previous=now;if(!paused){for(let i=pending.length-1;i>=0;i--){const hit=pending[i];hit.time+=dt;if(hit.time>=hit.delay){if(hit.type==='torpedo')effects.createWaterSplash(end);else effects.createImpactEffect(end.clone().add(new THREE.Vector3(0,1,0)),hit.type);pending.splice(i,1);}}effects.update(dt);}renderer.info.reset();renderer.render(scene,camera);report+=dt;if(report>.2&&!shaderError){report=0;status.textContent=`PASS / ${effects.activeEffects.length} effects / ${effects._spritePool.filter(s=>s.visible).length} active sprites / ${renderer.info.render.calls} draws`;}});
+</script></body></html>

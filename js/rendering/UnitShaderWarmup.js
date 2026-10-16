@@ -40,7 +40,7 @@ export async function warmupUnitShaders(renderer,camera,scene,assets,effects,col
     effects._shadowTexture??=effects._createShadowTexture();
     add(plane,new THREE.MeshBasicMaterial({map:effects._shadowTexture,transparent:true,side:THREE.DoubleSide,depthWrite:false}),true);
     for(const map of [effects._fireTexture,effects._smokeTexture,effects._sparkTexture]){
-      const material=new THREE.SpriteMaterial({map,transparent:true,depthWrite:false});
+      const material=new THREE.SpriteMaterial({map,transparent:true,depthWrite:false,toneMapped:false});
       materials.add(material);staging.add(new THREE.Sprite(material));
     }
     await compile(staging);

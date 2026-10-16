@@ -7,9 +7,9 @@ const _sharedMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
 
 // Trail type color/scale lookup
 const TRAIL_CONFIG = {
-  bullet:    { color: 0xffff00, scale: 0.15 },
-  shell:     { color: 0xff8800, scale: 0.3 },
-  laser:     { color: 0x00ff44, scale: 0.2 },
+  bullet:    { color: 0xffe7ab, scale: 0.15 },
+  shell:     { color: 0xffbd6b, scale: 0.3 },
+  laser:     { color: 0x8be1ec, scale: 0.2 },
   artillery: { color: 0xff4400, scale: 0.4 },
   torpedo:   { color: 0xaaddff, scale: 0.25 }
 };
@@ -51,6 +51,7 @@ export class Projectile {
 
     const end = target.getPosition().clone();
     end.y += 1;
+    if (this.trailType === 'torpedo') start.y = end.y = -.18;
     this.endPos = end;
 
     // Use pooled mesh when available, fall back to new mesh
@@ -77,9 +78,11 @@ export class Projectile {
   update(deltaTime) {
     if (!this.alive) return;
 
-    const moveAmount = this.speed * deltaTime;
-    this.mesh.position.addScaledVector(this.direction, moveAmount);
+    const moveAmount = Math.min(this.speed * deltaTime, Math.max(0, this.distanceTotal - this.distanceTraveled));
     this.distanceTraveled += moveAmount;
+    const progress = this.distanceTotal > 0 ? Math.min(1, this.distanceTraveled / this.distanceTotal) : 1;
+    this.mesh.position.lerpVectors(this.startPos, this.endPos, progress);
+    if (this.trailType === 'artillery') this.mesh.position.y += Math.sin(progress * Math.PI) * Math.min(8, this.distanceTotal * .18);
 
     // Store trail points (max 8)
     this.trailPoints.push(this.mesh.position.clone());
@@ -88,7 +91,9 @@ export class Projectile {
     // Check if reached target
     if (this.distanceTraveled >= this.distanceTotal) {
       this.alive = false;
-      // Damage is applied by CombatSystem when projectile dies
+      this.onImpact?.(this.endPos);
+      this.onImpact = null;
+      // Visual arrival only; CombatSystem retains its existing damage timing.
     }
   }
 

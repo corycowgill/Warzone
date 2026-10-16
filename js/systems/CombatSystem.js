@@ -343,21 +343,11 @@ export class CombatSystem {
     // Determine impact type from attacker type
     const _impactType = this._getImpactType(attacker);
 
-    // Create impact effect at defender position — use pooled Vector3 (effects only .copy() the position)
-    if (this.game.effectsManager) {
-      const impactVec = Vec3Pool.acquire();
-      impactVec.copy(defenderPos);
-      this.game.effectsManager.createImpactEffect(impactVec, _impactType);
-      // Spec 009: Water splash when projectile hits water terrain
-      if (this.game.terrain && this.game.terrain.isWater(defenderPos.x, defenderPos.z)) {
-        this.game.effectsManager.createWaterSplash(impactVec);
-      }
-      Vec3Pool.release(impactVec);
-    }
+    this._attachImpact(projectile, _impactType);
 
     // Create muzzle flash effect
     if (this.game.effectsManager) {
-      this.game.effectsManager.createMuzzleFlash(attackerPos);
+      this.game.effectsManager.createMuzzleFlash(attackerPos, defenderPos, _impactType);
       // GD-065: Projectile trail (enhanced with trail type)
       this.game.effectsManager.createProjectileTrail(attackerPos, defenderPos, _impactType);
     }
@@ -504,21 +494,11 @@ export class CombatSystem {
     const projectile = new Projectile(turret, defender, 0, 100);
     this.game.addProjectile(projectile);
 
-    // Impact effect at defender position — use pooled Vector3
-    if (this.game.effectsManager) {
-      const turretImpact = turret.type === 'aaturret' ? 'bullet' : 'shell';
-      const defPos = Vec3Pool.acquire();
-      defPos.copy(defender.getPosition());
-      this.game.effectsManager.createImpactEffect(defPos, turretImpact);
-      // Spec 009: Water splash when projectile hits water terrain
-      if (this.game.terrain && this.game.terrain.isWater(defPos.x, defPos.z)) {
-        this.game.effectsManager.createWaterSplash(defPos);
-      }
-      Vec3Pool.release(defPos);
-    }
+    const turretImpact = turret.type === 'aaturret' ? 'bullet' : 'shell';
+    this._attachImpact(projectile, turretImpact);
 
     if (this.game.effectsManager) {
-      this.game.effectsManager.createMuzzleFlash(turret.getPosition());
+      this.game.effectsManager.createMuzzleFlash(turret.getPosition(), defender.getPosition(), turretImpact);
     }
 
     if (this.game.soundManager) {
@@ -881,6 +861,15 @@ export class CombatSystem {
   }
 
   // Determine impact/trail type from attacker unit type
+  _attachImpact(projectile, type) {
+    projectile.onImpact = position => {
+      const effects = this.game.effectsManager;
+      if (!effects) return;
+      if (this.game.terrain?.isWater(position.x, position.z)) effects.createWaterSplash(position);
+      else effects.createImpactEffect(position, type);
+    };
+  }
+
   _getImpactType(attacker) {
     if (!attacker || !attacker.type) return 'bullet';
     switch (attacker.type) {

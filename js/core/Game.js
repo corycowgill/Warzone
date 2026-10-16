@@ -1833,26 +1833,7 @@ export class Game {
     }
     // Clean up EffectsManager active effects and pooled sprites
     if (this.effectsManager) {
-      for (const effect of this.effectsManager.activeEffects) {
-        if (effect.particles) {
-          for (const p of effect.particles) {
-            if (p.userData && p.userData.isPooled) {
-              this.effectsManager._returnToPool(p);
-            }
-          }
-        }
-        if (effect.group) this.sceneManager.scene.remove(effect.group);
-      }
-      this.effectsManager.activeEffects = [];
-      // Cycle 15: Clear move marker pool
-      if (this.effectsManager._moveMarkerPool) {
-        this.effectsManager._moveMarkerPool = [];
-      }
-      // Return all pooled sprites
-      for (const sprite of this.effectsManager._spritePool) {
-        if (sprite.parent) sprite.parent.remove(sprite);
-        sprite.visible = false;
-      }
+      this.effectsManager.dispose();
       this.effectsManager = null;
     }
 
