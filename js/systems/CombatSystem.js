@@ -357,7 +357,7 @@ export class CombatSystem {
 
     // Play attack sound (unit-type-specific)
     if (this.game.soundManager) {
-      this.game.soundManager.play('attack', { unitType: attacker.type });
+      this.game.soundManager.play('attack', { unitType: attacker.type, position: attackerPos });
       this.game.soundManager.notifyCombat();
     }
 
@@ -427,7 +427,7 @@ export class CombatSystem {
 
       // Play death sound (unit-type-specific)
       if (this.game.soundManager) {
-        this.game.soundManager.play('death', { unitType: defender.type });
+        this.game.soundManager.play('death', { unitType: defender.type, position: defender.getPosition() });
       }
     }
   }
@@ -502,7 +502,7 @@ export class CombatSystem {
     }
 
     if (this.game.soundManager) {
-      this.game.soundManager.play('attack');
+      this.game.soundManager.play('attack', {unitType: turret.type, position: turret.getPosition()});
     }
 
     // Camera shake on turret attacks
@@ -864,6 +864,7 @@ export class CombatSystem {
   _attachImpact(projectile, type) {
     projectile.onImpact = position => {
       const effects = this.game.effectsManager;
+      this.game.soundManager?.play('impact', {unitType: type, position});
       if (!effects) return;
       if (this.game.terrain?.isWater(position.x, position.z)) effects.createWaterSplash(position);
       else effects.createImpactEffect(position, type);

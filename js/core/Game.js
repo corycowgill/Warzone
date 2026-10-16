@@ -1546,10 +1546,7 @@ export class Game {
   _applyAudioSettings() {
     if (!this.soundManager) return;
     const a = settingsManager.settings.audio;
-    this.soundManager.setVolume(a.masterVolume);
-    this.soundManager.setMusicVolume(a.musicVolume);
-    this.soundManager.setEnabled(a.sfxEnabled);
-    this.soundManager.setMusicEnabled(a.musicEnabled);
+    this.soundManager.applySettings(a);
   }
 
   // For 2P hot-seat: switch active team

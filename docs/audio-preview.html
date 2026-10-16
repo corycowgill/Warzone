@@ -1,0 +1,25 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="../"><title>Warzone / Audio Review</title><style>body{background:#12252c;color:#e9dfc8;font:16px system-ui;max-width:900px;margin:50px auto;padding:25px}h1{font-size:25px}nav{display:flex;gap:10px;flex-wrap:wrap;margin:25px 0}button,select{background:#30474b;border:1px solid #af9d71;padding:14px;color:inherit;cursor:pointer}label{display:block;margin:18px 0}input{vertical-align:middle}#status{color:#a8c5b1}</style></head><body><h1>WARZONE / AUDIO REVIEW</h1><p>Original layered combat sounds. Select a weapon, then compare direction and mixer controls.</p><nav><button data-unit="infantry">Rifle</button><button data-unit="aahalftrack">Autocannon</button><button data-unit="tank">Cannon</button><button data-unit="heavytank">Heavy armor</button><button data-unit="spg">Artillery</button><button data-unit="battleship">Naval gun</button><button data-unit="submarine">Torpedo</button><button data-unit="plane">Aircraft</button><button id="explosion">Explosion</button><button id="stress">Battle burst</button></nav><label>Direction <select id="direction"><option value="-40">Left</option><option value="0" selected>Center</option><option value="40">Right</option><option value="180">Distant right</option></select></label><label>Master <input id="master" type="range" min="0" max="1" step=".01" value=".3"></label><label><input id="sfx" type="checkbox" checked> Sound effects</label><label><input id="music" type="checkbox"> Music</label><label><input id="ambient" type="checkbox"> Ambience</label><button id="stop">Stop all</button><p id="status" role="status">Click a weapon to enable browser audio.</p>
+<script type="module">
+import {SoundManager} from './js/systems/SoundManager.js';
+import {BattleAudio,SOUND_PROFILES} from './js/audio/BattleAudio.js';
+const check=document.createElement('button'),validation=document.createElement('p');check.textContent='Validate rendered mix';document.body.append(check,validation);
+check.onclick=async()=>{check.disabled=true;try{
+ const ctx=new OfflineAudioContext(2,44100*2,44100),compressor=ctx.createDynamicsCompressor(),gain=ctx.createGain();
+ compressor.threshold.value=-12;compressor.knee.value=12;compressor.ratio.value=6;compressor.attack.value=.004;compressor.release.value=.18;gain.gain.value=.3;compressor.connect(gain);gain.connect(ctx.destination);
+ const battle=new BattleAudio(ctx,compressor,{});for(const family of Object.keys(SOUND_PROFILES))battle.play(family);
+ const rendered=await ctx.startRendering();let peak=0,energy=0;const data=rendered.getChannelData(0);for(const value of data){peak=Math.max(peak,Math.abs(value));energy+=value*value;}
+ validation.textContent=`${peak>.002&&peak<.98?'PASS':'FAIL'} / Rendered mix peak ${peak.toFixed(3)} / RMS ${Math.sqrt(energy/data.length).toFixed(3)} / ${Object.keys(SOUND_PROFILES).length} layered sound families`;
+}catch(error){validation.textContent='FAIL / '+error.message;}finally{check.disabled=false;}};
+const settings={masterVolume:.3,sfxVolume:1,musicVolume:.25,voiceEnabled:false,ambientEnabled:false,musicEnabled:false,sfxEnabled:true};
+const game={state:'PLAYING',settingsManager:{settings:{audio:settings}},cameraController:{target:{x:0,z:0}},sceneManager:{camera:{matrixWorld:{elements:[1,0,0]}}}};
+const sound=new SoundManager(game);let initialMs=0;
+function ready(){if(!sound.initialized){const start=performance.now();sound.initAudio();initialMs=performance.now()-start;}sound.audioContext?.resume();}
+function fire(type){ready();sound.play(type==='explosion'?'explosion':'attack',{unitType:type,position:{x:Number(document.querySelector('#direction').value),z:0}});}
+document.querySelectorAll('[data-unit]').forEach(button=>button.onclick=()=>fire(button.dataset.unit));
+document.querySelector('#explosion').onclick=()=>fire('explosion');
+document.querySelector('#stress').onclick=()=>{for(let i=0;i<80;i++)fire(['infantry','tank','spg','battleship'][i%4]);sound.notifyCombat();};
+function apply(){ready();settings.masterVolume=Number(document.querySelector('#master').value);settings.sfxEnabled=document.querySelector('#sfx').checked;settings.musicEnabled=document.querySelector('#music').checked;settings.ambientEnabled=document.querySelector('#ambient').checked;sound.applySettings(settings);}
+for(const id of ['master','sfx','music','ambient'])document.getElementById(id).oninput=apply;
+document.querySelector('#stop').onclick=()=>{sound.battleAudio?.stop();sound.stopAllMusic();sound.stopAmbient();};
+setInterval(()=>{if(!sound.initialized)return;sound.update(.1);document.querySelector('#status').textContent=`PASS / Audio ${sound.audioContext.state} / ${sound.battleAudio.voices.size} combat voices / SFX ${sound.sfxGain.gain.value.toFixed(2)} / Music ${sound.musicEnabled?'on':'off'} / Ambient ${sound.ambientEnabled?'on':'off'} / Initial buffers ${initialMs.toFixed(0)} ms`;},100);
+</script></body></html>

@@ -1,3 +1,5 @@
+import {BattleAudio, weaponFamily} from '../audio/BattleAudio.js';
+
 export class SoundManager {
   constructor(game) {
     this.game = game;
@@ -11,6 +13,11 @@ export class SoundManager {
     this.enabled = true;
     this.musicEnabled = true;
     this.initialized = false;
+    this.voiceEnabled = true;
+    this.voiceVolume = .7;
+    this.ambientEnabled = true;
+    this._noiseCache = new Map();
+    this._musicPercussion = {nodes: []};
 
     // Active music/ambient state
     this._menuMusic = null;
@@ -39,6 +46,39 @@ export class SoundManager {
     };
     document.addEventListener('click', this._initOnInteraction, { once: true });
     document.addEventListener('keydown', this._initOnInteraction, { once: true });
+    document.addEventListener('click', event => {
+      if (event.target.closest?.('.menu-btn,.nation-card,.map-btn,.biome-btn,.difficulty-btn,.gamemode-btn')) this.play('ui');
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (!this.audioContext) return;
+      if (document.hidden) {
+        window.speechSynthesis?.cancel();
+        this.battleAudio?.stop();
+        this.audioContext.suspend().catch(() => {});
+      } else this.audioContext.resume().catch(() => {});
+    });
+  }
+
+  applySettings(settings) {
+    const level = (value, fallback) => Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : fallback;
+    this.setVolume(level(settings.masterVolume, this.volume));
+    this.setMusicVolume(level(settings.musicVolume, this.musicVolume));
+    this.sfxVolume = level(settings.sfxVolume, 1);
+    this.voiceVolume = level(settings.voiceVolume, .7);
+    this.voiceEnabled = settings.voiceEnabled !== false;
+    if (!this.voiceEnabled || this.volume === 0 || this.voiceVolume === 0) window.speechSynthesis?.cancel();
+    this.setEnabled(settings.sfxEnabled !== false);
+    this.setMusicEnabled(settings.musicEnabled !== false);
+    const ambient = settings.ambientEnabled !== false;
+    const changed = ambient !== this.ambientEnabled;
+    this.ambientEnabled = ambient;
+    if (this.audioContext) {
+      const now = this.audioContext.currentTime;
+      this.sfxGain.gain.setTargetAtTime(this.enabled ? this.sfxVolume : 0, now, .02);
+      this.ambientGain.gain.setTargetAtTime(ambient ? level(settings.ambientVolume, .5) : 0, now, .03);
+      if (!ambient) this.stopAmbient();
+      else if (changed && this.game?.state === 'PLAYING') this.startAmbient();
+    }
   }
 
   initAudio() {
@@ -47,29 +87,41 @@ export class SoundManager {
 
       // Master gain
       this.masterGain = this.audioContext.createGain();
-      this.masterGain.gain.value = this.volume;
+      this.masterGain.gain.setTargetAtTime(this.volume, this.audioContext.currentTime, .02);
       this.masterGain.connect(this.audioContext.destination);
+      this.limiter = this.audioContext.createDynamicsCompressor();
+      this.limiter.threshold.value = -12;
+      this.limiter.knee.value = 12;
+      this.limiter.ratio.value = 6;
+      this.limiter.attack.value = .004;
+      this.limiter.release.value = .18;
+      this.limiter.connect(this.masterGain);
 
       // SFX bus
       this.sfxGain = this.audioContext.createGain();
       this.sfxGain.gain.value = 1.0;
-      this.sfxGain.connect(this.masterGain);
+      this.sfxGain.connect(this.limiter);
 
       // Music bus
       this.musicGain = this.audioContext.createGain();
-      this.musicGain.gain.value = this.musicVolume;
-      this.musicGain.connect(this.masterGain);
+      this.musicGain.gain.setTargetAtTime(this.musicVolume, this.audioContext.currentTime, .03);
+      this.musicGain.connect(this.limiter);
 
       // Ambient bus
       this.ambientGain = this.audioContext.createGain();
       this.ambientGain.gain.value = 0.5;
-      this.ambientGain.connect(this.masterGain);
+      this.ambientGain.connect(this.limiter);
+      this.battleAudio = new BattleAudio(this.audioContext, this.sfxGain, this.game);
 
       this.initialized = true;
+      this.applySettings(this.game?.settingsManager?.settings?.audio || {});
 
       // If game is at menu, start menu music
       if (this.game && this.game.state === 'MENU') {
         this.startMenuMusic();
+      } else if (this.game?.state === 'PLAYING') {
+        this.startGameMusic();
+        this.startAmbient();
       }
     } catch (e) {
       console.warn('Web Audio not available:', e);
@@ -79,34 +131,28 @@ export class SoundManager {
 
   setVolume(vol) {
     this.volume = Math.max(0, Math.min(1, vol));
+    if (this.volume === 0) window.speechSynthesis?.cancel();
     if (this.masterGain) {
-      this.masterGain.gain.value = this.volume;
+      this.masterGain.gain.setTargetAtTime(this.volume, this.audioContext.currentTime, .02);
     }
   }
 
   setMusicVolume(vol) {
     this.musicVolume = Math.max(0, Math.min(1, vol));
     if (this.musicGain) {
-      this.musicGain.gain.value = this.musicVolume;
+      this.musicGain.gain.setTargetAtTime(this.musicVolume, this.audioContext.currentTime, .03);
     }
   }
 
   setEnabled(enabled) {
+    if (this.enabled === enabled) return;
     this.enabled = enabled;
-    if (!enabled) {
-      this.stopAllMusic();
-      this.stopAmbient();
-    } else if (this.initialized) {
-      // Restart appropriate music
-      if (this.game.state === 'MENU') this.startMenuMusic();
-      else if (this.game.state === 'PLAYING') {
-        this.startGameMusic();
-        this.startAmbient();
-      }
-    }
+    if (!enabled) this.battleAudio?.stop();
+    this.sfxGain?.gain.setTargetAtTime(enabled ? (this.sfxVolume ?? 1) : 0, this.audioContext.currentTime, .02);
   }
 
   setMusicEnabled(enabled) {
+    if (this.musicEnabled === enabled) return;
     this.musicEnabled = enabled;
     if (!enabled) {
       this.stopAllMusic();
@@ -118,7 +164,9 @@ export class SoundManager {
 
   // Called from Game.js state changes
   onStateChange(newState) {
-    if (!this.initialized || !this.enabled) return;
+    if (!this.initialized) return;
+    this.battleAudio?.stop();
+    window.speechSynthesis?.cancel();
     switch (newState) {
       case 'MENU':
         this.stopAllMusic();
@@ -139,7 +187,9 @@ export class SoundManager {
 
   // Called each game frame from Game.update()
   update(delta) {
-    if (!this.initialized || !this.enabled) return;
+    if (!this.initialized || document.hidden) return;
+    const duck = this.audioContext.currentTime < (this._voiceUntil || 0) ? .55 : this._combatIntensity > .3 ? .78 : 1;
+    this.musicGain.gain.setTargetAtTime(this.musicVolume * duck, this.audioContext.currentTime, .15);
 
     // Decay combat intensity over time
     if (this._combatIntensity > 0) {
@@ -182,6 +232,7 @@ export class SoundManager {
   }
 
   playWarningPing(direction) {
+    if (!this.enabled || document.hidden || !this.audioContext) return;
     // Throttle: don't spam pings
     const now = Date.now();
     if (this._lastPingTime && now - this._lastPingTime < 3000) return;
@@ -210,23 +261,27 @@ export class SoundManager {
   // ==================== PLAY DISPATCHER ====================
 
   play(soundName, options) {
-    if (!this.enabled || !this.initialized || !this.audioContext) return;
-    if (this.audioContext.state === 'suspended') {
-      this.audioContext.resume();
+    if (!this.initialized || !this.audioContext || document.hidden) return;
+    if (this.audioContext.state === 'suspended') this.audioContext.resume().catch(() => {});
+    if (!this.enabled) {
+      if (['move','select','acknowledge'].includes(soundName)) this.playVoiceLine(soundName === 'acknowledge' ? 'attack' : soundName);
+      return;
     }
 
     // Throttle repeated sounds
     const now = this.audioContext.currentTime;
     const key = soundName + (options?.unitType || '');
-    if (this._lastPlayTime[key] && (now - this._lastPlayTime[key]) < this._minInterval) return;
+    if (this._lastPlayTime[key] !== undefined && (now - this._lastPlayTime[key]) < this._minInterval) return;
     this._lastPlayTime[key] = now;
 
     const unitType = options?.unitType || null;
 
     switch (soundName) {
-      case 'attack': this.playAttack(unitType); break;
-      case 'death': this.playDeath(unitType); break;
-      case 'explosion': this.playExplosion(); break;
+      case 'attack': this.battleAudio.play(weaponFamily(unitType), options?.position); break;
+      case 'death': this.battleAudio.play(['infantry','engineer','mortar'].includes(unitType) ? 'casualty' : 'explosion', options?.position); break;
+      case 'explosion': this.battleAudio.play('explosion', options?.position); break;
+      case 'impact': this.battleAudio.play(unitType === 'artillery' ? 'explosion' : 'impact', options?.position); break;
+      case 'ui': this.battleAudio.play('ui'); break;
       case 'produce': this.playProduce(); break;
       case 'move': this.playMoveAck(unitType); this.playVoiceLine('move'); break;
       case 'select': this.playSelectAck(unitType); this.playVoiceLine('select'); break;
@@ -242,16 +297,7 @@ export class SoundManager {
   // ==================== UNIT-TYPE ATTACK SOUNDS ====================
 
   playAttack(unitType) {
-    switch (unitType) {
-      case 'infantry': this._playInfantryAttack(); break;
-      case 'tank': this._playTankAttack(); break;
-      case 'drone': this._playDroneAttack(); break;
-      case 'plane': this._playPlaneAttack(); break;
-      case 'battleship': this._playBattleshipAttack(); break;
-      case 'carrier': this._playCarrierAttack(); break;
-      case 'submarine': this._playSubmarineAttack(); break;
-      default: this._playInfantryAttack(); break;
-    }
+    if (this.enabled) this.battleAudio?.play(weaponFamily(unitType));
   }
 
   _playInfantryAttack() {
@@ -977,10 +1023,8 @@ export class SoundManager {
   }
 
   stopAllMusic() {
-    // Cancel any queued speech synthesis voice lines
-    if (window.speechSynthesis) {
-      try { window.speechSynthesis.cancel(); } catch (e) { /* ok */ }
-    }
+    this._stopMusicObj(this._musicPercussion);
+    this._musicPercussion = {nodes: []};
     this._currentMusicType = null;
     if (this._menuMusic) {
       this._stopMusicObj(this._menuMusic);
@@ -1018,6 +1062,17 @@ export class SoundManager {
     } catch (e) { /* cleanup errors are fine */ }
   }
 
+  _trackMusicNodes(obj, ...nodes) {
+    for (const node of nodes) {
+      obj.nodes.push(node);
+      node.onended = () => {
+        node.disconnect();
+        const index = obj.nodes.indexOf(node);
+        if (index !== -1) obj.nodes.splice(index, 1);
+      };
+    }
+  }
+
   _createMenuMusicLoop() {
     // Military/patriotic feel: marchlike rhythm, simple brass-like melody
     // Key of C major, 4/4 time, ~100 BPM
@@ -1034,12 +1089,12 @@ export class SoundManager {
     gain.connect(this.musicGain);
     musicObj.gain = gain;
 
+    let nextLoopTime = ctx.currentTime + .02;
     const scheduleLoop = () => {
       if (this._currentMusicType !== 'menu') return;
-      const now = ctx.currentTime;
-
-      // Clear old node references (they've already stopped)
-      musicObj.nodes = [];
+      if (nextLoopTime > ctx.currentTime + .3) return;
+      const now = Math.max(ctx.currentTime + .02, nextLoopTime);
+      nextLoopTime = now + loopDuration;
 
       // Melody (brass-like square wave with low-pass)
       // "Taps"-inspired simple military melody
@@ -1094,7 +1149,7 @@ export class SoundManager {
         noteGain.gain.exponentialRampToValueAtTime(0.001, t + note.d);
         osc.connect(lp); lp.connect(noteGain); noteGain.connect(gain);
         osc.start(t); osc.stop(t + note.d + 0.01);
-        musicObj.nodes.push(osc);
+        this._trackMusicNodes(musicObj, osc);
       }
 
       // Bass line (root notes, sine wave)
@@ -1121,7 +1176,7 @@ export class SoundManager {
         noteGain.gain.exponentialRampToValueAtTime(0.001, t + note.d);
         osc.connect(noteGain); noteGain.connect(gain);
         osc.start(t); osc.stop(t + note.d + 0.01);
-        musicObj.nodes.push(osc);
+        this._trackMusicNodes(musicObj, osc);
       }
 
       // March-style snare drum pattern (on beats 1 and 3, with flam on 1)
@@ -1148,7 +1203,7 @@ export class SoundManager {
         return;
       }
       scheduleLoop();
-    }, loopDuration * 1000 - 200); // 200ms before loop end
+    }, 200); // 200ms before loop end
 
     return musicObj;
   }
@@ -1169,10 +1224,12 @@ export class SoundManager {
     gain.connect(this.musicGain);
     musicObj.gain = gain;
 
+    let nextLoopTime = ctx.currentTime + .02;
     const scheduleLoop = () => {
       if (this._currentMusicType !== 'game') return;
-      const now = ctx.currentTime;
-      musicObj.nodes = [];
+      if (nextLoopTime > ctx.currentTime + .3) return;
+      const now = Math.max(ctx.currentTime + .02, nextLoopTime);
+      nextLoopTime = now + loopDuration;
 
       // Low drone pad (C2 + G2, slow pulsing)
       const droneDuration = loopDuration;
@@ -1199,7 +1256,7 @@ export class SoundManager {
         osc.stop(now + droneDuration);
         lfo.start(now);
         lfo.stop(now + droneDuration);
-        musicObj.nodes.push(osc, lfo);
+        this._trackMusicNodes(musicObj, osc, lfo);
       }
 
       // Sparse melodic fragments (minor key, piano-like triangle waves)
@@ -1235,7 +1292,7 @@ export class SoundManager {
         noteGain.gain.exponentialRampToValueAtTime(0.001, t + note.d);
         osc.connect(noteGain); noteGain.connect(gain);
         osc.start(t); osc.stop(t + note.d + 0.01);
-        musicObj.nodes.push(osc);
+        this._trackMusicNodes(musicObj, osc);
       }
 
       // Sparse bass movement (every 2 bars)
@@ -1262,7 +1319,7 @@ export class SoundManager {
         noteGain.gain.exponentialRampToValueAtTime(0.001, t + note.d);
         osc.connect(noteGain); noteGain.connect(gain);
         osc.start(t); osc.stop(t + note.d + 0.01);
-        musicObj.nodes.push(osc);
+        this._trackMusicNodes(musicObj, osc);
       }
 
       // Very sparse tension percussion (low toms, every ~4 bars)
@@ -1280,7 +1337,7 @@ export class SoundManager {
         return;
       }
       scheduleLoop();
-    }, loopDuration * 1000 - 200);
+    }, 200);
 
     return musicObj;
   }
@@ -1301,10 +1358,12 @@ export class SoundManager {
     gain.connect(this.musicGain);
     musicObj.gain = gain;
 
+    let nextLoopTime = ctx.currentTime + .02;
     const scheduleLoop = () => {
       if (this._currentMusicType !== 'game') return;
-      const now = ctx.currentTime;
-      musicObj.nodes = [];
+      if (nextLoopTime > ctx.currentTime + .3) return;
+      const now = Math.max(ctx.currentTime + .02, nextLoopTime);
+      nextLoopTime = now + loopDuration;
 
       // Driving bass (8th notes, alternating root and fifth)
       for (let bar = 0; bar < loopBars; bar++) {
@@ -1323,7 +1382,7 @@ export class SoundManager {
           noteGain.gain.exponentialRampToValueAtTime(0.001, t + beatDuration / 2 - 0.01);
           osc.connect(lp); lp.connect(noteGain); noteGain.connect(gain);
           osc.start(t); osc.stop(t + beatDuration / 2);
-          musicObj.nodes.push(osc);
+          this._trackMusicNodes(musicObj, osc);
         }
       }
 
@@ -1364,7 +1423,7 @@ export class SoundManager {
         noteGain.gain.exponentialRampToValueAtTime(0.001, t + stab.d);
         osc.connect(lp); lp.connect(noteGain); noteGain.connect(gain);
         osc.start(t); osc.stop(t + stab.d + 0.01);
-        musicObj.nodes.push(osc);
+        this._trackMusicNodes(musicObj, osc);
       }
     };
 
@@ -1375,7 +1434,7 @@ export class SoundManager {
         return;
       }
       scheduleLoop();
-    }, loopDuration * 1000 - 200);
+    }, 200);
 
     return musicObj;
   }
@@ -1516,6 +1575,7 @@ export class SoundManager {
   // ==================== UTILITY ====================
 
   _makeNoiseBuffer(duration) {
+    if (this._noiseCache.has(duration)) return this._noiseCache.get(duration);
     const ctx = this.audioContext;
     const bufferSize = Math.floor(ctx.sampleRate * duration);
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
@@ -1523,6 +1583,7 @@ export class SoundManager {
     for (let i = 0; i < bufferSize; i++) {
       data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 2);
     }
+    if (this._noiseCache.size < 24) this._noiseCache.set(duration, buffer);
     return buffer;
   }
 
@@ -1544,6 +1605,7 @@ export class SoundManager {
       g.gain.setValueAtTime(volume, time);
       g.gain.exponentialRampToValueAtTime(0.001, time + 0.08);
       noise.connect(hp); hp.connect(g); g.connect(destNode);
+      if (destNode !== this.sfxGain) this._trackMusicNodes(this._musicPercussion, noise);
       noise.start(time); noise.stop(time + 0.08);
 
       const osc = ctx.createOscillator();
@@ -1554,6 +1616,7 @@ export class SoundManager {
       og.gain.setValueAtTime(volume * 0.5, time);
       og.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
       osc.connect(og); og.connect(destNode);
+      if (destNode !== this.sfxGain) this._trackMusicNodes(this._musicPercussion, osc);
       osc.start(time); osc.stop(time + 0.05);
     } else if (type === 'kick') {
       const osc = ctx.createOscillator();
@@ -1564,6 +1627,7 @@ export class SoundManager {
       g.gain.setValueAtTime(volume, time);
       g.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
       osc.connect(g); g.connect(destNode);
+      if (destNode !== this.sfxGain) this._trackMusicNodes(this._musicPercussion, osc);
       osc.start(time); osc.stop(time + 0.15);
     } else if (type === 'hat') {
       const buf = this._makeNoiseBuffer(0.03);
@@ -1576,6 +1640,7 @@ export class SoundManager {
       g.gain.setValueAtTime(volume, time);
       g.gain.exponentialRampToValueAtTime(0.001, time + 0.03);
       noise.connect(hp); hp.connect(g); g.connect(destNode);
+      if (destNode !== this.sfxGain) this._trackMusicNodes(this._musicPercussion, noise);
       noise.start(time); noise.stop(time + 0.03);
     }
   }
@@ -1584,7 +1649,8 @@ export class SoundManager {
   // Uses Web Audio SpeechSynthesis API for unit voice lines
 
   playVoiceLine(category) {
-    if (!this.enabled || !window.speechSynthesis) return;
+    if (!this.voiceEnabled || !window.speechSynthesis || document.hidden) return;
+    if (window.speechSynthesis.speaking || window.speechSynthesis.pending) return;
 
     // Throttle voice lines
     const now = Date.now();
@@ -1605,9 +1671,10 @@ export class SoundManager {
 
     try {
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 1.2;
-      utterance.pitch = 0.8 + Math.random() * 0.4;
-      utterance.volume = this.volume * 0.6;
+      utterance.rate = 1.08;
+      utterance.pitch = 0.88 + Math.random() * 0.08;
+      utterance.volume = this.volume * this.voiceVolume;
+      this._voiceUntil = (this.audioContext?.currentTime || 0) + 1.8;
       window.speechSynthesis.speak(utterance);
     } catch (e) {
       // SpeechSynthesis not available
@@ -1617,7 +1684,7 @@ export class SoundManager {
   // ==================== GD-107: ENHANCED AMBIENT SOUNDS ====================
 
   startAmbient() {
-    if (!this.initialized || !this.audioContext) return;
+    if (!this.initialized || !this.audioContext || !this.ambientEnabled) return;
     this.stopAmbient();
 
     const ctx = this.audioContext;
@@ -1626,7 +1693,8 @@ export class SoundManager {
     this._ambientWind = this._createWindAmbient(ctx);
 
     // Bird chirps (periodic oscillator chirps)
-    this._ambientBirds = this._createBirdAmbient(ctx);
+    if (!this.game.terrain?.biome || this.game.terrain.biome === 'temperate') this._ambientBirds = this._createBirdAmbient(ctx);
+    if (this.game.terrain && this.game.terrain.mapTemplate !== 'plains') this._ambientWater = this._createWaterAmbient(ctx);
 
     // Distant artillery rumble
     this._ambientArtillery = this._createArtilleryAmbient(ctx);
@@ -1649,7 +1717,7 @@ export class SoundManager {
 
     const lp = ctx.createBiquadFilter();
     lp.type = 'lowpass';
-    lp.frequency.value = 400;
+    lp.frequency.value = this.game.terrain?.biome === 'arctic' ? 700 : this.game.terrain?.biome === 'desert' ? 550 : 400;
 
     const gain = ctx.createGain();
     gain.gain.value = 0.06;
@@ -1662,13 +1730,29 @@ export class SoundManager {
     return { source, gain, nodes: [source] };
   }
 
+  _createWaterAmbient(ctx) {
+    const source=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),gain=ctx.createGain();
+    if (!this._waterBuffer) {
+      const noise=this._makeNoiseBuffer(3).getChannelData(0);
+      this._waterBuffer=ctx.createBuffer(1,noise.length,ctx.sampleRate);
+      const data=this._waterBuffer.getChannelData(0);
+      for(let i=0;i<data.length;i++) data[i]=noise[i]*Math.min(1,i/(ctx.sampleRate*.06));
+    }
+    source.buffer=this._waterBuffer;source.loop=true;
+    filter.type='lowpass';filter.frequency.value=650;
+    gain.gain.value=.035;
+    source.connect(filter);filter.connect(gain);gain.connect(this.ambientGain);source.start();
+    return {source,gain,nodes:[filter]};
+  }
+
   _createBirdAmbient(ctx) {
     const obj = { nodes: [], interval: null };
     obj.interval = setInterval(() => {
-      if (!this.enabled || this.audioContext?.state === 'closed') {
+      if (!this.ambientEnabled || this.audioContext?.state === 'closed') {
         clearInterval(obj.interval);
         return;
       }
+      if (document.hidden || ctx.state !== 'running') return;
       // Random bird chirp
       if (Math.random() > 0.6) return;
       const now = ctx.currentTime;
@@ -1695,10 +1779,11 @@ export class SoundManager {
   _createArtilleryAmbient(ctx) {
     const obj = { nodes: [], interval: null };
     obj.interval = setInterval(() => {
-      if (!this.enabled || this.audioContext?.state === 'closed') {
+      if (!this.ambientEnabled || this.audioContext?.state === 'closed') {
         clearInterval(obj.interval);
         return;
       }
+      if (document.hidden || ctx.state !== 'running') return;
       if (Math.random() > 0.4) return;
       const now = ctx.currentTime;
       const osc = ctx.createOscillator();
@@ -1720,7 +1805,7 @@ export class SoundManager {
   }
 
   stopAmbient() {
-    const stops = [this._ambientWind, this._ambientBirds, this._ambientArtillery];
+    const stops = [this._ambientWind, this._ambientBirds, this._ambientArtillery, this._ambientWater];
     for (const obj of stops) {
       if (!obj) continue;
       if (obj.interval) clearInterval(obj.interval);
@@ -1741,5 +1826,6 @@ export class SoundManager {
     this._ambientWind = null;
     this._ambientBirds = null;
     this._ambientArtillery = null;
+    this._ambientWater = null;
   }
 }

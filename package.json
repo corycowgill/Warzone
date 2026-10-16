@@ -18,6 +18,7 @@
     "test:performance": "node scripts/verify-performance.mjs",
     "test:batching": "node scripts/verify-unit-batching.mjs",
     "test:vfx": "node scripts/verify-vfx.mjs",
+    "test:audio": "node scripts/verify-audio.mjs",
     "analyze:assets": "node scripts/analyze-roster-budget.mjs"
   },
   "dependencies": {
