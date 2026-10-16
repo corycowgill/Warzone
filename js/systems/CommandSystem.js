@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { UNIT_PICK_LAYER } from '../rendering/UnitModelBatcher.js';
 import { UNIT_STATS, UNIT_ABILITIES, FORMATION_CONFIG } from '../core/Constants.js';
 import { LockstepManager } from '../networking/LockstepManager.js';
+import { issueUnitMove } from './MovementOrders.js';
 
 export class CommandSystem {
   constructor(game) {
@@ -325,6 +326,7 @@ export class CommandSystem {
   }
 
   getFormationHeading(units, position) {
+    if (!units.length) return 0;
     let cx = 0, cz = 0;
     for (const u of units) {
       const p = u.getPosition();
@@ -338,8 +340,11 @@ export class CommandSystem {
     return Math.atan2(dx, dz);
   }
 
-  moveUnits(units, position, skipMarker) {
-    const groupSpeed = Math.min(...units.map(u => u.speed));
+  moveUnits(units, position, skipMarker, attackMove = false) {
+    units = units.filter(u => u.alive && !u.isGarrisoned && u.speed > 0 && !u._siegeMode && !(u.empDisabledTimer > 0));
+    if (!units.length) return;
+    const speeds = new Map();
+    for (const unit of units) speeds.set(unit.domain, Math.min(speeds.get(unit.domain) ?? Infinity, unit.speed));
     const offsets = this.getFormationOffsets(units.length, this.formationType);
     const heading = this.getFormationHeading(units, position);
     const cosH = Math.cos(heading);
@@ -358,30 +363,7 @@ export class CommandSystem {
         position.z + rz
       );
 
-      unit.formationSpeed = groupSpeed;
-
-      if ((unit.domain === 'land' || unit.domain === 'naval') && this.game.pathfinding) {
-        // Use async pathfinding (auto-falls back to sync for short distances)
-        const unitRef = unit;
-        const startPos = unit.getPosition();
-        // Start moving toward target immediately (will be corrected when path arrives)
-        unit.moveTo(targetPos);
-        unit._pathPending = true;
-        this.game.pathfinding.findPathAsync(startPos, targetPos, unit.domain).then(path => {
-          unitRef._pathPending = false;
-          if (!unitRef.alive) return;
-          if (path && path.length > 1) {
-            unitRef.followPath(path);
-          } else if (path && path.length === 1) {
-            unitRef.moveTo(path[0]);
-          }
-        });
-      } else {
-        unit.moveTo(targetPos);
-      }
-
-      unit.attackTarget = null;
-      unit._attackMove = false;
+      issueUnitMove(unit, targetPos, this.game, {attackMove, formationSpeed: speeds.get(unit.domain)});
     }
 
     this.game.eventBus.emit('command:move', { units, position });
@@ -409,13 +391,21 @@ export class CommandSystem {
     }
   }
 
+  stopUnits(units) {
+    if (this._isMP) this._queueLockstep(LockstepManager.stopCommand(units.map(u => u.id)));
+    else for (const unit of units) unit.stop();
+    this.game.eventBus.emit('command:stop', {units});
+  }
+
+  holdUnits(units) {
+    if (this._isMP) this._queueLockstep({type:'HOLD',entityIds:units.map(u => u.id)});
+    else for (const unit of units) unit.holdPosition();
+    this.game.eventBus.emit('command:hold', {units});
+  }
+
   attackMoveUnits(units, position) {
     // Pass skipMarker to avoid double-marker (moveUnits creates green, we want red)
-    this.moveUnits(units, position, true);
-    // Mark units as attack-moving (they will engage any enemy in range while moving)
-    for (const unit of units) {
-      unit._attackMove = true;
-    }
+    this.moveUnits(units, position, true, true);
     // Cycle 15: Show attack-move marker (red) instead of the green one
     if (this.game.effectsManager) {
       this.game.effectsManager.createMoveMarker(position, 'attackmove');
@@ -427,7 +417,8 @@ export class CommandSystem {
     if (this.game.state !== 'PLAYING') return;
 
     const key = event.key.toLowerCase();
-    const selected = this.game.selectionManager.getSelected();
+    const ownTeam = this.game.isMultiplayer ? this.game.getLocalTeam() : this.game.mode === '2P' ? this.game.activeTeam : 'player';
+    const selected = this.game.selectionManager.getSelected().filter(e => e.alive && e.team === ownTeam);
 
     switch (key) {
       case 'a':
@@ -463,9 +454,7 @@ export class CommandSystem {
               this._queueLockstep({ type: 'HOLD', entityIds: holdUnits.map(u => u.id) });
             } else {
               for (const entity of holdUnits) {
-                entity.moveTarget = null;
-                entity.waypoints = [];
-                entity.isMoving = false;
+                entity.holdPosition();
               }
             }
           }
@@ -750,13 +739,16 @@ export class CommandSystem {
   queueWaypoint(units, position) {
     for (const unit of units) {
       // Add to existing waypoints without clearing current movement
-      unit.waypoints.push(position.clone());
-      if (!unit.isMoving && !unit.moveTarget) {
-        unit.moveTarget = unit.waypoints.shift();
-        unit.isMoving = true;
+      const goal = new THREE.Vector3(position.x, position.y || 0, position.z);
+      if (!unit._pathPending && !unit.isMoving && !unit.moveTarget) {
+        issueUnitMove(unit, goal, this.game);
+      } else {
+        unit._queuedMoveOrders ??= [];
+        unit._queuedMoveOrders.push(goal);
       }
     }
     this.game.eventBus.emit('command:waypoint', { units, position });
+    this.game.effectsManager?.createMoveMarker(position, 'move');
     if (this.game.soundManager) {
       this.game.soundManager.play('move', { unitType: units[0]?.type });
     }

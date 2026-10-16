@@ -459,9 +459,7 @@ export class LockstepManager {
 
       case CommandType.HOLD:
         for (const unit of units) {
-          unit.moveTarget = null;
-          unit.waypoints = [];
-          unit.isMoving = false;
+          unit.holdPosition();
         }
         break;
 

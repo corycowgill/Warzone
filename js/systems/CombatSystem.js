@@ -897,7 +897,7 @@ export class CombatSystem {
     if (unit.damage <= 0) return;
 
     // Auto-acquire if idle or in attack-move mode
-    if (unit.moveTarget && !unit._attackMove) return;
+    if ((unit.moveTarget || unit._pathPending) && !unit._attackMove) return;
 
     const ownTeam = unit.team;
     const enemyTeam = ownTeam === 'player' ? 'enemy' : 'player';
@@ -953,7 +953,7 @@ export class CombatSystem {
     }
 
     if (nearestEnemy) {
-      unit.attackEntity(nearestEnemy);
+      unit.attackEntity(nearestEnemy, true);
     }
   }
 }

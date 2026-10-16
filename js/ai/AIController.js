@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { issueUnitMove } from '../systems/MovementOrders.js';
 import { UNIT_STATS, BUILDING_STATS, GAME_CONFIG, AI_DIFFICULTY, DAMAGE_MODIFIERS, RESEARCH_UPGRADES, BUILDING_UPGRADES, BUILDING_LIMITS, TECH_BRANCHES } from '../core/Constants.js';
 
 // Multiple build order strategies
@@ -951,24 +952,7 @@ export class AIController {
       );
       const attackPos = targetPos.clone().add(offset);
 
-      if (unit.domain === 'land' && this.game.pathfinding) {
-        const unitRef = unit;
-        const startPos = unit.getPosition();
-        unit.moveTo(attackPos);
-        unit._pathPending = true;
-        this.game.pathfinding.findPathAsync(startPos, attackPos, unit.domain).then(path => {
-          unitRef._pathPending = false;
-          if (!unitRef.alive) return;
-          if (path && path.length > 1) {
-            unitRef.followPath(path);
-          } else if (path && path.length === 1) {
-            unitRef.moveTo(path[0]);
-          }
-        });
-      } else {
-        unit.moveTo(attackPos);
-      }
-      unit._attackMove = true;
+      issueUnitMove(unit, attackPos, this.game, {attackMove: true});
     }
   }
 
@@ -994,23 +978,7 @@ export class AIController {
       mapSize * (0.2 + this.game.rng.next() * 0.6)
     );
 
-    if (scout.domain === 'land' && this.game.pathfinding) {
-      const scoutRef = scout;
-      const startPos = scout.getPosition();
-      scout.moveTo(scoutTarget);
-      scout._pathPending = true;
-      this.game.pathfinding.findPathAsync(startPos, scoutTarget, scout.domain).then(path => {
-        scoutRef._pathPending = false;
-        if (!scoutRef.alive) return;
-        if (path && path.length > 1) {
-          scoutRef.followPath(path);
-        } else if (path && path.length === 1) {
-          scoutRef.moveTo(path[0]);
-        }
-      });
-    } else {
-      scout.moveTo(scoutTarget);
-    }
+    issueUnitMove(scout, scoutTarget, this.game);
 
     this.scoutSent = true;
     this._scoutResetTimer = 60; // Reset after 60 game seconds
@@ -1060,10 +1028,10 @@ export class AIController {
       }
 
       // If unit is idle, look for nearby enemies
-      if (!unit.attackTarget && !unit.moveTarget) {
+      if (!unit.attackTarget && !unit.moveTarget && (!unit._pathPending || unit._attackMove)) {
         const nearbyEnemy = this.findNearestEnemy(unit, unit.range * 5);
         if (nearbyEnemy) {
-          unit.attackEntity(nearbyEnemy);
+          unit.attackEntity(nearbyEnemy, true);
         }
       }
 
@@ -1259,7 +1227,7 @@ export class AIController {
     }
 
     if (weakest && weakest !== unit.attackTarget) {
-      unit.attackEntity(weakest);
+      unit.attackEntity(weakest, true);
     }
   }
 

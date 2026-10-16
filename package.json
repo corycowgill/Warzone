@@ -19,6 +19,7 @@
     "test:batching": "node scripts/verify-unit-batching.mjs",
     "test:vfx": "node scripts/verify-vfx.mjs",
     "test:audio": "node scripts/verify-audio.mjs",
+    "test:gameplay": "node scripts/verify-gameplay.mjs",
     "analyze:assets": "node scripts/analyze-roster-budget.mjs"
   },
   "dependencies": {

@@ -186,6 +186,10 @@ export class SaveSystem {
           attackCooldown: e.attackCooldown,
           waypoints: (e.waypoints || []).map(w => this._vec3(w)),
           _attackMove: e._attackMove || false,
+          attackMoveDestination: e._attackMoveDestination ? this._vec3(e._attackMoveDestination) : null,
+          holdPosition: e._holdPosition || false,
+          queuedMoveOrders: (e._queuedMoveOrders || []).map(w => this._vec3(w)),
+          pendingMoveGoal: e._pathPending && e._pendingMoveGoal ? this._vec3(e._pendingMoveGoal) : null,
           isRetreating: e.isRetreating || false,
           _siegeMode: e._siegeMode || false,
           empDisabledTimer: e.empDisabledTimer || 0,
@@ -438,6 +442,10 @@ export class SaveSystem {
         entity.isMoving = u.isMoving || false;
         entity.attackCooldown = u.attackCooldown || 0;
         entity._attackMove = u._attackMove || false;
+        entity._holdPosition = u.holdPosition || false;
+        if (u.attackMoveDestination) entity._attackMoveDestination = new THREE.Vector3(u.attackMoveDestination.x,u.attackMoveDestination.y,u.attackMoveDestination.z);
+        entity._queuedMoveOrders = (u.queuedMoveOrders || []).map(w => new THREE.Vector3(w.x,w.y,w.z));
+        if (u.pendingMoveGoal && !u.attackMoveDestination) entity._queuedMoveOrders.unshift(new THREE.Vector3(u.pendingMoveGoal.x,u.pendingMoveGoal.y,u.pendingMoveGoal.z));
         entity.isRetreating = u.isRetreating || false;
         entity._siegeMode = u._siegeMode || false;
         entity.empDisabledTimer = u.empDisabledTimer || 0;

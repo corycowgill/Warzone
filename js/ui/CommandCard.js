@@ -24,6 +24,8 @@ export class CommandCard {
   // GD-126: Command Card - shows context-sensitive action buttons
   updateCommandCard(entities) {
     if (!this.commandCardEl || !this.commandCardGrid) return;
+    const team = this.game.isMultiplayer ? this.game.getLocalTeam() : this.game.mode === '2P' ? this.game.activeTeam : 'player';
+    entities = entities?.filter(e => e.alive && e.team === team);
 
     if (!entities || entities.length === 0) {
       this.commandCardEl.classList.add('hidden');
@@ -51,8 +53,8 @@ export class CommandCard {
     const buttons = [
       { icon: '\u279C', key: 'M', label: 'Move', action: () => { this.hud.showNotification('Right-click to move', '#ffcc00'); } },
       { icon: '\u2694', key: 'A', label: 'Attack', action: () => { game.commandSystem.attackMoveMode = true; document.body.style.cursor = 'crosshair'; } },
-      { icon: '\u25A0', key: 'S', label: 'Stop', action: () => { units.forEach(u => u.stop && u.stop()); } },
-      { icon: '\u26CA', key: 'D', label: 'Hold', action: () => { units.forEach(u => { if (u.isUnit) { u.moveTarget = null; u.waypoints = []; u.isMoving = false; } }); } },
+      { icon: '\u25A0', key: 'S', label: 'Stop', action: () => { game.commandSystem.stopUnits(units); } },
+      { icon: '\u26CA', key: 'D', label: 'Hold', action: () => { game.commandSystem.holdUnits(units); } },
       { icon: '\u21BB', key: 'P', label: 'Patrol', action: () => { game.commandSystem.patrolMode = true; document.body.style.cursor = 'crosshair'; this.hud.showNotification('Click to set patrol destination', '#ffcc00'); } },
       { icon: '\u2699', key: 'V', label: 'Stance', action: () => { const s = units[0].cycleStance(); units.slice(1).forEach(u => u.stance = s); } },
     ];

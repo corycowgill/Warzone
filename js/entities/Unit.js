@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Entity } from './Entity.js';
+import { issueUnitMove } from '../systems/MovementOrders.js';
 import { UNIT_STATS, GAME_CONFIG, NATIONS, UNIT_ABILITIES, VETERANCY, FORMATION_CONFIG } from '../core/Constants.js';
 
 export class Unit extends Entity {
@@ -34,6 +35,10 @@ export class Unit extends Entity {
     this.waypoints = [];
     this._attackMove = false;
     this._pathPending = false;
+    this._orderRevision = 0;
+    this._holdPosition = false;
+    this._attackMoveDestination = null;
+    this._queuedMoveOrders = [];
     this.formationSpeed = null;
 
     // Stance system: 'aggressive' (default), 'defensive', 'holdfire'
@@ -333,6 +338,15 @@ export class Unit extends Entity {
     // Cannot move if EMP disabled
     if (this.empDisabledTimer > 0) return;
 
+    this._orderRevision++;
+    this._queuedMoveOrders = [];
+    this._pathPending = false;
+    this._holdPosition = false;
+    this._attackMoveDestination = null;
+    this._isPatrolling = false;
+    this.isRetreating = false;
+    this.retreatTarget = null;
+    this.formationSpeed = null;
     this.moveTarget = target.clone();
     if (this.domain !== 'air') {
       this.moveTarget.y = 0;
@@ -360,6 +374,7 @@ export class Unit extends Entity {
 
   // Chase/move toward target without clearing attack target (for combat pursuit)
   chasePosition(target) {
+    if (this._holdPosition) return;
     if (this._siegeMode) return;
     if (this.empDisabledTimer > 0) return;
 
@@ -371,12 +386,25 @@ export class Unit extends Entity {
     // Do NOT clear attackTarget - this is a chase move
   }
 
-  attackEntity(target) {
+  attackEntity(target, automatic = false) {
     if (this.empDisabledTimer > 0) return;
+    if (!automatic) this.stop();
     this.attackTarget = target;
   }
 
+  holdPosition() {
+    const target = this.attackTarget;
+    this.stop();
+    this._holdPosition = true;
+    if (target?.alive) this.attackTarget = target;
+  }
+
   stop() {
+    this._queuedMoveOrders = [];
+    this._orderRevision++;
+    this._pathPending = false;
+    this._holdPosition = false;
+    this._attackMoveDestination = null;
     this.moveTarget = null;
     this.attackTarget = null;
     this.isMoving = false;
@@ -402,6 +430,11 @@ export class Unit extends Entity {
   // GD-125: Start tactical retreat to nearest friendly building
   startRetreat(targetPos) {
     if (!targetPos) return;
+    this._queuedMoveOrders = [];
+    this._orderRevision++;
+    this._pathPending = false;
+    this._holdPosition = false;
+    this._attackMoveDestination = null;
     this.isRetreating = true;
     this.retreatTarget = targetPos.clone();
     this.attackTarget = null;
@@ -419,6 +452,7 @@ export class Unit extends Entity {
     let badgeState = '';
     if (this.isRetreating) badgeState = 'retreat';
     else if (this.stance === 'holdfire') badgeState = 'holdfire';
+    else if (this._holdPosition) badgeState = 'holding';
     else if (this.stance === 'defensive') badgeState = 'defensive';
     else if (this._isPatrolling) badgeState = 'patrol';
     else if (this._attackMove) badgeState = 'attackmove';
@@ -450,6 +484,7 @@ export class Unit extends Entity {
     // Create badge — use canvas-based icons for activity states, circles for stances
     const badgeColors = {
       holdfire: 0xffcc00,
+      holding: 0xe1bd7b,
       defensive: 0x4488ff,
       patrol: 0x00ccff,
       attackmove: 0xff4444,
@@ -534,6 +569,12 @@ export class Unit extends Entity {
 
   startPatrol(points) {
     if (!points || points.length < 2) return;
+    this._queuedMoveOrders = [];
+    this._orderRevision++;
+    this._pathPending = false;
+    this._holdPosition = false;
+    this._attackMoveDestination = null;
+    this.waypoints = [];
     this._patrolPoints = points.map(p => p.clone());
     this._patrolIndex = 0;
     this._isPatrolling = true;
@@ -656,6 +697,25 @@ export class Unit extends Entity {
     } else {
       this.stationaryTime = 0;
       this.isStationary = false;
+    }
+
+    // Resume the destination after an attack-move engagement has cleared.
+    if (this._attackMoveDestination && !this.attackTarget && !this.moveTarget && !this._pathPending) {
+      const goal = this._attackMoveDestination;
+      if (Math.hypot(goal.x - this.mesh.position.x, goal.z - this.mesh.position.z) > 1) {
+        const queued = this._queuedMoveOrders;
+        issueUnitMove(this, goal, this.game, {attackMove: true});
+        this._queuedMoveOrders = queued;
+      } else {
+        this._attackMoveDestination = null;
+        this._attackMove = false;
+      }
+    }
+
+    if (!this.attackTarget && !this.moveTarget && !this._pathPending && this._queuedMoveOrders.length) {
+      const [goal, ...remaining] = this._queuedMoveOrders;
+      issueUnitMove(this, goal, this.game);
+      this._queuedMoveOrders = remaining;
     }
 
     // Movement
@@ -834,7 +894,7 @@ export class Unit extends Entity {
     }
 
     // Idle separation: push overlapping units apart even when stationary
-    if (!this.moveTarget && !this.attackTarget && this.game && this.game.spatialGrid) {
+    if (!this._holdPosition && !this.moveTarget && !this.attackTarget && this.game && this.game.spatialGrid) {
       const pos = this.mesh.position;
       const myR = (FORMATION_CONFIG.unitRadius && FORMATION_CONFIG.unitRadius[this.type]) || 1.5;
       const queryR = myR * 3;
@@ -889,7 +949,7 @@ export class Unit extends Entity {
 
       if (dist > worldRange) {
         // Defensive stance: don't chase beyond auto-acquire range
-        if (this.stance === 'defensive') {
+        if (this._holdPosition || this.stance === 'defensive') {
           this.attackTarget = null;
         } else {
           // Out of range - chase the target (don't clear attackTarget)
