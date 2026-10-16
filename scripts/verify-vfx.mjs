@@ -19,6 +19,20 @@ assert.equal(sprite,reused);assert.equal(reused.position.length(),0);
 assert.equal(reused.userData.isSmoke,false);assert.equal(reused.userData.flickerPhase,undefined);
 assert.equal(reused.userData.baseSize,.3);fx._returnToPool(reused);
 
+fx.createImpactWave(origin,5);
+const wave=fx.activeEffects[0];
+assert.ok(Array.from(wave.group.geometry.attributes.position.array).every(Number.isFinite));
+for(let i=0;i<wave.group.geometry.attributes.position.count;i++)assert.ok(Math.abs(wave.group.geometry.attributes.position.getY(i)-3.09)<1e-5);
+fx.update(.2);assert.ok(wave.material.uniforms.uProgress.value>0);
+for(let i=0;i<20;i++)fx.createImpactWave(origin,4,true);
+assert.equal(fx.activeEffects.filter(e=>e.type==='impactWave').length,12);
+const ripple=fx.activeEffects.find(e=>e.group.name==='Impact ripple');
+assert.ok(Math.abs(ripple.group.geometry.attributes.position.getY(0)+.16)<1e-5);
+let waveDisposed=0;wave.group.geometry.addEventListener('dispose',()=>waveDisposed++);
+fx.update(2);assert.equal(waveDisposed,1);assert.equal(scene.children.length,0);
+fx.createImpactEffect(origin,'laser');const laser=fx.activeEffects[0].particles[0];const laserColor=laser.material.color.clone();fx.update(.05);assert.ok(laser.material.color.equals(laserColor));fx.update(1);
+fx.createImpactEffect(origin,'shell');const flame=fx.activeEffects.find(e=>e.particles).particles[0];fx.update(.05);const hot=flame.material.color.g;fx.update(.2);assert.ok(flame.material.color.g<hot,'fire cools over its lifetime');fx.update(2);
+
 fx.createSmoke(origin);const smoke=fx.activeEffects[0].particles[0];
 fx.update(.1);assert.ok(smoke.userData.velocity.y>0);assert.ok(smoke.scale.x>=smoke.userData.baseSize);
 fx.update(3);assert.equal(scene.children.length,0);

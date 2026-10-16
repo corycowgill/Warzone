@@ -30,3 +30,12 @@ and presentation pass; no new FPS benchmark is claimed.
 
 Open `docs/vfx-preview.html` for repeatable weapon/destruction previews, particle
 quality selection, pause, clear, and stress controls.
+
+
+## Layered impact presentation
+
+Heavy impacts and destruction now send a broken dust wave across a small terrain-conforming grid. Water splashes produce a pale expanding ripple at the shared water surface. At most 12 waves are active, each uses one draw, and all remain inside the existing 180-effect admission limit. Their geometry and materials are disposed on expiry and restart.
+
+Fire begins white-hot and cools through amber/red; sparks, energy hits, and water droplets retain their own colors. Shell and artillery bursts last longer so smoke separates from the initial flash. Smoke uses a six-lobed cloud texture generated once per match instead of a plain circular gradient. No new asset downloads or dynamic lights are introduced.
+
+Regression coverage checks wave grounding, water height, wave limits, shader progress, disposal, fire cooling and preserved energy colors, alongside the previous pool/timing/budget checks. Browser preview verifies shader compilation and high/low stress bursts; no new gameplay FPS benchmark is claimed.

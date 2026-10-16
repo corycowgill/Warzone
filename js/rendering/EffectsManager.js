@@ -9,7 +9,7 @@ export class EffectsManager {
     // GD-129: Pre-create billboard textures for particle pooling
     // Neutral textures take their color from the material, without double tinting.
     this._fireTexture = this._createGradientTexture(0xffffff, 0xffffff);
-    this._smokeTexture = this._createGradientTexture(0xffffff, 0xdddddd);
+    this._smokeTexture = this._createSmokeTexture();
     this._sparkTexture = this._createGradientTexture(0xffffff, 0xffffff);
 
     // GD-129: Particle pool
@@ -47,6 +47,21 @@ export class EffectsManager {
     ctx.fillRect(0, 0, 64, 64);
     const texture = new THREE.CanvasTexture(canvas);
     return texture;
+  }
+
+  _createSmokeTexture() {
+    // Authored cloud lobes break up circular billboards; generated once per match.
+    const canvas=document.createElement('canvas');canvas.width=128;canvas.height=128;
+    const ctx=canvas.getContext('2d');
+    const lobes=[[64,65,43],[40,58,29],[83,44,28],[82,83,31],[47,85,26],[56,35,24]];
+    for(const [x,y,r] of lobes){
+      const gradient=ctx.createRadialGradient(x,y,0,x,y,r);
+      gradient.addColorStop(0,'rgba(255,255,255,.48)');
+      gradient.addColorStop(.55,'rgba(230,230,230,.32)');
+      gradient.addColorStop(1,'rgba(200,200,200,0)');
+      ctx.fillStyle=gradient;ctx.fillRect(x-r,y-r,r*2,r*2);
+    }
+    return new THREE.CanvasTexture(canvas);
   }
 
   // Admission checks reserve room for a complete burst; never steal a live sprite.
@@ -222,6 +237,39 @@ export class EffectsManager {
 
     // GD-129: Ground scorch mark
     this.createScorchMark(position);
+    this.createImpactWave(position,5);
+  }
+
+  // One terrain-conforming draw per heavy hit, capped independently of sprites.
+  createImpactWave(position, radius=4, water=false) {
+    if(!this._canSpawn()||this.activeEffects.filter(e=>e.type==='impactWave').length>=12)return;
+    const geometry=new THREE.PlaneGeometry(radius*2,radius*2,8,8);
+    geometry.rotateX(-Math.PI/2);
+    const vertices=geometry.attributes.position;
+    for(let i=0;i<vertices.count;i++){
+      const x=vertices.getX(i)+position.x,z=vertices.getZ(i)+position.z;
+      vertices.setXYZ(i,x,water?-.16:(this.game.terrain?.getHeightAt(x,z)??position.y)+.09,z);
+    }
+    geometry.computeBoundingSphere();
+    const material=new THREE.ShaderMaterial({
+      uniforms:{uProgress:{value:0},uColor:{value:new THREE.Color(water?0xb9e3e5:0xb9a27a)}},
+      vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+      fragmentShader:`varying vec2 vUv;uniform float uProgress;uniform vec3 uColor;
+        void main(){
+          vec2 p=vUv*2.-1.;float r=length(p);
+          float front=mix(.08,.94,sqrt(uProgress));
+          float width=mix(.08,.19,uProgress);
+          float band=1.-smoothstep(width*.25,width,abs(r-front));
+          float breakup=.72+.28*sin(p.x*31.+sin(p.y*23.)*2.);
+          float alpha=band*breakup*(1.-uProgress)*.48*(1.-smoothstep(.9,1.,r));
+          gl_FragColor=vec4(uColor,alpha);
+          #include <tonemapping_fragment>
+          #include <colorspace_fragment>
+        }`,transparent:true,depthWrite:false,side:THREE.DoubleSide
+    });
+    const mesh=new THREE.Mesh(geometry,material);mesh.name=water?'Impact ripple':'Blast dust wave';
+    this.scene.add(mesh);
+    this.activeEffects.push({type:'impactWave',group:mesh,material,lifetime:water?1.2:.65,elapsed:0});
   }
 
   createMuzzleFlash(position, target, weapon = 'bullet') {
@@ -591,6 +639,7 @@ export class EffectsManager {
   createImpactEffect(position, impactType) {
     if (!this._canSpawn(15)) return;
     impactType = impactType || 'bullet';
+    if(this.activeEffects.length<179&&(impactType==='shell'||impactType==='artillery'))this.createImpactWave(position,impactType==='artillery'?5:3);
     const group = new THREE.Group();
     group.position.copy(position);
     const particles = [];
@@ -632,7 +681,7 @@ export class EffectsManager {
       group.add(dust);
       particles.push(dust);
       this.scene.add(group);
-      this.activeEffects.push({ type: 'explosion', group, particles, lifetime: 0.4, elapsed: 0 });
+      this.activeEffects.push({ type: 'explosion', group, particles, lifetime: 0.65, elapsed: 0 });
 
     } else if (impactType === 'artillery') {
       // Medium explosion: 10 fire + 5 dirt chunks + scorch mark
@@ -657,7 +706,7 @@ export class EffectsManager {
         particles.push(sprite);
       }
       this.scene.add(group);
-      this.activeEffects.push({ type: 'explosion', group, particles, lifetime: 0.6, elapsed: 0 });
+      this.activeEffects.push({ type: 'explosion', group, particles, lifetime: 0.95, elapsed: 0 });
       this.createScorchMark(position);
 
     } else if (impactType === 'laser') {
@@ -709,7 +758,7 @@ export class EffectsManager {
       particles.push(sprite);
     }
     this.scene.add(group);
-    this.activeEffects.push({ type: 'explosion', group, particles, lifetime: 0.4, elapsed: 0 });
+    this.activeEffects.push({ type: 'explosion', group, particles, lifetime: 0.65, elapsed: 0 });
   }
 
   // Dust puff on construction completion
@@ -950,6 +999,7 @@ export class EffectsManager {
     });
 
     this.createScorchMark(position);
+    this.createImpactWave(position,7);
   }
 
   // Spec 009: Water splash for projectiles/units entering water
@@ -961,6 +1011,7 @@ export class EffectsManager {
     group.position.y = -.18; // Slightly above the shared terrain water plane (-.25).
     const particles = [];
 
+    if(this.activeEffects.length<179)this.createImpactWave(position,4,true);
     const count = 8 + Math.floor(Math.random() * 5); // 8-12 particles
     for (let i = 0; i < count; i++) {
       const color = Math.random() > 0.4 ? 0xaaddff : 0xffffff;
@@ -1072,13 +1123,20 @@ export class EffectsManager {
         continue;
       }
 
-      if (effect.type === 'explosion') {
+      if(effect.type==='impactWave'){
+        effect.material.uniforms.uProgress.value=progress;
+      } else if (effect.type === 'explosion') {
         // Expand particles outward and fade
         for (const particle of effect.particles) {
           particle.position.addScaledVector(particle.userData.velocity, delta);
           const smoke = particle.userData.isSmoke;
           if (!smoke) particle.userData.velocity.y -= 15 * delta;
           particle.position.y = Math.max(.02, particle.position.y);
+          if(particle.material.map===this._fireTexture){
+            // White-hot core cools to amber, then red before disappearing.
+            const cooling=Math.min(1,progress*3.2);
+            particle.material.color.setRGB(1, .86-cooling*.68, .4*(1-cooling));
+          }
           particle.material.opacity = smoke ? Math.min(1, progress * 6) * .55 * (1 - progress) : Math.pow(1 - progress, 2);
           const scale = (particle.userData.baseSize ?? 1) * (1.0 + progress * (smoke ? 2.5 : .6));
           particle.scale.set(scale, scale, scale);
