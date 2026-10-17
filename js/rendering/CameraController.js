@@ -1,8 +1,10 @@
+import {isEditing} from '../systems/InputPolicy.js';
 import * as THREE from 'three';
 
 export class CameraController {
-  constructor(camera, domElement) {
+  constructor(camera, domElement, isEnabled=()=>true) {
     this.camera = camera;
+    this.isEnabled=isEnabled;
     this.domElement = domElement;
 
     // Camera target (look-at point on ground)
@@ -46,14 +48,17 @@ export class CameraController {
 
   setupListeners() {
     this.listen(window, 'keydown', e => {
-      if (e.target?.closest?.('input, textarea, select, [contenteditable=true]') || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (!this.isEnabled()||isEditing(e)||e.ctrlKey||e.metaKey||e.altKey) return;
       const key = e.key.toLowerCase();
       this.keys[key] = true;
       if (['arrowup','arrowdown','arrowleft','arrowright'].includes(key)) e.preventDefault();
       if (key === 'home') { e.preventDefault(); this.resetOrientation(); }
     });
+    this.listen(window,'focusin',e=>{if(isEditing(e))this.keys={};});
+    this.listen(this.domElement,'mouseleave',()=>{this.pointerOverBattlefield=false;});
     this.listen(window, 'keyup', e => this.keys[e.key.toLowerCase()] = false);
     this.listen(window, 'mousemove', e => {
+      if(!this.isEnabled()){this.isPanning=false;this.isRotating=false;this.pointerOverBattlefield=false;return;}
       this.mousePos.x = e.clientX;
       this.mousePos.y = e.clientY;
       this.pointerOverBattlefield = e.target === this.domElement;
@@ -69,6 +74,7 @@ export class CameraController {
       }
     });
     this.listen(this.domElement, 'mousedown', e => {
+      if(!this.isEnabled())return;
       if (e.button === 1) { e.preventDefault(); this.isRotating = !e.shiftKey; this.isPanning = e.shiftKey; this.lastMouse = { x: e.clientX, y: e.clientY }; }
     });
     this.listen(window, 'mouseup', e => {
@@ -82,9 +88,10 @@ export class CameraController {
       ['camera-reset', () => this.resetOrientation()]
     ]) {
       const button = document.getElementById(id);
-      if (button) this.listen(button, 'click', action);
+      if (button) this.listen(button, 'click', ()=>{if(this.isEnabled())action();});
     }
     this.listen(this.domElement, 'wheel', e => {
+      if(!this.isEnabled())return;
       this.zoom += e.deltaY * 0.05;
       this.zoom = Math.max(this.minZoom, Math.min(this.maxZoom, this.zoom));
       e.preventDefault();
@@ -95,6 +102,7 @@ export class CameraController {
     const el = this.domElement;
 
     this.listen(el, 'touchstart', (e) => {
+      if(!this.isEnabled())return;
       e.preventDefault();
       this._isTouching = true;
       this._touches = Array.from(e.touches);
@@ -115,6 +123,7 @@ export class CameraController {
     }, { passive: false });
 
     this.listen(el, 'touchmove', (e) => {
+      if(!this.isEnabled())return;
       e.preventDefault();
       const touches = e.touches;
 
@@ -166,6 +175,7 @@ export class CameraController {
       this.updateCamera();
     }, { passive: false });
 
+    this.listen(el,'touchcancel',()=>{this._isTouching=false;this._touches=[];this._lastTouchDist=0;});
     this.listen(el, 'touchend', (e) => {
       this._touches = Array.from(e.touches);
       if (e.touches.length === 0) {
@@ -179,6 +189,7 @@ export class CameraController {
   }
 
   update(delta) {
+    if(!this.isEnabled()){this.keys={};this.isPanning=false;this.isRotating=false;return;}
     let dx = 0, dz = 0;
 
     // Arrow keys + W for camera movement (A/S/D reserved for unit commands)
@@ -198,6 +209,8 @@ export class CameraController {
       if (this.pointerOverBattlefield && this.mousePos.y < this.edgePanSize) dz += 1;
       if (this.pointerOverBattlefield && this.mousePos.y > window.innerHeight - this.edgePanSize) dz -= 1;
     }
+
+    const length=Math.hypot(dx,dz);if(length>1){dx/=length;dz/=length;}
 
     // Move relative to camera rotation
     const cos = Math.cos(this.rotation);

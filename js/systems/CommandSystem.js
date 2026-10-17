@@ -1,3 +1,4 @@
+import {isEditing,screenToNDC} from './InputPolicy.js';
 import * as THREE from 'three';
 import { UNIT_PICK_LAYER } from '../rendering/UnitModelBatcher.js';
 import { UNIT_STATS, UNIT_ABILITIES, FORMATION_CONFIG } from '../core/Constants.js';
@@ -7,6 +8,7 @@ import { issueUnitMove } from './MovementOrders.js';
 export class CommandSystem {
   constructor(game) {
     this.game = game;
+    this.moveMode = false;
     this.attackMoveMode = false;
     this.abilityTargetMode = false;
     this.patrolMode = false;
@@ -69,10 +71,8 @@ export class CommandSystem {
     }
 
     const camera = this.game.sceneManager.camera;
-    const mouse = new THREE.Vector2(
-      (event.clientX / window.innerWidth) * 2 - 1,
-      -(event.clientY / window.innerHeight) * 2 + 1
-    );
+    const ndc=screenToNDC(this.game.sceneManager.renderer.domElement,event.clientX,event.clientY);
+    const mouse=new THREE.Vector2(ndc.x,ndc.y);
     this.raycaster.setFromCamera(mouse, camera);
 
     // Check for enemy or neutral entity under cursor
@@ -414,21 +414,27 @@ export class CommandSystem {
   }
 
   handleKeyPress(event) {
-    if (this.game.state !== 'PLAYING') return;
+    if (this.game.state !== 'PLAYING'||isEditing(event)||event.ctrlKey||event.metaKey||event.altKey||event.repeat) return;
 
     const key = event.key.toLowerCase();
     const ownTeam = this.game.isMultiplayer ? this.game.getLocalTeam() : this.game.mode === '2P' ? this.game.activeTeam : 'player';
     const selected = this.game.selectionManager.getSelected().filter(e => e.alive && e.team === ownTeam);
 
     switch (key) {
+      case 'm':
+        if(selected.some(e=>e.isUnit)){this.moveMode=true;this.attackMoveMode=false;this.patrolMode=false;this.abilityTargetMode=false;document.body.style.cursor='crosshair';}
+        break;
       case 'a':
+        if(!selected.some(e=>e.isUnit))break;
+        this.moveMode=false;this.patrolMode=false;this.abilityTargetMode=false;
         // Enter attack-move mode
         this.attackMoveMode = true;
         document.body.style.cursor = 'crosshair';
-        event.preventDefault();
+        event.preventDefault?.();
         break;
 
       case 's':
+        this.moveMode=false;this.attackMoveMode=false;this.patrolMode=false;this.abilityTargetMode=false;if(globalThis.document?.body)document.body.style.cursor='default';
         // Stop all selected units (only if units are selected)
         if (selected.length > 0) {
           const stopUnits = selected.filter(e => e.isUnit);
@@ -446,6 +452,7 @@ export class CommandSystem {
         break;
 
       case 'd':
+        this.moveMode=false;this.attackMoveMode=false;this.patrolMode=false;this.abilityTargetMode=false;if(globalThis.document?.body)document.body.style.cursor='default';
         // Hold position (stop moving but keep attacking)
         {
           const holdUnits = selected.filter(e => e.isUnit);
@@ -522,6 +529,7 @@ export class CommandSystem {
         // Enter patrol mode
         const patrolUnits = selected.filter(e => e.isUnit);
         if (patrolUnits.length > 0) {
+          this.moveMode=false;this.attackMoveMode=false;this.abilityTargetMode=false;
           this.patrolMode = true;
           document.body.style.cursor = 'crosshair';
           this.game.eventBus.emit('notification', { message: 'Click to set patrol destination', color: '#ffcc00' });
@@ -530,6 +538,7 @@ export class CommandSystem {
       }
 
       case 'escape':
+        this.moveMode=false;
         // Cancel attack-move mode, ability targeting, patrol, or build placement
         this.attackMoveMode = false;
         this.abilityTargetMode = false;
@@ -556,6 +565,7 @@ export class CommandSystem {
         // Activate ability for selected units
         const abilityUnits = selected.filter(e => e.isUnit && e.ability);
         if (abilityUnits.length > 0) {
+          this.moveMode=false;this.attackMoveMode=false;this.patrolMode=false;
           const firstAbility = abilityUnits[0].ability;
           if (firstAbility.type === 'toggle') {
             // Toggle abilities (like siege_mode) execute immediately
@@ -577,7 +587,7 @@ export class CommandSystem {
             this.game.eventBus.emit('notification', { message: `Click to use ${firstAbility.name}`, color: '#ffcc00' });
           }
         }
-        event.preventDefault();
+        event.preventDefault?.();
         break;
       }
 
@@ -589,7 +599,7 @@ export class CommandSystem {
         break;
 
       case 'tab':
-        event.preventDefault();
+        event.preventDefault?.();
         this.cycleProductionBuildings();
         break;
 
@@ -625,7 +635,7 @@ export class CommandSystem {
 
       case ' ': {
         // Space: center camera on last combat alert position
-        event.preventDefault();
+        event.preventDefault?.();
         if (this.game._lastCombatAlertPos && this.game.cameraController) {
           this.game.cameraController.moveTo(
             this.game._lastCombatAlertPos.x,

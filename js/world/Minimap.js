@@ -1,3 +1,5 @@
+import {localTeam} from '../systems/InputPolicy.js';
+import {LockstepManager} from '../networking/LockstepManager.js';
 import * as THREE from 'three';
 import { GAME_CONFIG } from '../core/Constants.js';
 
@@ -28,13 +30,14 @@ export class Minimap {
     this._fogCtx = this._fogCanvas.getContext('2d');
     this._fogPixels = this._fogCtx.createImageData(this.mapSize, this.mapSize);
 
+    this._listeners=[];
     this.setupListeners();
     this.setupCombatPings();
   }
 
   setupListeners() {
     // Left-click on minimap to move camera
-    this.canvas.addEventListener('mousedown', (e) => {
+    this.listen(this.canvas,'mousedown', (e) => {
       if (e.ctrlKey && e.button === 0) {
         // Ctrl+click: start tactical drawing
         this._drawingActive = true;
@@ -51,7 +54,7 @@ export class Minimap {
       if (e.button === 2) this.handleRightClick(e);
     });
     // Drag on minimap to continuously update camera or draw
-    this.canvas.addEventListener('mousemove', (e) => {
+    this.listen(this.canvas,'mousemove', (e) => {
       if (this._drawingActive && this._currentDrawing) {
         const { x, z } = this.minimapToWorld(e);
         this._currentDrawing.push({ x, z });
@@ -60,7 +63,7 @@ export class Minimap {
       if (e.buttons === 1) this.handleClick(e);
     });
     // End drawing on mouseup
-    this.canvas.addEventListener('mouseup', (e) => {
+    this.listen(this.canvas,'mouseup', (e) => {
       if (this._drawingActive && this._currentDrawing && this._currentDrawing.length > 1) {
         if (!this._tacticalDrawings) this._tacticalDrawings = [];
         this._tacticalDrawings.push({
@@ -77,7 +80,7 @@ export class Minimap {
       this._currentDrawing = null;
     });
     // Prevent browser context menu on minimap
-    this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    this.listen(this.canvas,'contextmenu', (e) => e.preventDefault());
   }
 
   setupCombatPings() {
@@ -96,7 +99,10 @@ export class Minimap {
     this.game.eventBus.on('combat:kill', this._onCombatKill);
   }
 
+  listen(target,type,handler){target.addEventListener(type,handler);this._listeners.push(()=>target.removeEventListener(type,handler));}
+
   dispose() {
+    for(const remove of this._listeners)remove();this._listeners=[];
     if (this._onCombatKill) {
       this.game.eventBus.off('combat:kill', this._onCombatKill);
       this._onCombatKill = null;
@@ -121,17 +127,20 @@ export class Minimap {
   }
 
   handleRightClick(e) {
+    if(this.game.state!=='PLAYING'||this.game.mode==='SPECTATE')return;
     const selected = this.game.selectionManager
       ? this.game.selectionManager.getSelected()
       : [];
-    const units = selected.filter(ent => ent.isUnit && ent.alive);
+    const units = selected.filter(ent => ent.isUnit && ent.alive&&ent.team===localTeam(this.game));
     if (units.length === 0) return;
 
     const { x, z } = this.minimapToWorld(e);
     const worldPos = new THREE.Vector3(x, 0, z);
 
     if (this.game.commandSystem) {
-      this.game.commandSystem.moveUnits(units, worldPos);
+      if(this.game.isMultiplayer&&this.game.lockstepManager?.enabled){
+        this.game.lockstepManager.queueCommand(LockstepManager.moveCommand(units.map(u=>u.id),worldPos));
+      }else this.game.commandSystem.moveUnits(units, worldPos);
       if (this.game.soundManager) {
         this.game.soundManager.play('move', { unitType: units[0].type });
       }

@@ -14,6 +14,7 @@
     "test:interface": "node scripts/verify-interface.mjs",
     "test:roster": "node scripts/verify-roster.mjs",
     "test:camera": "node scripts/verify-camera.mjs",
+    "test:controls": "node scripts/verify-controls.mjs",
     "test:layouts": "node scripts/verify-layouts.mjs",
     "test:environment": "node scripts/verify-environment.mjs",
     "test:performance": "node scripts/verify-performance.mjs",

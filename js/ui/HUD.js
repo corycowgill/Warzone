@@ -1,3 +1,4 @@
+import {isEditing,localTeam} from '../systems/InputPolicy.js';
 import { UNIT_STATS, BUILDING_STATS, GAME_CONFIG, RESEARCH_UPGRADES, TECH_BRANCHES, FACTION_UNITS, VICTORY_CONDITIONS } from '../core/Constants.js';
 import { BuildPanel } from './BuildPanel.js';
 import { CommandCard } from './CommandCard.js';
@@ -181,16 +182,14 @@ export class HUD {
 
     // Command panel buttons
     document.getElementById('cmd-move')?.addEventListener('click', () => {
-      this.showNotification('Right-click to move selected units', '#ffcc00');
+      this.game.commandSystem.handleKeyPress({key:'m'});
     });
     document.getElementById('cmd-attack')?.addEventListener('click', () => {
-      this.game.commandSystem.attackMoveMode = true;
-      document.body.style.cursor = 'crosshair';
+      this.game.commandSystem.handleKeyPress({key:'a'});
       this.showNotification('Click on an enemy or ground to attack-move', '#ffcc00');
     });
     document.getElementById('cmd-stop')?.addEventListener('click', () => {
-      const selected = this.game.selectionManager?.getSelected() || [];
-      selected.forEach(u => { if (u.isUnit && u.stop) u.stop(); });
+      this.game.commandSystem.handleKeyPress({key:'s'});
     });
     document.getElementById('cmd-build')?.addEventListener('click', () => {
       this.toggleBuildMenu();
@@ -199,6 +198,7 @@ export class HUD {
     // Handle build placement click
     const canvas = this.game.sceneManager.renderer.domElement;
     canvas.addEventListener('click', (e) => {
+      if(this.game.state!=='PLAYING'||this.game.mode==='SPECTATE'||this.game.inputManager?.lastGestureWasDrag)return;
       if (this.buildPanel._superweaponTargetMode) {
         this.buildPanel.handleSuperweaponTarget(e);
         return;
@@ -219,6 +219,8 @@ export class HUD {
 
     // Keyboard dispatch
     window.addEventListener('keydown', (e) => {
+      if(isEditing(e)||e.repeat||this.game.mode==='SPECTATE')return;
+      if((e.ctrlKey||e.metaKey||e.altKey)&&!['a','z'].includes(e.key.toLowerCase()))return;
       if (e.key === 'Escape') {
         this.closeBuildMenu();
         this.cancelBuildPlacement();
@@ -244,7 +246,7 @@ export class HUD {
       // Cycle 15: Ctrl+A selects all military units
       if (e.key === 'a' && (e.ctrlKey || e.metaKey) && this.game.state === 'PLAYING') {
         e.preventDefault();
-        const ownTeam = this.game.mode === '2P' ? this.game.activeTeam : 'player';
+        const ownTeam = localTeam(this.game);
         const allUnits = this.game.getUnits(ownTeam);
         if (allUnits.length > 0 && this.game.selectionManager) {
           this.game.selectionManager.selectEntities(allUnits);
@@ -260,7 +262,7 @@ export class HUD {
         const units = selected.filter(e => e.isUnit);
         if (units.length > 0) {
           const type = units[0].type;
-          const ownTeam = this.game.mode === '2P' ? this.game.activeTeam : 'player';
+          const ownTeam = localTeam(this.game);
           const allOfType = this.game.getUnits(ownTeam).filter(u => u.type === type);
           if (allOfType.length > 0 && this.game.selectionManager) {
             this.game.selectionManager.selectEntities(allOfType);

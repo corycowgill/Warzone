@@ -50,13 +50,14 @@ export class CommandCard {
     const game = this.game;
 
     // Base commands for all units
+    const dispatch=key=>game.commandSystem.handleKeyPress({key});
     const buttons = [
-      { icon: '\u279C', key: 'M', label: 'Move', action: () => { this.hud.showNotification('Right-click to move', '#ffcc00'); } },
-      { icon: '\u2694', key: 'A', label: 'Attack', action: () => { game.commandSystem.attackMoveMode = true; document.body.style.cursor = 'crosshair'; } },
-      { icon: '\u25A0', key: 'S', label: 'Stop', action: () => { game.commandSystem.stopUnits(units); } },
-      { icon: '\u26CA', key: 'D', label: 'Hold', action: () => { game.commandSystem.holdUnits(units); } },
-      { icon: '\u21BB', key: 'P', label: 'Patrol', action: () => { game.commandSystem.patrolMode = true; document.body.style.cursor = 'crosshair'; this.hud.showNotification('Click to set patrol destination', '#ffcc00'); } },
-      { icon: '\u2699', key: 'V', label: 'Stance', action: () => { const s = units[0].cycleStance(); units.slice(1).forEach(u => u.stance = s); } },
+      {key:'M',label:'Move',action:()=>dispatch('m')},
+      {key:'A',label:'Attack',action:()=>dispatch('a')},
+      {key:'S',label:'Stop',action:()=>dispatch('s')},
+      {key:'D',label:'Hold',action:()=>dispatch('d')},
+      {key:'P',label:'Patrol',action:()=>dispatch('p')},
+      {key:'V',label:'Stance',action:()=>dispatch('v')},
     ];
 
     // Type-specific commands
@@ -78,6 +79,7 @@ export class CommandCard {
           buttons.push({ icon: '\u2605', key: `${i+1}`, label: ab.name.substring(0, 6), action: () => {
             if (cmd.isAbilityReady(idx)) {
               if (ab.range) {
+                game.commandSystem.moveMode=false;game.commandSystem.attackMoveMode=false;game.commandSystem.patrolMode=false;
                 game.commandSystem._commanderAbilityUnit = cmd;
                 game.commandSystem._commanderAbilityIndex = idx;
                 game.commandSystem.abilityTargetMode = true;
@@ -192,41 +194,13 @@ export class CommandCard {
   }
 
   _triggerAbility(units) {
-    const abilityUnits = units.filter(u => u.ability && u.canUseAbility());
-    if (abilityUnits.length === 0) return;
-    const first = abilityUnits[0];
-    if (first.ability.type === 'toggle' || first.ability.id === 'siege_mode') {
-      for (const u of abilityUnits) {
-        this.game.combatSystem.executeAbility(u);
-      }
-    } else {
-      this.game.commandSystem.abilityTargetMode = true;
-      document.body.style.cursor = 'crosshair';
-      this.hud.showNotification(`Click to use ${first.ability.name}`, '#ffcc00');
-    }
+    this.game.commandSystem.handleKeyPress({key:'g'});
   }
 
   _triggerRetreat(units) {
-    const ownTeam = this.game.mode === '2P' ? this.game.activeTeam : 'player';
-    const friendlyBuildings = this.game.getBuildings(ownTeam);
-    if (friendlyBuildings.length === 0) {
-      this.hud.showNotification('No buildings to retreat to!', '#ff4444');
-      return;
-    }
-    for (const unit of units) {
-      let nearestBuilding = null;
-      let nearestDist = Infinity;
-      for (const b of friendlyBuildings) {
-        const dist = unit.distanceTo(b);
-        if (dist < nearestDist) { nearestDist = dist; nearestBuilding = b; }
-      }
-      if (nearestBuilding) unit.startRetreat(nearestBuilding.getPosition());
-    }
-    this.hud.showNotification('Retreating!', '#ffffff');
-    if (this.game.soundManager) this.game.soundManager.play('move');
+    this.game.commandSystem.handleKeyPress({key:'r'});
   }
 
-  // GD-128: Supply Exchange conversion
   _doExchange(building, direction) {
     if (this._exchangeCooldown > 0) {
       this.hud.showNotification(`Exchange on cooldown (${Math.ceil(this._exchangeCooldown)}s)`, '#ff4444');

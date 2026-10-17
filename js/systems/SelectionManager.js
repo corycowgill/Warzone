@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { UNIT_PICK_LAYER } from '../rendering/UnitModelBatcher.js';
+import {isEditing,localTeam,screenToNDC} from './InputPolicy.js';
 import { Vec3Pool } from '../core/Vec3Pool.js';
 
 export class SelectionManager {
@@ -21,13 +22,17 @@ export class SelectionManager {
     this._lastClickedEntity = null;
     this._doubleClickThreshold = 350; // ms
 
+    this._listeners=[];
     this.createSelectionBoxElement();
     this.setupControlGroupKeys();
   }
 
+  listen(target,type,handler){target.addEventListener(type,handler);this._listeners.push(()=>target.removeEventListener(type,handler));}
+  dispose(){for(const remove of this._listeners)remove();this._listeners=[];this.selectionBoxEl?.remove();}
+
   setupControlGroupKeys() {
-    window.addEventListener('keydown', (e) => {
-      if (this.game.state !== 'PLAYING') return;
+    this.listen(window,'keydown', (e) => {
+      if (this.game.state !== 'PLAYING'||this.game.mode==='SPECTATE'||isEditing(e)||e.repeat) return;
       const key = e.key;
       // Only handle digit keys 0-9
       if (key >= '0' && key <= '9') {
@@ -60,7 +65,7 @@ export class SelectionManager {
 
   saveControlGroup(index) {
     // Save current selection (store entity references)
-    this.controlGroups[index] = [...this.selected];
+    this.controlGroups[index] = this.selected.filter(e=>e.alive&&e.team===localTeam(this.game));
     if (this.game.uiManager && this.game.uiManager.hud) {
       this.game.uiManager.hud.showNotification(`Group ${index} saved (${this.selected.length} units)`, '#00ccff');
     }
@@ -73,7 +78,7 @@ export class SelectionManager {
     const existing = this.controlGroups[index];
     let added = 0;
     for (const entity of this.selected) {
-      if (!existing.includes(entity)) {
+      if (entity.alive&&entity.team===localTeam(this.game)&&!existing.includes(entity)) {
         existing.push(entity);
         added++;
       }
@@ -87,7 +92,7 @@ export class SelectionManager {
   recallControlGroup(index) {
     // Filter out dead entities
     const before = this.controlGroups[index].length;
-    this.controlGroups[index] = this.controlGroups[index].filter(e => e.alive);
+    this.controlGroups[index] = this.controlGroups[index].filter(e => e.alive&&e.team===localTeam(this.game));
     const group = this.controlGroups[index];
     if (before !== group.length) {
       this.game.eventBus.emit('controlgroups:changed', { groups: this.controlGroups });
@@ -97,7 +102,7 @@ export class SelectionManager {
   }
 
   centerCameraOnGroup(index) {
-    this.controlGroups[index] = this.controlGroups[index].filter(e => e.alive);
+    this.controlGroups[index] = this.controlGroups[index].filter(e => e.alive&&e.team===localTeam(this.game));
     const group = this.controlGroups[index];
     if (group.length === 0) return;
 
@@ -128,7 +133,7 @@ export class SelectionManager {
 
     // Update box position during drag via mousemove
     const canvas = this.game.sceneManager.renderer.domElement;
-    canvas.addEventListener('mousemove', (e) => {
+    this.listen(canvas,'mousemove', (e) => {
       if (this.game.inputManager.isDragging && this.game.inputManager.dragStart) {
         this.updateSelectionBox(e);
       }
@@ -155,14 +160,12 @@ export class SelectionManager {
     if (this.game.state !== 'PLAYING') return;
 
     const camera = this.game.sceneManager.camera;
-    const mouse = new THREE.Vector2(
-      (event.clientX / window.innerWidth) * 2 - 1,
-      -(event.clientY / window.innerHeight) * 2 + 1
-    );
+    const ndc=screenToNDC(this.game.sceneManager.renderer.domElement,event.clientX,event.clientY);
+    const mouse=new THREE.Vector2(ndc.x,ndc.y);
     this.raycaster.setFromCamera(mouse, camera);
 
     // Determine which team the active player controls
-    const ownTeam = this.game.mode === '2P' ? this.game.activeTeam : 'player';
+    const ownTeam = localTeam(this.game);
 
     // Gather all entity meshes for raycasting (skip fog-hidden enemies)
     const entityMeshes = [];
@@ -262,7 +265,7 @@ export class SelectionManager {
     const dragStart = this.game.inputManager.dragStart;
     if (!dragStart) return;
 
-    const ownTeam = this.game.mode === '2P' ? this.game.activeTeam : 'player';
+    const ownTeam = localTeam(this.game);
     const camera = this.game.sceneManager.camera;
 
     // Compute screen-space bounding box
@@ -288,10 +291,8 @@ export class SelectionManager {
       ];
       const _ray = this.raycaster;
       for (const [sx, sy] of corners) {
-        const ndc = new THREE.Vector2(
-          (sx / window.innerWidth) * 2 - 1,
-          -(sy / window.innerHeight) * 2 + 1
-        );
+        const point=screenToNDC(this.game.sceneManager.renderer.domElement,sx,sy);
+        const ndc = new THREE.Vector2(point.x,point.y);
         _ray.setFromCamera(ndc, camera);
         // Intersect with y=0 ground plane
         const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
@@ -324,6 +325,7 @@ export class SelectionManager {
     const selectedUnits = [];
 
     for (const unit of units) {
+      if(!unit.alive||unit.mesh?.visible===false)continue;
       const screenPos = this.worldToScreen(unit.getPosition(), camera);
       if (screenPos &&
           screenPos.x >= x1 && screenPos.x <= x2 &&
@@ -333,7 +335,7 @@ export class SelectionManager {
     }
 
     if (selectedUnits.length > 0) {
-      this.selectEntities(selectedUnits);
+      this.selectEntities(event.shiftKey?[...new Set([...this.selected,...selectedUnits])]:selectedUnits);
     }
   }
 
@@ -348,10 +350,8 @@ export class SelectionManager {
       return null;
     }
 
-    const result = {
-      x: (vector.x * 0.5 + 0.5) * window.innerWidth,
-      y: (-vector.y * 0.5 + 0.5) * window.innerHeight
-    };
+    const rect=this.game.sceneManager.renderer.domElement.getBoundingClientRect();
+    const result = {x:rect.left+(vector.x*.5+.5)*rect.width,y:rect.top+(-vector.y*.5+.5)*rect.height};
     Vec3Pool.release(vector);
     return result;
   }
@@ -372,7 +372,7 @@ export class SelectionManager {
       }
     }
 
-    this.selected = [...entities];
+    this.selected = [...new Set(entities.filter(e=>e.alive&&e.team===localTeam(this.game)))];
     for (const entity of this.selected) {
       entity.setSelected(true);
     }
@@ -381,7 +381,7 @@ export class SelectionManager {
   }
 
   selectAllSameTypeOnScreen(entity, camera, addToSelection) {
-    const ownTeam = this.game.mode === '2P' ? this.game.activeTeam : 'player';
+    const ownTeam = localTeam(this.game);
     const units = this.game.getUnits(ownTeam).filter(u => u.alive && u.type === entity.type);
     const onScreen = units.filter(u => {
       const sp = this.worldToScreen(u.getPosition(), camera);
@@ -406,14 +406,14 @@ export class SelectionManager {
 
   getSelected() {
     // Filter out dead entities
-    this.selected = this.selected.filter(e => e.alive);
+    this.selected = this.selected.filter(e => e.alive&&e.team===localTeam(this.game));
     return this.selected;
   }
 
   // Remove dead entities from selection
   cleanup() {
     const before = this.selected.length;
-    this.selected = this.selected.filter(e => e.alive);
+    this.selected = this.selected.filter(e => e.alive&&e.team===localTeam(this.game));
     if (this.selected.length !== before) {
       this.game.eventBus.emit('selection:changed', { entities: [...this.selected] });
     }

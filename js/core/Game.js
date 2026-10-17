@@ -1,3 +1,4 @@
+import {isEditing} from '../systems/InputPolicy.js';
 import { RenderQuality } from '../rendering/RenderQuality.js';
 import { FrameMetrics } from './FrameMetrics.js';
 import { loadGroundTextures } from '../world/TerrainMaterials.js';
@@ -163,6 +164,7 @@ export class Game {
 
     // Global key handlers (pause, quick save/load)
     window.addEventListener('keydown', (e) => {
+      if(isEditing(e)||e.repeat)return;
       if (e.key === 'F3') { e.preventDefault(); this.performanceMonitor.toggle(); }
       if ((e.key === 'Pause' || (e.key === 'p' && e.ctrlKey)) && (this.state === 'PLAYING' || this.state === 'PAUSED')) {
         e.preventDefault();
@@ -284,7 +286,7 @@ export class Game {
       this.terrain.setDetail(settingsManager.settings.graphics.terrainDetail);
 
       const mapSize = GAME_CONFIG.mapSize * GAME_CONFIG.worldScale;
-      this.cameraController = new CameraController(this.sceneManager.camera, this.sceneManager.renderer.domElement);
+      this.cameraController = new CameraController(this.sceneManager.camera, this.sceneManager.renderer.domElement,()=>this.state==='PLAYING');
       // Position camera over local player's base
       if (this.isMultiplayer && this.playerSlot === 1) {
         this.cameraController.moveTo(mapSize - 60, mapSize / 2);
@@ -1737,6 +1739,8 @@ export class Game {
     if (resDisplay) resDisplay.remove();
 
     this.cameraController?.dispose();
+    this.inputManager?.dispose();
+    this.selectionManager?.dispose();
 
     // Clean up minimap event listeners
     if (this.minimap && this.minimap.dispose) {
