@@ -1,3 +1,4 @@
+import {planFormation} from './FormationPlanner.js';
 import {isEditing,screenToNDC} from './InputPolicy.js';
 import * as THREE from 'three';
 import { UNIT_PICK_LAYER } from '../rendering/UnitModelBatcher.js';
@@ -345,25 +346,13 @@ export class CommandSystem {
     if (!units.length) return;
     const speeds = new Map();
     for (const unit of units) speeds.set(unit.domain, Math.min(speeds.get(unit.domain) ?? Infinity, unit.speed));
-    const offsets = this.getFormationOffsets(units.length, this.formationType);
-    const heading = this.getFormationHeading(units, position);
-    const cosH = Math.cos(heading);
-    const sinH = Math.sin(heading);
-
-    for (let i = 0; i < units.length; i++) {
-      const unit = units[i];
-      const ox = offsets[i].x;
-      const oz = offsets[i].z;
-      const rx = ox * cosH - oz * sinH;
-      const rz = ox * sinH + oz * cosH;
-
-      const targetPos = new THREE.Vector3(
-        position.x + rx,
-        0,
-        position.z + rz
-      );
-
-      issueUnitMove(unit, targetPos, this.game, {attackMove, formationSpeed: speeds.get(unit.domain)});
+    for(const domain of new Set(units.map(u=>u.domain))){
+      const group=units.filter(u=>u.domain===domain);
+      const offsets=this.getFormationOffsets(group.length,this.formationType);
+      const heading=this.getFormationHeading(group,position);
+      for(const {unit,target} of planFormation(group,position,offsets,heading,this.game)){
+        issueUnitMove(unit,target,this.game,{attackMove,formationSpeed:speeds.get(domain)});
+      }
     }
 
     this.game.eventBus.emit('command:move', { units, position });

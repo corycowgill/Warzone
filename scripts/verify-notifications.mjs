@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {NotificationFeed} from '../js/ui/NotificationFeed.js';
+const timers=new Map();let next=0;
+globalThis.setTimeout=(fn,ms)=>{const id=++next;timers.set(id,{fn,ms});return id;};globalThis.clearTimeout=id=>timers.delete(id);
+const area={children:[],setAttribute(){},appendChild(node){this.children.push(node);node.parent=this;}};
+globalThis.document={createElement:()=>({style:{},remove(){if(this.parent)this.parent.children=this.parent.children.filter(n=>n!==this);}})};
+const feed=new NotificationFeed(area);
+for(let i=0;i<30;i++)feed.push('Infantry produced!');assert.equal(area.children.length,1);assert.equal(area.children[0].textContent,'Infantry produced! x30');assert.equal(timers.size,1);
+feed.push('Headquarters under attack!');feed.push('Tank produced!');feed.push('Engineer produced!');assert.equal(area.children.length,3);assert.ok(feed.entries.some(e=>e.urgent));
+assert.ok(!feed.entries.some(e=>e.message==='Infantry produced!'),'old routine messages evicted first');
+for(const timer of [...timers.values()])timer.fn();assert.equal(area.children.length,0);assert.equal(timers.size,0);
+for(let i=0;i<3;i++)feed.push(`Warning ${i}`);feed.push('Infantry produced!');assert.equal(area.children.length,3);assert.ok(feed.entries.every(e=>e.urgent),'production cannot replace warnings');feed.clear();assert.equal(timers.size,0);
+console.log('PASS compact alert feed: duplicate coalescing, three-notice cap, combat priority, expiry and timer cleanup.');

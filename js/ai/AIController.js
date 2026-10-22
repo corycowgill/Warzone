@@ -1,3 +1,4 @@
+import {AttackWaves,readyForWave} from './AttackWaves.js';
 import * as THREE from 'three';
 import { issueUnitMove } from '../systems/MovementOrders.js';
 import { UNIT_STATS, BUILDING_STATS, GAME_CONFIG, AI_DIFFICULTY, DAMAGE_MODIFIERS, RESEARCH_UPGRADES, BUILDING_UPGRADES, BUILDING_LIMITS, TECH_BRANCHES } from '../core/Constants.js';
@@ -72,6 +73,8 @@ export class AIController {
     this.nextBuildSlot = 1;
     this.attackWaveCount = 0;
     this.gameTime = 0;
+    this.attackWaves=new AttackWaves(this);
+    this._enemyMemory=new Map();
 
     // Grace period: AI won't attack during this time (seconds)
     this.gracePeriod = difficulty === 'easy' ? 120 : difficulty === 'hard' ? 45 : 75;
@@ -186,6 +189,7 @@ export class AIController {
     this.microTimer += delta;
     if (this.microTimer >= this.microInterval) {
       this.microTimer = 0;
+      this.attackWaves.update();
       this.executeMicro();
     }
 
@@ -212,14 +216,13 @@ export class AIController {
   // =============================================
   updateStrategy() {
     const myUnits = this.game.getUnits(this.team);
-    const enemyUnits = this.game.getUnits(this.enemyTeam);
+    const enemyUnits = this.observedEnemies().filter(e=>e.isUnit);
     const mySP = this.game.teams[this.team].sp;
 
     // GD-086: Every 15 seconds, analyze visible player units by type
     this.lastKnownEnemyComposition = {};
-    for (const unit of enemyUnits) {
-      this.lastKnownEnemyComposition[unit.type] = (this.lastKnownEnemyComposition[unit.type] || 0) + 1;
-    }
+    for(const unit of enemyUnits)this._enemyMemory.set(unit.id,{type:unit.type,time:this.gameTime});
+    for(const [id,record] of this._enemyMemory){if(this.gameTime-record.time>45)this._enemyMemory.delete(id);else this.lastKnownEnemyComposition[record.type]=(this.lastKnownEnemyComposition[record.type]??0)+1;}
 
     // Adapt strategy based on game state (counter-building on normal+hard)
     if (this.config.countersPlayer || this.difficulty !== 'easy') {
@@ -364,7 +367,7 @@ export class AIController {
     // Early harassment for aggressive nations
     if (this.personality && this.personality.earlyHarass && this.gameTime > 60 && this.gameTime < this.gracePeriod) {
       const harassUnits = this.game.getUnits(this.team).filter(u =>
-        u.type === 'drone' && !u.attackTarget && !u.moveTarget
+        u.type === 'drone' && readyForWave(u,this.gameTime)
       );
       if (harassUnits.length >= 2) {
         const enemyBuildings = this.game.getBuildings(this.enemyTeam);
@@ -816,7 +819,7 @@ export class AIController {
     if (this.gameTime < this.gracePeriod) return;
 
     const myUnits = this.game.getUnits(this.team);
-    const idleUnits = myUnits.filter(u => !u.attackTarget && !u.moveTarget);
+    const idleUnits = myUnits.filter(u => readyForWave(u,this.gameTime));
 
     const threshold = this.config.attackThresholdMultiplier;
     let attackThreshold;
@@ -860,7 +863,7 @@ export class AIController {
     }
 
     // Smart targeting: production buildings > resource depots > HQ > anything
-    const enemyBuildings = this.game.getBuildings(this.enemyTeam);
+    const enemyBuildings = this.observedEnemies().filter(e=>e.isBuilding);
     const priorities = ['warfactory', 'airfield', 'barracks', 'resourcedepot', 'headquarters'];
 
     for (const pType of priorities) {
@@ -870,8 +873,9 @@ export class AIController {
       }
     }
 
-    // Fall back to any enemy entity
-    const enemies = this.game.getEntitiesByTeam(this.enemyTeam);
+    // Known HQ location remains a strategic objective even before scouting.
+    const hq=this.game.getHQ(this.enemyTeam);if(hq)return hq.getPosition().clone();
+    const enemies = this.observedEnemies();
     if (enemies.length > 0) {
       return enemies[0].getPosition().clone();
     }
@@ -880,7 +884,7 @@ export class AIController {
   }
 
   findSecondaryTarget() {
-    const enemyBuildings = this.game.getBuildings(this.enemyTeam);
+    const enemyBuildings = this.observedEnemies().filter(e=>e.isBuilding);
     // Find a target different from the primary
     const depots = enemyBuildings.filter(b => b.type === 'resourcedepot' && b.alive);
     if (depots.length > 0) {
@@ -944,16 +948,20 @@ export class AIController {
   }
 
   sendUnitsToTarget(units, targetPos) {
-    for (const unit of units) {
-      const offset = new THREE.Vector3(
-        (this.game.rng.next() - 0.5) * 20,
-        0,
-        (this.game.rng.next() - 0.5) * 20
-      );
-      const attackPos = targetPos.clone().add(offset);
+    this.attackWaves.launch(units,targetPos);
+  }
 
-      issueUnitMove(unit, attackPos, this.game, {attackMove: true});
-    }
+  observedEnemies(){
+    if(this._observedAt===this.gameTime)return this._observed;
+    this._observedAt=this.gameTime;
+    const observers=this.game.getEntitiesByTeam(this.team).filter(e=>e.alive&&!e.isGarrisoned);
+    this._observed=this.game.getEntitiesByTeam(this.enemyTeam).filter(enemy=>enemy.alive&&observers.some(observer=>{
+      let vision=(observer.isUnit?(observer.vision??10):12)*(this.game.terrain?.worldScale??2);
+      vision*=this.game.sceneManager?.getVisionMultiplier?.(observer.type)??1;
+      vision*=this.game.weatherSystem?.getVisionMultiplier?.()??1;
+      return observer.getPosition().distanceToSquared(enemy.getPosition())<=vision*vision;
+    }));
+    return this._observed;
   }
 
   // =============================================
@@ -964,22 +972,24 @@ export class AIController {
 
     const myUnits = this.game.getUnits(this.team);
     // Prefer drones for scouting, fall back to infantry
-    let scout = myUnits.find(u => u.type === 'drone' && !u.attackTarget && !u.moveTarget);
+    let scout = myUnits.find(u => u.type === 'drone' && readyForWave(u,this.gameTime));
     if (!scout) {
-      scout = myUnits.find(u => u.type === 'infantry' && !u.attackTarget && !u.moveTarget);
+      scout = myUnits.find(u => u.type === 'infantry' && readyForWave(u,this.gameTime));
     }
     if (!scout) return;
 
     // Scout toward enemy side of map
     const mapSize = GAME_CONFIG.mapSize * GAME_CONFIG.worldScale;
+    const enemyBase=this.game.getHQ(this.enemyTeam)?.getPosition();
     const scoutTarget = new THREE.Vector3(
-      mapSize * 0.7 + this.game.rng.next() * mapSize * 0.2,
+      enemyBase?.x??mapSize*.5,
       0,
       mapSize * (0.2 + this.game.rng.next() * 0.6)
     );
 
     issueUnitMove(scout, scoutTarget, this.game);
 
+    scout._aiScoutUntil=this.gameTime+25;
     this.scoutSent = true;
     this._scoutResetTimer = 60; // Reset after 60 game seconds
   }
@@ -1000,6 +1010,11 @@ export class AIController {
     const myUnits = this.game.getUnits(this.team);
 
     for (const unit of myUnits) {
+      if(unit.isRetreating||(unit._aiRetreatUntil??0)>this.gameTime){
+        const hq=this.game.getHQ(this.team);
+        if(hq&&unit.distanceTo(hq)<30)unit.health=Math.min(unit.maxHealth,unit.health+1);
+        continue;
+      }
       // Use abilities
       if (unit.ability && unit.canUseAbility()) {
         this.tryUseAbility(unit);
@@ -1257,8 +1272,9 @@ export class AIController {
     if (retreatPos) {
       retreatPos.x += (this.game.rng.next() - 0.5) * 10;
       retreatPos.z += (this.game.rng.next() - 0.5) * 10;
-      unit.moveTo(retreatPos);
-      unit.attackTarget = null;
+      if(unit.isRetreating||(unit._aiRetreatUntil??0)>this.gameTime)return;
+      unit._aiRetreatUntil=this.gameTime+12;unit._aiMissionUntil=0;
+      unit.startRetreat(retreatPos);
     }
   }
 
@@ -1268,21 +1284,16 @@ export class AIController {
     const inCombat = myUnits.filter(u => u.attackTarget && u.attackTarget.alive);
     if (inCombat.length < 3) return; // too few to assess
 
-    // Calculate total remaining HP ratio of combat units
-    let totalHP = 0, totalMaxHP = 0;
-    for (const unit of inCombat) {
-      totalHP += unit.health;
-      totalMaxHP += unit.maxHealth;
-    }
-    const hpRatio = totalHP / totalMaxHP;
-
-    // If force has lost >40% HP, retreat all combat units
-    if (hpRatio < 0.6) {
-      for (const unit of inCombat) {
-        this.retreatUnit(unit);
-      }
-      // Reset attack cooldown to enforce full delay before re-attacking
-      this.lastAttackTime = 0;
+    // Local strength matters: a damaged winning army should not flee globally.
+    const enemies=this.observedEnemies().filter(e=>e.isUnit&&e.damage>0),checked=new Set();
+    const power=u=>(u.health/u.maxHealth)*Math.max(1,u.damage)*Math.sqrt(u.maxHealth);
+    for(const unit of inCombat){
+      if(checked.has(unit.id))continue;
+      const allies=inCombat.filter(u=>u.getPosition().distanceTo(unit.getPosition())<35);
+      for(const ally of allies)checked.add(ally.id);
+      const foes=enemies.filter(e=>e.getPosition().distanceTo(unit.getPosition())<35);
+      const ourPower=allies.reduce((v,u)=>v+power(u),0),theirPower=foes.reduce((v,u)=>v+power(u),0);
+      if(theirPower>ourPower*1.6){for(const ally of allies)this.retreatUnit(ally);this.lastAttackTime=0;}
     }
   }
 
@@ -1300,9 +1311,7 @@ export class AIController {
 
     // If less than 25% of enemy units are near their base, launch opportunistic raid
     if (enemyUnits.length > 3 && nearHQ.length < enemyUnits.length * 0.25) {
-      const myIdleUnits = this.game.getUnits(this.team).filter(
-        u => !u.attackTarget && !u.moveTarget
-      );
+      const myIdleUnits = this.game.getUnits(this.team).filter(u=>readyForWave(u,this.gameTime));
       if (myIdleUnits.length >= 3) {
         this.sendUnitsToTarget(myIdleUnits.slice(0, Math.min(5, myIdleUnits.length)), hqPos.clone());
       }
@@ -1529,7 +1538,7 @@ export class AIController {
           }
         }
         if (nearestBuilding) {
-          unit.startRetreat(nearestBuilding.getPosition());
+          this.retreatUnit(unit);
         }
       }
     }

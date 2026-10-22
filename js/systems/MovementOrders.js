@@ -1,6 +1,7 @@
 // One movement transaction per unit. Async results may only finish their own order.
-export function issueUnitMove(unit, destination, game, {attackMove = false, formationSpeed = null} = {}) {
+export function issueUnitMove(unit, destination, game, {attackMove = false, formationSpeed = null, recovery = false} = {}) {
   if (!unit.alive || unit._siegeMode || unit.isGarrisoned || unit.speed <= 0 || unit.empDisabledTimer > 0) return;
+  if(!recovery)unit._routeRecoveryAttempts=0;
   unit.moveTo(destination);
   unit.formationSpeed = formationSpeed;
   unit._attackMove = attackMove;
@@ -21,10 +22,12 @@ export function issueUnitMove(unit, destination, game, {attackMove = false, form
     unit._pendingMoveGoal = null;
     if (unit.attackTarget) return;
     if (path?.length) {
+      if(unit.isRetreating)unit.retreatTarget=path[path.length-1].clone();
       if (attackMove) unit._attackMoveDestination = path[path.length - 1].clone();
       const queued = unit.waypoints;
       unit.followPath([...path, ...queued]);
     } else {
+      unit.isRetreating=false;unit.retreatTarget=null;
       unit.waypoints = [];
       unit._attackMove = false;
       unit._attackMoveDestination = null;

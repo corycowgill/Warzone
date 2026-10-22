@@ -522,7 +522,7 @@ export class Terrain {
   }
 
   isWater(worldX, worldZ) {
-    return !this.isWalkable(worldX, worldZ);
+    return this.getHeightAt(worldX,worldZ)<-.5;
   }
 
   worldToGrid(worldX, worldZ) {

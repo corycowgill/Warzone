@@ -1,3 +1,4 @@
+import {NotificationFeed} from './NotificationFeed.js';
 import * as THREE from 'three';
 import { BUILDING_STATS, UNIT_STATS, TECH_TREE, TECH_BRANCHES, VETERANCY, UNIT_COUNTERS, NATION_ABILITIES, RESEARCH_UPGRADES, GAME_CONFIG } from '../core/Constants.js';
 
@@ -6,20 +7,11 @@ export class HUDNotifications {
     this.hud = hud;
     this.game = hud.game;
 
-    // Create notification area (top-center, below resource bar)
     this.notificationArea = document.createElement('div');
     this.notificationArea.id = 'hud-notifications';
-    this.notificationArea.style.cssText = `
-      position: fixed;
-      top: 44px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 300px;
-      z-index: 100;
-      pointer-events: none;
-    `;
     const hudEl = document.getElementById('hud');
     if (hudEl) hudEl.appendChild(this.notificationArea);
+    this.feed=new NotificationFeed(this.notificationArea);
 
     // Cycle 15: Hover Tooltip
     this._tooltipEl = document.getElementById('entity-tooltip');
@@ -41,36 +33,7 @@ export class HUDNotifications {
   // Notifications
   // ============================
   showNotification(message, color = '#ffffff') {
-    if (!this.notificationArea) return;
-
-    const notif = document.createElement('div');
-    notif.style.cssText = `
-      background: rgba(0, 0, 0, 0.8);
-      color: ${color};
-      padding: 8px 14px;
-      margin-bottom: 4px;
-      border-radius: 4px;
-      font-family: sans-serif;
-      font-size: 13px;
-      border-left: 3px solid ${color};
-      text-align: center;
-      opacity: 1;
-      transition: opacity 0.5s;
-      pointer-events: none;
-    `;
-    notif.textContent = message;
-    this.notificationArea.appendChild(notif);
-
-    setTimeout(() => {
-      notif.style.opacity = '0';
-      setTimeout(() => {
-        if (notif.parentElement) notif.parentElement.removeChild(notif);
-      }, 500);
-    }, 3000);
-
-    while (this.notificationArea.children.length > 5) {
-      this.notificationArea.removeChild(this.notificationArea.firstChild);
-    }
+    this.feed.push(message,color);
   }
 
   // ============================

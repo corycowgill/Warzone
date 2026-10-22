@@ -103,6 +103,7 @@ export class PathfindingSystem {
       gridSize: this.gridSize,
       worldScale: this.worldScale,
       walkableGrid: flat,
+      waterGrid: Uint8Array.from(flat,(_,i)=>terrain.heightData[Math.floor(i/this.gridSize)][i%this.gridSize]<-.5?1:0),
       wallBlockedCells: wallCells
     }, [flat.buffer]); // Transfer the buffer for zero-copy
 
@@ -172,14 +173,14 @@ export class PathfindingSystem {
         end.x = nearest.x;
         end.y = nearest.y;
       } else {
-        return [endWorld.clone()];
+        return null;
       }
     }
 
     const path = this.astar(start, end, domain);
 
     if (!path || path.length === 0) {
-      return [endWorld.clone()];
+      return null;
     }
 
     const worldPath = [];
@@ -450,6 +451,7 @@ export class PathfindingSystem {
         if (!this.isPassable(neighbor.x, neighbor.y, domain)) continue;
 
         const isDiagonal = neighbor.x !== current.x && neighbor.y !== current.y;
+        if(isDiagonal&&(!this.isPassable(neighbor.x,current.y,domain)||!this.isPassable(current.x,neighbor.y,domain)))continue;
         const moveCost = isDiagonal ? 1.414 : 1.0;
         const tentativeG = (gScore.get(currentKey) ?? Infinity) + moveCost;
 
@@ -531,7 +533,7 @@ export class PathfindingSystem {
 
       if (len1 > 0 && len2 > 0) {
         const dot = (dx1 / len1) * (dx2 / len2) + (dz1 / len1) * (dz2 / len2);
-        if (dot < 0.98) {
+        if (dot < .999999) {
           simplified.push(curr);
         }
       }

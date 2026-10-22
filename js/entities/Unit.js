@@ -1,3 +1,4 @@
+import {steerStep,canTraverse,separationVector} from '../systems/NavigationSteering.js';
 import * as THREE from 'three';
 import { Entity } from './Entity.js';
 import { issueUnitMove } from '../systems/MovementOrders.js';
@@ -347,6 +348,7 @@ export class Unit extends Entity {
     this.isRetreating = false;
     this.retreatTarget = null;
     this.formationSpeed = null;
+    this._blockedMoveTime=0;
     this.moveTarget = target.clone();
     if (this.domain !== 'air') {
       this.moveTarget.y = 0;
@@ -430,19 +432,10 @@ export class Unit extends Entity {
   // GD-125: Start tactical retreat to nearest friendly building
   startRetreat(targetPos) {
     if (!targetPos) return;
-    this._queuedMoveOrders = [];
-    this._orderRevision++;
-    this._pathPending = false;
-    this._holdPosition = false;
-    this._attackMoveDestination = null;
-    this.isRetreating = true;
-    this.retreatTarget = targetPos.clone();
-    this.attackTarget = null;
-    this.moveTarget = null;
-    this.waypoints = [];
-    this._attackMove = false;
-    this._isPatrolling = false;
-    this._retreatFlashTimer = 0;
+    if(this.isRetreating)return;
+    issueUnitMove(this,targetPos,this.game);
+    if(!this._pathPending&&!this.moveTarget)return;
+    this.isRetreating=true;this.retreatTarget=(this.waypoints.at(-1)??this.moveTarget??targetPos).clone();this._retreatFlashTimer=0;
   }
 
   updateStatusBadge() {
@@ -640,6 +633,7 @@ export class Unit extends Entity {
         // Reached friendly building - end retreat
         this.isRetreating = false;
         this.retreatTarget = null;
+        this.waypoints=[];
         this.moveTarget = null;
         this.isMoving = false;
         this._retreatFlashTimer = 0;
@@ -650,21 +644,6 @@ export class Unit extends Entity {
           }
         });
       } else {
-        // Move toward retreat target at +40% speed
-        let effSpeed = this.speed * 1.4;
-        if (this.domain === 'land' && this.game && this.game.weatherSystem) {
-          effSpeed *= this.game.weatherSystem.getSpeedMultiplier();
-        }
-        const moveAmount = effSpeed * deltaTime * GAME_CONFIG.unitSpeedMultiplier;
-        const ratio = Math.min(moveAmount / dist, 1);
-        pos.x += dx * ratio;
-        pos.z += dz * ratio;
-        this.mesh.rotation.y = Math.atan2(dx, dz) + this.modelRotationOffset;
-        this.isMoving = true;
-        if (this.domain === 'land' && this.game && this.game.terrain) {
-          pos.y = this.game.terrain.getHeightAt(pos.x, pos.z);
-        }
-
         // White flash effect — use cached mesh children to avoid traverse() every frame
         this._retreatFlashTimer += deltaTime;
         const flash = Math.sin(this._retreatFlashTimer * 6) > 0.3;
@@ -682,9 +661,7 @@ export class Unit extends Entity {
         }
       }
 
-      // Update status badge and procedural animation, then return (skip normal movement)
-      this.updateStatusBadge();
-      return;
+      // Routed retreat uses normal waypoint movement below, skipping combat acquisition.
     }
 
     // Update status badge
@@ -725,8 +702,10 @@ export class Unit extends Entity {
       let dz = this.moveTarget.z - pos.z;
       const dist = Math.sqrt(dx * dx + dz * dz);
 
-      if (dist > 1) {
+      if (dist > .2) {
         let effSpeed = this.formationSpeed !== null ? Math.min(this.formationSpeed, this.speed) : this.speed;
+
+        if(this.isRetreating)effSpeed*=1.4;
 
         // GD-112: Weather speed effect
         if (this.domain === 'land' && this.game && this.game.weatherSystem) {
@@ -761,40 +740,29 @@ export class Unit extends Entity {
           const nearby = this.game.spatialGrid.query(pos.x, pos.z, baseSepR + myRadius);
           for (let ni = 0, nlen = nearby.length; ni < nlen; ni++) {
             const other = nearby[ni];
-            if (other === this || !other.isUnit || !other.alive) continue;
+            if (other === this || !other.isUnit || !other.alive||other.isGarrisoned||other.domain!==this.domain) continue;
             // Separate from all units, not just same team (prevents cross-team stacking too)
-            const odx = pos.x - other.mesh.position.x;
-            const odz = pos.z - other.mesh.position.z;
-            const d2 = odx * odx + odz * odz;
-            const otherRadius = (FORMATION_CONFIG.unitRadius && FORMATION_CONFIG.unitRadius[other.type]) || 1.5;
-            const combinedR = myRadius + otherRadius;
-            if (d2 > 0 && d2 < combinedR * combinedR) {
-              const d = Math.sqrt(d2);
-              // Quadratic falloff — much stronger when very close
-              const overlap = 1 - (d / combinedR);
-              const strength = overlap * overlap;
-              sepX += (odx / d) * strength;
-              sepZ += (odz / d) * strength;
-            }
+            const otherRadius = FORMATION_CONFIG.unitRadius?.[other.type]??1.5;
+            const combinedR=myRadius+otherRadius;
+            const away=separationVector(this,other);
+            if(away.distance<combinedR){const overlap=1-away.distance/combinedR;sepX+=away.x*overlap*overlap;sepZ+=away.z*overlap*overlap;}
+
           }
         }
-        const sepForce = FORMATION_CONFIG.separationForce * deltaTime;
-        dx += sepX * sepForce;
-        dz += sepZ * sepForce;
-        const adjDist = Math.sqrt(dx * dx + dz * dz);
-
-        const ratio = Math.min(moveAmount / adjDist, 1);
-        const nextX = pos.x + dx * ratio;
-        const nextZ = pos.z + dz * ratio;
-
-        // Block land units from entering water
-        if (this.domain === 'land' && this.game && this.game.terrain && this.game.terrain.isWater(nextX, nextZ)) {
-          // Can't cross water — stop movement
-          this.moveTarget = null;
-          this.waypoints = [];
-          this.isMoving = false;
+        const step=steerStep(this,dx,dz,moveAmount,sepX,sepZ);
+        if(!step){
+          this.isMoving=false;this._blockedMoveTime=(this._blockedMoveTime??0)+deltaTime;
+          if(this._blockedMoveTime>.8){
+            const destination=(this.waypoints.at(-1)??this.moveTarget).clone();
+            const attackMove=this._attackMove,speed=this.formationSpeed,retreatGoal=this.retreatTarget?.clone();
+            this._routeRecoveryAttempts=(this._routeRecoveryAttempts??0)+1;
+            if(this._routeRecoveryAttempts<=2){issueUnitMove(this,destination,this.game,{attackMove,formationSpeed:speed,recovery:true});if(retreatGoal&&(this._pathPending||this.moveTarget)){this.isRetreating=true;this.retreatTarget=retreatGoal;}}
+            else{this.stop();this.game.eventBus?.emit('command:blocked',{unit:this,position:destination});}
+          }
           return;
         }
+        this._blockedMoveTime=0;
+        const nextX=step.x,nextZ=step.z;
 
         pos.x = nextX;
         pos.z = nextZ;
@@ -902,21 +870,16 @@ export class Unit extends Entity {
       let pushX = 0, pushZ = 0;
       for (let ni = 0, nlen = nearby.length; ni < nlen; ni++) {
         const other = nearby[ni];
-        if (other === this || !other.isUnit || !other.alive) continue;
+        if (other === this || !other.isUnit || !other.alive||other.isGarrisoned||other.domain!==this.domain) continue;
         const otherR = (FORMATION_CONFIG.unitRadius && FORMATION_CONFIG.unitRadius[other.type]) || 1.5;
         const combinedR = myR + otherR;
-        const odx = pos.x - other.mesh.position.x;
-        const odz = pos.z - other.mesh.position.z;
-        const d2 = odx * odx + odz * odz;
-        if (d2 > 0 && d2 < combinedR * combinedR) {
-          const d = Math.sqrt(d2);
-          const overlap = 1 - (d / combinedR);
-          pushX += (odx / d) * overlap * overlap;
-          pushZ += (odz / d) * overlap * overlap;
-        }
+        const away=separationVector(this,other);
+        if(away.distance<combinedR){const overlap=1-away.distance/combinedR;pushX+=away.x*overlap*overlap;pushZ+=away.z*overlap*overlap;}
+
       }
       if (pushX !== 0 || pushZ !== 0) {
         const idleForce = FORMATION_CONFIG.separationForce * (FORMATION_CONFIG.idleSeparationMultiplier || 2.5) * deltaTime;
+        if(!canTraverse(this,pos.x+pushX*idleForce,pos.z+pushZ*idleForce))return;
         pos.x += pushX * idleForce;
         pos.z += pushZ * idleForce;
         // Keep on terrain

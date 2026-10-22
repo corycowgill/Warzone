@@ -314,6 +314,7 @@ export class HUD {
   }
 
   hide() {
+    this.notifications.feed?.clear();
     this.visible = false;
     this.hudEl?.classList.add('hidden');
   }

@@ -82,7 +82,7 @@ export class AIWorkerBridge {
         id: u.id, type: u.type, health: u.health, maxHealth: u.maxHealth,
         domain: u.domain, x: pos.x, z: pos.z,
         inCombat: !!(u.attackTarget && u.attackTarget.alive),
-        isMoving: !!u.moveTarget
+        isMoving: !!(u.moveTarget||u._pathPending||u.isRetreating||(u._aiRetreatUntil??0)>this.ai.gameTime||(u._aiMissionUntil??0)>this.ai.gameTime||(u._aiScoutUntil??0)>this.ai.gameTime)
       };
     });
 
@@ -100,17 +100,18 @@ export class AIWorkerBridge {
       };
     });
 
-    const enemyUnits = game.getUnits(enemyTeam).map(u => {
+    const observed=this.ai.observedEnemies();
+    const enemyUnits = observed.filter(e=>e.isUnit).map(u => {
       const pos = u.getPosition();
       return {
         id: u.id, type: u.type, health: u.health, domain: u.domain,
         x: pos.x, z: pos.z,
         inCombat: !!(u.attackTarget && u.attackTarget.alive),
-        isMoving: !!u.moveTarget
+        isMoving: !!(u.moveTarget||u._pathPending||u.isRetreating||(u._aiRetreatUntil??0)>this.ai.gameTime||(u._aiMissionUntil??0)>this.ai.gameTime||(u._aiScoutUntil??0)>this.ai.gameTime)
       };
     });
 
-    const enemyBuildings = game.getBuildings(enemyTeam).filter(b => b.alive).map(b => {
+    const enemyBuildings = game.getBuildings(enemyTeam).filter(b => b.alive&&(b.type==='headquarters'||observed.includes(b))).map(b => {
       const pos = b.getPosition();
       return {
         id: b.id, type: b.type, health: b.health, x: pos.x, z: pos.z

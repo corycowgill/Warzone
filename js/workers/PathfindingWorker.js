@@ -15,6 +15,7 @@
 // Worker-local grid state
 let gridSize = 128;
 let worldScale = 2;
+let waterGrid = null;
 let walkableGrid = null;   // Flat Uint8Array, row-major [z * gridSize + x]
 let wallBlockedSet = null;  // Set of 'x,y' strings
 
@@ -30,6 +31,7 @@ self.onmessage = function(e) {
       worldScale = msg.worldScale;
       // walkableGrid arrives as a flat Uint8Array (transferred)
       walkableGrid = msg.walkableGrid;
+      waterGrid = msg.waterGrid??null;
       // wallBlockedCells arrives as an array of strings
       wallBlockedSet = new Set(msg.wallBlockedCells || []);
       break;
@@ -90,7 +92,7 @@ function computePath(req) {
       end.x = nearest.x;
       end.y = nearest.y;
     } else {
-      return [{ x: end.x, y: end.y }];
+      return null;
     }
   }
 
@@ -111,7 +113,7 @@ function isPassable(gx, gy, domain) {
     // Naval: passable where land is NOT walkable (i.e., water)
     // walkableGrid is flat: index = gy * gridSize + gx
     const idx = gy * gridSize + gx;
-    return walkableGrid[idx] === 0;
+    return waterGrid?waterGrid[idx]===1:walkableGrid[idx]===0;
   }
 
   // Land units
@@ -195,6 +197,7 @@ function astar(start, end, domain) {
       if (!isPassable(nx, ny, domain)) continue;
 
       const isDiagonal = dir.x !== 0 && dir.y !== 0;
+      if(isDiagonal&&(!isPassable(nx,current.y,domain)||!isPassable(current.x,ny,domain)))continue;
       const moveCost = isDiagonal ? 1.414 : 1.0;
       const tentativeG = (gScore.get(currentKey) ?? Infinity) + moveCost;
 
