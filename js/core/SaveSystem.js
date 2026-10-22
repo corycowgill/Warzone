@@ -65,6 +65,8 @@ export class SaveSystem {
         mode: game.mode,
         gameMode: game.gameMode || 'annihilation',
         gameElapsed: game.gameElapsed,
+        combatTick:game.combatSystem?._combatTick??0,
+        rngState:game.rng?.state,
         aiDifficulty: game.aiDifficulty || 'normal',
         playerNation: game.teams.player.nation,
         enemyNation: game.teams.enemy.nation,
@@ -213,6 +215,7 @@ export class SaveSystem {
           productionQueue: [...(e.productionQueue || [])],
           currentProduction: e.currentProduction || null,
           productionTimer: e.productionTimer || 0,
+          spawnAngleIndex:e._spawnAngleIndex??0,
           _productionTotalTime: e._productionTotalTime || 0,
           rallyPoint: e.rallyPoint ? this._vec3(e.rallyPoint) : null,
           _constructing: e._constructing || false,
@@ -346,6 +349,8 @@ export class SaveSystem {
 
     // --- Restore game timer ---
     game.gameElapsed = saveData.meta.gameElapsed;
+    if(game.combatSystem)game.combatSystem._combatTick=saveData.meta.combatTick??0;
+    if(game.rng&&saveData.meta.rngState!==undefined)game.rng.state=saveData.meta.rngState;
 
     // --- Restore commander state ---
     if (saveData.commanderState) {
@@ -394,6 +399,7 @@ export class SaveSystem {
         entity.productionQueue = [...(b.productionQueue || [])];
         entity.currentProduction = b.currentProduction || null;
         entity.productionTimer = b.productionTimer || 0;
+        entity._spawnAngleIndex=b.spawnAngleIndex??0;
         entity._productionTotalTime = b._productionTotalTime || 0;
         entity._constructing = b._constructing || false;
         entity._constructionTime = b._constructionTime || 0;

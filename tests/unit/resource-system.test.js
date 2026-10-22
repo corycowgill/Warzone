@@ -11,6 +11,7 @@ function createGameForResources(overrides = {}) {
   const game = {
     eventBus,
     entities: [],
+    stats: {player:{resourcesGathered:0},enemy:{resourcesGathered:0}},
     teams: {
       player: { sp: GAME_CONFIG.startingSP, mu: GAME_CONFIG.startingMU, nation: 'america' },
       enemy: { sp: GAME_CONFIG.startingSP, mu: GAME_CONFIG.startingMU, nation: 'germany' },

@@ -166,12 +166,12 @@ function runTactical(team, state, commands) {
     if (nextType !== 'resourcedepot' && nextType !== 'turret' && nextType !== 'aaturret' && nextType !== 'wall') {
       const existing = myBuildings.some(b => b.type === nextType);
       if (existing) {
-        commands.push({ cmd: 'advanceBuildOrder' });
+        commands.push({ cmd: 'advanceBuildOrder', orderIndex:buildOrderIndex });
       } else {
-        commands.push({ cmd: 'build', buildingType: nextType });
+        commands.push({ cmd: 'build', buildingType: nextType, orderIndex:buildOrderIndex });
       }
     } else {
-      commands.push({ cmd: 'build', buildingType: nextType });
+      commands.push({ cmd: 'build', buildingType: nextType, orderIndex:buildOrderIndex });
     }
   } else {
     // Build order complete - add resource depots
@@ -198,6 +198,9 @@ function runTactical(team, state, commands) {
   if (caches < 2 && sp > 400 && (mu || 0) < 50 && hasBarracks) {
     commands.push({ cmd: 'build', buildingType: 'munitionscache' });
   }
+
+  const plannedSpend=commands.filter(c=>c.cmd==='build'||c.cmd==='buildDefense').reduce((sum,c)=>sum+(state.constructionCosts?.[c.buildingType??c.defenseType]??0),0);
+  let productionBudget=Math.max(0,sp-Math.max(state.buildReserveCost??0,plannedSpend));
 
   // --- Produce units ---
   if (myUnits.length < (maxUnitsPerTeam || 50)) {
@@ -244,7 +247,8 @@ function runTactical(team, state, commands) {
         }
       }
 
-      if (unitType) {
+      if (unitType&&productionBudget>=(state.unitCosts?.[unitType]??0)) {
+        productionBudget-=state.unitCosts?.[unitType]??0;
         commands.push({ cmd: 'produce', buildingId: building.id, unitType: unitType });
       }
     }

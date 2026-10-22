@@ -678,7 +678,7 @@ export const GAME_CONFIG = {
   baseIncome: 12,
   baseMUIncome: 5,
   tickRate: 1,
-  unitSpeedMultiplier: 5,
+  unitSpeedMultiplier: 4,
   maxUnitsPerTeam: 50
 };
 
@@ -691,6 +691,7 @@ export const VICTORY_CONDITIONS = {
 
 export const AI_DIFFICULTY = {
   kids: {
+    openingDelay:180,
     label: 'Kids',
     resourceBonus: -0.5,
     attackThresholdMultiplier: 3.0,
@@ -707,6 +708,7 @@ export const AI_DIFFICULTY = {
     playerArmorBonus: 10
   },
   easy: {
+    openingDelay:120,
     label: 'Easy',
     resourceBonus: 0,
     attackThresholdMultiplier: 1.5,
@@ -720,6 +722,7 @@ export const AI_DIFFICULTY = {
     targetPriority: false
   },
   normal: {
+    openingDelay:75,
     label: 'Normal',
     resourceBonus: 0,
     attackThresholdMultiplier: 1.0,
@@ -733,6 +736,7 @@ export const AI_DIFFICULTY = {
     targetPriority: true
   },
   hard: {
+    openingDelay:45,
     label: 'Hard',
     resourceBonus: 0.5,
     attackThresholdMultiplier: 0.7,

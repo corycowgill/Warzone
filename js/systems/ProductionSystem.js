@@ -32,6 +32,7 @@ export class ProductionSystem {
 
     const stats = UNIT_STATS[unitType];
     if (!stats) return;
+    const random=()=>this.game.rng?.next()??Math.random();
 
     // Spawn the unit near the building (offset slightly toward rally)
     const buildPos = building.getPosition().clone();
@@ -49,8 +50,8 @@ export class ProductionSystem {
     // Use a rotating spawn angle so consecutive units don't overlap
     if (!building._spawnAngleIndex) building._spawnAngleIndex = 0;
     building._spawnAngleIndex++;
-    const spawnAngle = (building._spawnAngleIndex * 2.399) + Math.random() * 0.5; // golden angle + jitter
-    const spawnDist = 3 + Math.random() * 2;
+    const spawnAngle = (building._spawnAngleIndex * 2.399) + random() * 0.5; // golden angle + jitter
+    const spawnDist = 3 + random() * 2;
     const spawnPos = buildPos.clone().add(dir);
     spawnPos.x += Math.cos(spawnAngle) * spawnDist;
     spawnPos.z += Math.sin(spawnAngle) * spawnDist;
@@ -73,8 +74,8 @@ export class ProductionSystem {
     // Issue move command to rally point or nearby scatter position
     if (unit && building.rallyPoint) {
       // Stagger rally destination so units form a loose cluster, not a stack
-      const rallySpreadX = (Math.random() - 0.5) * 6; // ±3 units
-      const rallySpreadZ = (Math.random() - 0.5) * 6;
+      const rallySpreadX = (random() - 0.5) * 6; // ±3 units
+      const rallySpreadZ = (random() - 0.5) * 6;
       const staggeredRally = rallyPos.clone();
       staggeredRally.x += rallySpreadX;
       staggeredRally.z += rallySpreadZ;
@@ -98,8 +99,8 @@ export class ProductionSystem {
       }
     } else if (unit) {
       // No rally point — scatter away from building so units don't pile up
-      const angle = Math.random() * Math.PI * 2;
-      const dist = 4 + Math.random() * 3; // 4-7 units away
+      const angle = random() * Math.PI * 2;
+      const dist = 4 + random() * 3; // 4-7 units away
       const scatterTarget = spawnPos.clone();
       scatterTarget.x += Math.cos(angle) * dist;
       scatterTarget.z += Math.sin(angle) * dist;

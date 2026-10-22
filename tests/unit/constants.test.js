@@ -245,7 +245,8 @@ describe('VETERANCY', () => {
 describe('GAME_CONFIG', () => {
   it('should have reasonable default values', () => {
     expect(GAME_CONFIG.startingSP).toBeGreaterThan(0);
-    expect(GAME_CONFIG.startingMU).toBeGreaterThan(0);
+    expect(GAME_CONFIG.startingMU).toBeGreaterThanOrEqual(0);
+    expect(GAME_CONFIG.baseMUIncome).toBeGreaterThan(0);
     expect(GAME_CONFIG.baseIncome).toBeGreaterThan(0);
     expect(GAME_CONFIG.maxUnitsPerTeam).toBeGreaterThanOrEqual(20);
     expect(GAME_CONFIG.mapSize).toBeGreaterThan(0);

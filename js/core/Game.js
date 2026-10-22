@@ -1,3 +1,4 @@
+import {startingArmy} from '../world/StartingDeployment.js';
 import {isEditing} from '../systems/InputPolicy.js';
 import { RenderQuality } from '../rendering/RenderQuality.js';
 import { FrameMetrics } from './FrameMetrics.js';
@@ -606,14 +607,10 @@ export class Game {
       this.createBuilding('headquarters', 'enemy', new THREE.Vector3(mapSize - 60, 0, mapSize / 2));
       this.createBuilding('barracks', 'enemy', new THREE.Vector3(mapSize - 75, 0, mapSize / 2 - 15));
 
-      // GD-138: Starting units - 3 infantry + 1 scout car per side in formation
-      for (let i = 0; i < 3; i++) {
-        this.createUnit('infantry', 'player', new THREE.Vector3(50 + i * 4, 0, mapSize / 2 + 10));
-        this.createUnit('infantry', 'enemy', new THREE.Vector3(mapSize - 80 + i * 4, 0, mapSize / 2 + 10));
+      const playerArmy=startingArmy('player',mapSize),enemyArmy=startingArmy('enemy',mapSize);
+      for(let i=0;i<playerArmy.length;i++)for(const [team,army] of [['player',playerArmy],['enemy',enemyArmy]]){
+        const unit=army[i];this.createUnit(unit.type,team,new THREE.Vector3(unit.x,0,unit.z));
       }
-      // Scout car for early scouting
-      this.createUnit('scoutcar', 'player', new THREE.Vector3(50 + 14, 0, mapSize / 2 + 10));
-      this.createUnit('scoutcar', 'enemy', new THREE.Vector3(mapSize - 80 + 14, 0, mapSize / 2 + 10));
     }
 
     // Place supply caches (neutral resource pickups)
@@ -873,7 +870,7 @@ export class Game {
       unit.mesh.position.y = y;
 
       // Kids mode: bonus armor for player units
-      if (this._difficultyConfig?.playerArmorBonus && team === 'player') {
+      if (this._difficultyConfig?.playerArmorBonus && team === 'player'&&this.mode!=='SPECTATE'&&this.mode!=='2P'&&!this.isMultiplayer) {
         unit.armor = (unit.armor || 0) + this._difficultyConfig.playerArmorBonus;
       }
 

@@ -1,3 +1,4 @@
+import {difficultyDamage} from '../core/MatchRules.js';
 import * as THREE from 'three';
 import { DAMAGE_MODIFIERS, NATIONS, UNIT_ABILITIES, UNIT_STATS, SALVAGE_CONFIG, BUILDING_STATS } from '../core/Constants.js';
 import { Projectile } from '../entities/Projectile.js';
@@ -8,6 +9,7 @@ export class CombatSystem {
     this.game = game;
     this.combatIntensity = 0;
     this._intensityDecay = 2;
+    this._combatTick=0;
     // GD-075: Overkill protection - track committed damage per entity
     this._committedDamage = new Map();
 
@@ -72,9 +74,11 @@ export class CombatSystem {
     const enemyUnits = this.game.getUnits('enemy');
     const camera = this.game.sceneManager.camera;
 
-    // Iterate both teams' units without allocating a merged array
+    const firstTeam=(this._combatTick++)%2;
+
+    // Alternate initiative deterministically; neither team always fires first.
     for (let ti = 0; ti < 2; ti++) {
-      const units = ti === 0 ? playerUnits : enemyUnits;
+      const units = (ti^firstTeam) === 0 ? playerUnits : enemyUnits;
       for (let ui = 0, ulen = units.length; ui < ulen; ui++) {
         const unit = units[ui];
         // Skip garrisoned, EMP-disabled, and retreating units
@@ -104,7 +108,7 @@ export class CombatSystem {
 
     // Handle APC garrisoned infantry firing — iterate cached lists instead of filter
     for (let ti = 0; ti < 2; ti++) {
-      const units = ti === 0 ? playerUnits : enemyUnits;
+      const units = (ti^firstTeam) === 0 ? playerUnits : enemyUnits;
       for (let ui = 0, ulen = units.length; ui < ulen; ui++) {
         const apc = units[ui];
         if (apc.type !== 'apc' || !apc.garrisoned || apc.garrisoned.length === 0) continue;
@@ -134,7 +138,7 @@ export class CombatSystem {
 
     // Handle turret attacks — iterate cached building lists instead of filter
     for (let ti = 0; ti < 2; ti++) {
-      const buildings = ti === 0 ? this.game.getBuildings('player') : this.game.getBuildings('enemy');
+      const buildings = (ti^firstTeam) === 0 ? this.game.getBuildings('player') : this.game.getBuildings('enemy');
       for (let bi = 0, blen = buildings.length; bi < blen; bi++) {
         const turret = buildings[bi];
         if (!turret.isTurret) continue;
@@ -265,16 +269,7 @@ export class CombatSystem {
       }
     }
 
-    // Kids mode / difficulty damage scaling
-    let difficultyMod = 1.0;
-    const diffConfig = this.game._difficultyConfig;
-    if (diffConfig) {
-      if (attacker.team === 'enemy' && diffConfig.aiDamageMult) {
-        difficultyMod = diffConfig.aiDamageMult;
-      } else if (attacker.team === 'player' && diffConfig.playerDamageMult) {
-        difficultyMod = diffConfig.playerDamageMult;
-      }
-    }
+    const difficultyMod=difficultyDamage(this.game,attacker.team);
 
     const finalDmg = Math.max(1, baseDmg * modifier * armorReduction * terrainMod * ditchMod * banzaiMod * forestMod * cmdDmgMod * retreatMod * bushidoMod * stationaryMod * difficultyMod);
 
@@ -463,13 +458,7 @@ export class CombatSystem {
       }
     }
 
-    // Kids mode / difficulty damage scaling for turrets
-    let tDiffMod = 1.0;
-    const tDiffConfig = this.game._difficultyConfig;
-    if (tDiffConfig) {
-      if (turret.team === 'enemy' && tDiffConfig.aiDamageMult) tDiffMod = tDiffConfig.aiDamageMult;
-      else if (turret.team === 'player' && tDiffConfig.playerDamageMult) tDiffMod = tDiffConfig.playerDamageMult;
-    }
+    const tDiffMod=difficultyDamage(this.game,turret.team);
 
     const finalDmg = Math.max(1, baseDmg * modifier * armorReduction * terrainMod * ditchMod * tDiffMod);
 

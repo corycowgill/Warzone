@@ -1,6 +1,7 @@
+import {buildingReserve} from './AIBudget.js';
 import * as THREE from 'three';
 import { AIController } from './AIController.js';
-import { GAME_CONFIG, AI_DIFFICULTY } from '../core/Constants.js';
+import { GAME_CONFIG, AI_DIFFICULTY, UNIT_STATS, BUILDING_STATS, NATIONS } from '../core/Constants.js';
 
 /**
  * AIWorkerBridge — sits between Game and AIController.
@@ -135,6 +136,9 @@ export class AIWorkerBridge {
 
     return {
       sp: game.teams[team].sp,
+      buildReserveCost:buildingReserve(this.ai),
+      unitCosts:Object.fromEntries(Object.entries(UNIT_STATS).map(([type,s])=>[type,Math.round(s.cost*(NATIONS[nationKey]?.bonuses?.costReduction??1))])),
+      constructionCosts:Object.fromEntries(Object.entries(BUILDING_STATS).map(([type,s])=>[type,Math.round(s.cost*(NATIONS[nationKey]?.bonuses?.buildingCostReduction??1))])),
       mu: game.teams[team].mu || 0,
       nation: nationKey || '',
       myUnits,
@@ -183,9 +187,11 @@ export class AIWorkerBridge {
     for (const cmd of commands) {
       try {
         switch (cmd.cmd) {
-          case 'build':
-            ai.tryBuildBuilding(cmd.buildingType);
+          case 'build': {
+            const built=ai.tryBuildBuilding(cmd.buildingType);
+            if(built&&cmd.orderIndex===ai.buildOrderIndex)ai.buildOrderIndex++;
             break;
+          }
 
           case 'queueBuild':
             // Append to build order if not already queued
@@ -195,7 +201,7 @@ export class AIWorkerBridge {
             break;
 
           case 'advanceBuildOrder':
-            ai.buildOrderIndex++;
+            if(cmd.orderIndex===undefined||cmd.orderIndex===ai.buildOrderIndex)ai.buildOrderIndex++;
             break;
 
           case 'buildDefense':

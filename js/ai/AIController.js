@@ -1,3 +1,4 @@
+import {buildingReserve} from './AIBudget.js';
 import {AttackWaves,readyForWave} from './AttackWaves.js';
 import * as THREE from 'three';
 import { issueUnitMove } from '../systems/MovementOrders.js';
@@ -77,7 +78,7 @@ export class AIController {
     this._enemyMemory=new Map();
 
     // Grace period: AI won't attack during this time (seconds)
-    this.gracePeriod = difficulty === 'easy' ? 120 : difficulty === 'hard' ? 45 : 75;
+    this.gracePeriod = AI_DIFFICULTY[difficulty]?.openingDelay??75;
 
     // GD-128: Exchange cooldown
     this._exchangeCooldown = 0;
@@ -643,6 +644,7 @@ export class AIController {
   }
 
   produceUnits() {
+    const reserve=buildingReserve(this);
     const buildings = this.game.getBuildings(this.team);
     const myUnits = this.game.getUnits(this.team);
 
@@ -695,7 +697,7 @@ export class AIController {
         unitType = this.adjustForCounter(unitType, building, myUnits);
       }
 
-      if (unitType && building.canProduce(unitType)) {
+      if (unitType && building.canProduce(unitType)&&this.game.teams[this.team].sp-(UNIT_STATS[unitType]?.cost??0)>=reserve) {
         this.game.productionSystem.requestProduction(building, unitType);
       }
     }

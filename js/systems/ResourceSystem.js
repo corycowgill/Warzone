@@ -1,4 +1,5 @@
-import { GAME_CONFIG, BUILDING_STATS, NATIONS, AI_DIFFICULTY } from '../core/Constants.js';
+import {incomeMultiplier} from '../core/MatchRules.js';
+import { GAME_CONFIG, BUILDING_STATS, NATIONS } from '../core/Constants.js';
 
 export class ResourceSystem {
   constructor(game) {
@@ -54,14 +55,8 @@ export class ResourceSystem {
         }
       }
 
-      // AI difficulty resource bonus
-      if (team === 'enemy' && this.game.aiDifficulty) {
-        const diffConfig = AI_DIFFICULTY[this.game.aiDifficulty];
-        if (diffConfig && diffConfig.resourceBonus > 0) {
-          income = Math.floor(income * (1 + diffConfig.resourceBonus));
-          muIncome = Math.floor(muIncome * (1 + diffConfig.resourceBonus));
-        }
-      }
+      const multiplier=incomeMultiplier(this.game,team);
+      income=Math.floor(income*multiplier);muIncome=Math.floor(muIncome*multiplier);
 
       // Supply Lines research bonus (+25% income)
       if (this.game.hasResearch && this.game.hasResearch(team, 'supply_lines')) {
@@ -191,6 +186,7 @@ export class ResourceSystem {
       }
     }
 
+    income=Math.floor(income*incomeMultiplier(this.game,team));
     // Supply Lines research bonus
     if (this.game.hasResearch && this.game.hasResearch(team, 'supply_lines')) {
       income = Math.floor(income * 1.25);
@@ -212,6 +208,7 @@ export class ResourceSystem {
       }
     }
 
+    muIncome=Math.floor(muIncome*incomeMultiplier(this.game,team));
     // Supply Lines research bonus
     if (this.game.hasResearch && this.game.hasResearch(team, 'supply_lines')) {
       muIncome = Math.floor(muIncome * 1.25);

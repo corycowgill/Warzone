@@ -1,3 +1,4 @@
+import {Vector3} from 'three';
 /**
  * Unit tests for ProductionSystem
  */
@@ -13,6 +14,7 @@ function createTestGame() {
     state: 'PLAYING',
     eventBus,
     entities: [],
+    stats: {player:{resourcesGathered:0},enemy:{resourcesGathered:0}},
     teams: {
       player: { sp: GAME_CONFIG.startingSP, mu: GAME_CONFIG.startingMU, nation: 'america' },
       enemy: { sp: GAME_CONFIG.startingSP, mu: GAME_CONFIG.startingMU, nation: 'germany' },
@@ -29,6 +31,7 @@ function createTestGame() {
         id: Math.floor(Math.random() * 10000),
         type: unitType,
         team,
+        moveTo: vi.fn(),
         isUnit: true,
         isBuilding: false,
         alive: true,
@@ -66,10 +69,10 @@ function createBarracks(team, game) {
     tier: 1,
     nation: game.teams[team]?.nation || null,
     game,
-    rallyPoint: { clone: () => ({ x: 0, y: 0, z: 10, add: () => ({ x: 0, y: 0, z: 10 }) }) },
+    rallyPoint: new Vector3(0,0,10),
     canProduce(unitType) { return this.produces.includes(unitType); },
     queueUnit(unitType) { if (this.canProduce(unitType)) this.productionQueue.push(unitType); },
-    getPosition() { return { x: 0, y: 0, z: 0, clone: () => ({ x: 0, y: 0, z: 0, add: () => ({ x: 0, y: 0, z: 10 }) }) }; },
+    getPosition() { return new Vector3(); },
     getTierBonus() { return null; },
     getProductionProgress() {
       if (!this.currentProduction) return 0;
