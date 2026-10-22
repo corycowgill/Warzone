@@ -52,6 +52,7 @@ export class Entity {
     const bgGeometry = new THREE.PlaneGeometry(barWidth, barHeight);
     const bgMaterial = new THREE.MeshBasicMaterial({ color: 0x333333, side: THREE.DoubleSide });
     const bg = new THREE.Mesh(bgGeometry, bgMaterial);
+    bg.position.z=-.02;
     barGroup.add(bg);
 
     // Foreground (green fill)
@@ -59,13 +60,14 @@ export class Entity {
     const fgMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00, side: THREE.DoubleSide });
     const fg = new THREE.Mesh(fgGeometry, fgMaterial);
     fg.name = 'healthFill';
+    fg.position.z=.01;
     barGroup.add(fg);
 
     // Thin black border frame
     const borderGeo = new THREE.PlaneGeometry(barWidth + 0.15, barHeight + 0.1);
     const borderMat = new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.DoubleSide });
     const border = new THREE.Mesh(borderGeo, borderMat);
-    border.position.z = -0.01; // Behind the bars
+    border.position.z = -0.03; // Behind the bars
     barGroup.add(border);
 
     // Position above entity - calculate from mesh bounding box if possible
@@ -165,8 +167,8 @@ export class Entity {
     const fill = this._healthFill;
     if (fill) {
       fill.scale.x = ratio;
-      fill.position.x = -(1 - ratio) * 1.5;
-      fill.material.color.setHex(ratio > 0.6 ? 0x00ff00 : ratio > 0.3 ? 0xffaa00 : 0xff0000);
+      fill.position.x = -(1 - ratio) * 1.25;
+      fill.material.color.setHex(ratio > 0.6 ? 0x76d6a4 : ratio > 0.3 ? 0xf1c46d : 0xf47b70);
     }
 
     // Billboard - face camera

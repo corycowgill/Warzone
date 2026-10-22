@@ -1457,3 +1457,17 @@ button {
 #hud-notifications{position:fixed;top:136px;left:auto;transform:none;right:12px;width:min(238px,calc(100vw - 24px));z-index:100;pointer-events:none;display:flex;flex-direction:column;gap:4px;}
 .battle-notice{box-sizing:border-box;padding:6px 9px;border-left:2px solid;border-radius:3px;background:rgba(15,28,32,.88);font:11px/1.35 system-ui,sans-serif;text-align:left;box-shadow:0 2px 8px #0003;overflow-wrap:anywhere;max-height:48px;overflow:hidden;}
 @media(max-width:700px){#hud-notifications{top:146px;right:8px;width:190px;}.battle-notice{font-size:10px;padding:5px 7px;}}
+
+/* Brief peripheral battle feedback; the battlefield center stays unobstructed. */
+.battle-feedback { pointer-events:none; }
+.battle-feedback [hidden] { display:none !important; }
+.battle-damage { position:fixed; z-index:85; background:#ef927c; opacity:.7; border-radius:4px; box-shadow:0 0 12px #ef927c55; }
+.battle-damage-left,.battle-damage-right { top:42%; width:3px; height:62px; }
+.battle-damage-left { left:10px; }.battle-damage-right { right:10px; }
+.battle-damage-top,.battle-damage-bottom { left:calc(50% - 31px); width:62px; height:3px; }
+.battle-damage-top { top:65px; }.battle-damage-bottom { bottom:180px; }
+.battle-status { position:fixed; right:16px; bottom:230px; display:flex; gap:6px; align-items:center; z-index:90; font:11px system-ui,sans-serif; }
+.battle-status span,.battle-status button { padding:5px 9px; border:1px solid #879eac55; border-radius:5px; background:#101e29e8; color:#d4e4ed; }
+.battle-status span { color:#ffcf73; }.battle-status button { pointer-events:auto; cursor:pointer; }
+.battle-status button:hover,.battle-status button:focus-visible { border-color:#83c8ff; background:#243d50; }
+@media(max-width:700px) { .battle-status { bottom:190px; right:10px; }.battle-damage-bottom { bottom:145px; } }

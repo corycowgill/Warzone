@@ -1,3 +1,4 @@
+import {BattleFeedback} from './BattleFeedback.js';
 import {isEditing,localTeam} from '../systems/InputPolicy.js';
 import { UNIT_STATS, BUILDING_STATS, GAME_CONFIG, RESEARCH_UPGRADES, TECH_BRANCHES, FACTION_UNITS, VICTORY_CONDITIONS } from '../core/Constants.js';
 import { BuildPanel } from './BuildPanel.js';
@@ -38,6 +39,7 @@ export class HUD {
     this._voiceOpponentSpeaking = document.getElementById('voice-opponent-speaking');
 
     this.setupEventListeners();
+    this.battleFeedback=new BattleFeedback(this);
   }
 
   _createControlGroupBar() {
@@ -315,12 +317,14 @@ export class HUD {
 
   hide() {
     this.notifications.feed?.clear();
+    this.battleFeedback?.clear();
     this.visible = false;
     this.hudEl?.classList.add('hidden');
   }
 
   update() {
     if (!this.visible) return;
+    this.battleFeedback?.update();
     this.updateResourceDisplay();
     this.productionPanel.updateProductionPanel();
     this.buildPanel.updateRallyPointVisuals();

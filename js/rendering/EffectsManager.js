@@ -854,11 +854,11 @@ export class EffectsManager {
   // ============================
   createMoveMarker(position, type) {
     // type: 'move' (green) or 'attackmove' (red)
-    const color = type === 'attackmove' ? 0xff3333 : 0x00ff44;
+    const color = ({move:0x76e8bc,attackmove:0xff8263,attack:0xff8263,retreat:0x83c8ff,blocked:0xffcf73})[type]??0x76e8bc;
 
     // Pool management: reuse oldest if at max
     if (!this._moveMarkerPool) this._moveMarkerPool = [];
-    if (this._moveMarkerPool.length >= 10) {
+    if (this._moveMarkerPool.length >= 6) {
       const oldest = this._moveMarkerPool.shift();
       // Remove it from activeEffects
       const idx = this.activeEffects.indexOf(oldest);
@@ -872,7 +872,7 @@ export class EffectsManager {
       }
     }
 
-    const ringGeo = new THREE.RingGeometry(1.2, 1.6, 24);
+    const ringGeo = new THREE.RingGeometry(1.35, 1.55, 32,1,0,type==='blocked'?Math.PI*1.65:Math.PI*2);
     const ringMat = new THREE.MeshBasicMaterial({
       color: color,
       transparent: true,
@@ -890,6 +890,15 @@ export class EffectsManager {
     }
     ring.position.set(position.x, y, position.z);
 
+    if(type==='attack'||type==='attackmove'||type==='retreat'||type==='blocked'){
+      for(let i=0;i<2;i++){
+        const tick=new THREE.Mesh(new THREE.PlaneGeometry(type==='blocked'?3.1:.18,type==='blocked'?.16:1.05),ringMat);
+        tick.position.z=.01;
+        if(type==='blocked')tick.rotation.z=Math.PI/4+i*Math.PI/2;
+        else {tick.position.x=(i?1:-1)*.5;tick.rotation.z=(i?1:-1)*(type==='retreat'?-.7:.7);}
+        ring.add(tick);
+      }
+    }
     this.scene.add(ring);
 
     const effect = {
@@ -897,7 +906,7 @@ export class EffectsManager {
       group: ring,
       material: ringMat,
       geometry: ringGeo,
-      lifetime: 1.0,
+      lifetime: .75,
       elapsed: 0
     };
 
@@ -1106,7 +1115,7 @@ export class EffectsManager {
           if (effect.geometry) effect.geometry.dispose();
         } else if (effect.type === 'moveMarker') {
           if (effect.material) effect.material.dispose();
-          if (effect.geometry) effect.geometry.dispose();
+          effect.group.traverse(child=>child.geometry?.dispose());
           // Remove from pool
           if (this._moveMarkerPool) {
             const pi = this._moveMarkerPool.indexOf(effect);

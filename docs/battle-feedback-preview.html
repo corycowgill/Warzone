@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Warzone Battle Feedback Review</title><link rel="stylesheet" href="../css/art-direction.css">
+<style>body{margin:0;background:#192c2b;color:#d4e4ed;font:14px system-ui}header{position:absolute;top:20px;left:24px;z-index:5;max-width:600px}h1{font-size:20px}button{background:#14242e;color:#d4e4ed;border:1px solid #78909e;padding:8px;margin:3px;border-radius:5px}canvas{display:block}#result{color:#83c8ff}</style>
+<script type="importmap">{"imports":{"three":"../node_modules/three/build/three.module.js"}}</script></head>
+<body><header><h1>WARZONE / BATTLE FEEDBACK</h1><p>Short command markers, directional fire cues and compact unit status.</p>
+<nav><button id="move">Move</button><button id="attack">Attack</button><button id="retreat">Retreat</button><button id="blocked">Blocked route</button><button id="damage">Incoming fire</button><button id="impacts">Weapon impacts</button></nav><p id="result">Ready</p></header><div id="hud"></div>
+<script type="module">
+import * as THREE from 'three';import {EffectsManager} from '../js/rendering/EffectsManager.js';import {BattleFeedback} from '../js/ui/BattleFeedback.js';import {EventBus} from '../js/core/EventBus.js';
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);document.body.appendChild(renderer.domElement);
+const scene=new THREE.Scene();scene.background=new THREE.Color('#192c2b');const camera=new THREE.PerspectiveCamera(45,innerWidth/innerHeight,.1,500);camera.position.set(0,40,38);camera.lookAt(0,0,0);camera.updateMatrixWorld();
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(100,100),new THREE.MeshBasicMaterial({color:0x293e37}));floor.rotation.x=-Math.PI/2;scene.add(floor);scene.add(new THREE.GridHelper(100,25,0x536859,0x344c40));
+const unit={alive:true,damage:10,team:'player',getPosition:()=>new THREE.Vector3(0,0,0)},enemy={alive:true,getPosition:()=>new THREE.Vector3(-30,0,0)};
+const game={mode:'1P',eventBus:new EventBus(),sceneManager:{scene,camera},terrain:{getHeightAt:()=>0},getUnits:()=>[unit],getHQ:()=>unit,selectionManager:{selectEntities:()=>document.querySelector('#result').textContent='Idle combat units selected'}};
+game.effectsManager=new EffectsManager(game);const feedback=new BattleFeedback({game,visible:true,hudEl:document.querySelector('#hud')});
+const fire=(type,data)=>game.eventBus.emit(type,data),point=new THREE.Vector3();
+document.querySelector('#move').onclick=()=>game.effectsManager.createMoveMarker(point,'move');
+document.querySelector('#attack').onclick=()=>fire('command:attack',{units:[unit],target:enemy});
+document.querySelector('#retreat').onclick=()=>fire('command:retreat',{units:[unit]});
+document.querySelector('#blocked').onclick=()=>fire('command:blocked',{unit,position:point});
+document.querySelector('#damage').onclick=()=>fire('combat:attack',{attacker:enemy,defender:unit,damage:25});
+document.querySelector('#impacts').onclick=()=>['bullet','shell','artillery'].forEach((type,i)=>game.effectsManager.createImpactEffect(new THREE.Vector3((i-1)*10,0,0),type));
+let last=performance.now();function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;feedback.update();game.effectsManager.update(dt);renderer.render(scene,camera);requestAnimationFrame(frame);}requestAnimationFrame(frame);
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+</script></body></html>

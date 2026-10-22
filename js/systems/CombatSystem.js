@@ -366,9 +366,7 @@ export class CombatSystem {
     }
 
     // Red vignette when player units take heavy hits
-    if (defender.team === 'player' && finalDmg > 20 && this.game.effectsManager) {
-      this.game.effectsManager.createDamageVignette();
-    }
+    // Directional damage feedback is driven by combat:attack in the local HUD.
 
     // Emit combat event
     this.game.eventBus.emit('combat:attack', {
@@ -501,9 +499,7 @@ export class CombatSystem {
     }
 
     // Red vignette when player units take heavy turret hits
-    if (defender.team === 'player' && finalDmg > 20 && this.game.effectsManager) {
-      this.game.effectsManager.createDamageVignette();
-    }
+    // Directional damage feedback is driven by combat:attack in the local HUD.
 
     this.game.eventBus.emit('combat:attack', {
       attacker: turret,
