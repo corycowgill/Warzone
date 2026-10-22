@@ -1471,3 +1471,5 @@ button {
 .battle-status span { color:#ffcf73; }.battle-status button { pointer-events:auto; cursor:pointer; }
 .battle-status button:hover,.battle-status button:focus-visible { border-color:#83c8ff; background:#243d50; }
 @media(max-width:700px) { .battle-status { bottom:190px; right:10px; }.battle-damage-bottom { bottom:145px; } }
+body[data-studio-intro] { background:#07070c; }
+body[data-studio-intro] #main-menu { visibility:hidden; }
