@@ -34,3 +34,13 @@ The harness uses actual unit classes, static nation/faction modifiers, terrain, 
 The complete Vitest suite passes: 126 tests across nine files. Eleven balance regression cases cover deployment symmetry, mode/difficulty rules, alternating initiative, AI placement acknowledgement and budgeting, seeded production, income display consistency, and save-state round trips. Existing fixture failures were corrected to reflect current resource, rally-point and Three.js behavior.
 
 Additional tactics, gameplay, controls, layouts, performance and VFX verification scripts pass. Browser smoke testing covers spectator startup and early simulation without console warnings or errors; the complete match matrix above runs in the headless harness.
+
+## Combat coordination follow-up
+
+Large multi-pronged attacks now retain a main force and send the fastest third of eligible land combatants through a reachable side approach. Mortars and self-propelled guns remain with the main force. Flankers proceed to the actual objective after reaching their approach, with a timeout to avoid waiting indefinitely. If neither side approach has a route, the army advances together. Route probing is capped at four synchronous searches per launch; issued orders retain normal per-unit path validation.
+
+Formation orders position mortars and self-propelled guns behind the assault line at a shared movement pace. Waves that lose at least half of an initial force of five or more withdraw their survivors. Retreating units wait through their cooldown and recover to 70% health before joining another wave; damaged units prioritize the headquarters recovery area. The worker recognizes recovery as an active assignment, and saves preserve recovery state.
+
+Five new regression tests cover the flank-to-objective transition, inaccessible-flank fallback, casualty withdrawal, recovery eligibility and artillery formation placement. The suite now passes 131 tests. Tactics, gameplay and performance verification also pass.
+
+`docs/balance/combat-ai.json` records the follow-up fixture run: 17/18 matches finished within the cap, median completed duration 166.2 seconds, median first contact 36.2 seconds, and no finishes before 90 seconds. One river fixture reached the six-minute cap. This is a limitation to investigate with live playtesting, not proof of a stalemate or improved faction balance. Reproduce with `npm run analyze:balance -- docs/balance/combat-ai.json`; the same harness exclusions above apply. No browser frame-rate improvement is claimed.

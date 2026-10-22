@@ -922,31 +922,8 @@ export class AIController {
     this.attackWaveCount++;
 
     const primaryTarget = this.findPriorityTarget();
-    const secondaryTarget = this.findSecondaryTarget();
-
     if (!primaryTarget) return;
-
-    // Split units into two groups
-    const midpoint = Math.floor(units.length * 0.6);
-    const mainForce = units.slice(0, midpoint);
-    const flankForce = units.slice(midpoint);
-
-    // Main force attacks primary target
-    this.sendUnitsToTarget(mainForce, primaryTarget);
-
-    // Flanking force attacks secondary target (or approaches from different angle)
-    if (secondaryTarget && flankForce.length >= 2) {
-      this.sendUnitsToTarget(flankForce, secondaryTarget);
-    } else if (flankForce.length >= 2) {
-      // Attack primary from a different angle
-      const flankOffset = new THREE.Vector3(
-        (this.game.rng.next() > 0.5 ? 1 : -1) * 30,
-        0,
-        (this.game.rng.next() > 0.5 ? 1 : -1) * 30
-      );
-      const flankTarget = primaryTarget.clone().add(flankOffset);
-      this.sendUnitsToTarget(flankForce, flankTarget);
-    }
+    this.attackWaves.launch(units,primaryTarget,{flank:true});
   }
 
   sendUnitsToTarget(units, targetPos) {
@@ -1012,9 +989,10 @@ export class AIController {
     const myUnits = this.game.getUnits(this.team);
 
     for (const unit of myUnits) {
-      if(unit.isRetreating||(unit._aiRetreatUntil??0)>this.gameTime){
+      if(unit.isRetreating||unit._aiRecovering||(unit._aiRetreatUntil??0)>this.gameTime){
         const hq=this.game.getHQ(this.team);
         if(hq&&unit.distanceTo(hq)<30)unit.health=Math.min(unit.maxHealth,unit.health+1);
+        if(!unit.isRetreating&&(unit._aiRetreatUntil??0)<=this.gameTime&&(!hq||unit.health/unit.maxHealth>=.7))unit._aiRecovering=false;
         continue;
       }
       // Use abilities
@@ -1266,7 +1244,7 @@ export class AIController {
     }
 
     // Fall back to HQ if no nearby defenses
-    if (!retreatPos || bestDist > 80) {
+    if (!retreatPos || bestDist > 80 || unit.health/unit.maxHealth<.7) {
       const hq = this.game.getHQ(this.team);
       if (hq) retreatPos = hq.getPosition().clone();
     }
@@ -1275,7 +1253,7 @@ export class AIController {
       retreatPos.x += (this.game.rng.next() - 0.5) * 10;
       retreatPos.z += (this.game.rng.next() - 0.5) * 10;
       if(unit.isRetreating||(unit._aiRetreatUntil??0)>this.gameTime)return;
-      unit._aiRetreatUntil=this.gameTime+12;unit._aiMissionUntil=0;
+      unit._aiRetreatUntil=this.gameTime+12;unit._aiMissionUntil=0;unit._aiRecovering=true;
       unit.startRetreat(retreatPos);
     }
   }

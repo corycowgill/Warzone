@@ -83,7 +83,7 @@ export class AIWorkerBridge {
         id: u.id, type: u.type, health: u.health, maxHealth: u.maxHealth,
         domain: u.domain, x: pos.x, z: pos.z,
         inCombat: !!(u.attackTarget && u.attackTarget.alive),
-        isMoving: !!(u.moveTarget||u._pathPending||u.isRetreating||(u._aiRetreatUntil??0)>this.ai.gameTime||(u._aiMissionUntil??0)>this.ai.gameTime||(u._aiScoutUntil??0)>this.ai.gameTime)
+        isMoving: !!(u.moveTarget||u._pathPending||u.isRetreating||u._aiRecovering||(u._aiRetreatUntil??0)>this.ai.gameTime||(u._aiMissionUntil??0)>this.ai.gameTime||(u._aiScoutUntil??0)>this.ai.gameTime)
       };
     });
 
@@ -108,7 +108,7 @@ export class AIWorkerBridge {
         id: u.id, type: u.type, health: u.health, domain: u.domain,
         x: pos.x, z: pos.z,
         inCombat: !!(u.attackTarget && u.attackTarget.alive),
-        isMoving: !!(u.moveTarget||u._pathPending||u.isRetreating||(u._aiRetreatUntil??0)>this.ai.gameTime||(u._aiMissionUntil??0)>this.ai.gameTime||(u._aiScoutUntil??0)>this.ai.gameTime)
+        isMoving: !!(u.moveTarget||u._pathPending||u.isRetreating||u._aiRecovering||(u._aiRetreatUntil??0)>this.ai.gameTime||(u._aiMissionUntil??0)>this.ai.gameTime||(u._aiScoutUntil??0)>this.ai.gameTime)
       };
     });
 
