@@ -25,7 +25,7 @@ it('withdraws a shattered wave without retasking other waves',()=>{
 });
 it('holds recovering units until the cooldown and health threshold are satisfied',()=>{
  const {units}=setup(),u=units[0];u._aiRecovering=true;u._aiRetreatUntil=105;u.health=60;u.distanceTo=()=>0;
- const ai=Object.assign(Object.create(AIController.prototype),{gameTime:110,game:{getUnits:()=>[u],getHQ:()=>({})},assessAttackForce(){},retreatDamagedUnits(){},considerNationAbility(){}});
+ const ai=Object.assign(Object.create(AIController.prototype),{gameTime:110,game:{getUnits:()=>[u],getHQ:()=>({})},assessAttackForce(){},retreatDamagedUnits(){},defendBase(){},considerNationAbility(){}});
  ai.executeMicro();expect(u.health).toBe(61);expect(readyForWave(u,110)).toBe(false);
  u.health=70;ai.executeMicro();expect(u._aiRecovering).toBe(false);expect(readyForWave(u,110)).toBe(true);
 });

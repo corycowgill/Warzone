@@ -293,7 +293,7 @@ function runTactical(team, state, commands) {
 
   // --- Consider attack ---
   if (gameTime >= (gracePeriod || 75)) {
-    const idleUnits = myUnits.filter(u => !u.inCombat && !u.isMoving);
+    const idleUnits = myUnits.filter(u => u.readyForAttack??(!u.inCombat&&!u.isMoving));
     const thresholdMult = config?.attackThresholdMultiplier || 1.0;
     let attackThreshold;
     switch (strategy) {
@@ -313,24 +313,7 @@ function runTactical(team, state, commands) {
         const target = findPriorityTarget(enemyBuildings, config);
         if (target) {
           const unitIds = idleUnits.map(u => u.id);
-          if (config?.multiPronged && idleUnits.length >= 8) {
-            // Multi-pronged: split into main and flank
-            const midpoint = Math.floor(unitIds.length * 0.6);
-            const mainIds = unitIds.slice(0, midpoint);
-            const flankIds = unitIds.slice(midpoint);
-            commands.push({ cmd: 'attack', unitIds: mainIds, targetX: target.x, targetZ: target.z });
-            // Secondary target
-            const secondary = findSecondaryTarget(enemyBuildings);
-            if (secondary && flankIds.length >= 2) {
-              commands.push({ cmd: 'attack', unitIds: flankIds, targetX: secondary.x, targetZ: secondary.z });
-            } else if (flankIds.length >= 2) {
-              const ox = (rng() > 0.5 ? 1 : -1) * 30;
-              const oz = (rng() > 0.5 ? 1 : -1) * 30;
-              commands.push({ cmd: 'attack', unitIds: flankIds, targetX: target.x + ox, targetZ: target.z + oz });
-            }
-          } else {
-            commands.push({ cmd: 'attack', unitIds: unitIds, targetX: target.x, targetZ: target.z });
-          }
+          commands.push({cmd:'attack',unitIds,targetX:target.x,targetZ:target.z,flank:!!config?.multiPronged&&idleUnits.length>=8});
           commands.push({ cmd: 'resetAttackTimer' });
         }
       }
@@ -407,7 +390,7 @@ function runTactical(team, state, commands) {
           return Math.sqrt(dx * dx + dz * dz) < 50;
         });
         if (nearHQ.length < enemyUnits.length * 0.25) {
-          const idleUnits = myUnits.filter(u => !u.inCombat && !u.isMoving);
+          const idleUnits = myUnits.filter(u => u.readyForAttack??(!u.inCombat&&!u.isMoving));
           if (idleUnits.length >= 3) {
             commands.push({
               cmd: 'attack',

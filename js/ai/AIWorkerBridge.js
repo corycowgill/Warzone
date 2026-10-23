@@ -1,3 +1,4 @@
+import {readyForWave} from './AttackWaves.js';
 import {buildingReserve} from './AIBudget.js';
 import * as THREE from 'three';
 import { AIController } from './AIController.js';
@@ -81,9 +82,10 @@ export class AIWorkerBridge {
       const pos = u.getPosition();
       return {
         id: u.id, type: u.type, health: u.health, maxHealth: u.maxHealth,
+        readyForAttack:readyForWave(u,this.ai.gameTime),
         domain: u.domain, x: pos.x, z: pos.z,
         inCombat: !!(u.attackTarget && u.attackTarget.alive),
-        isMoving: !!(u.moveTarget||u._pathPending||u.isRetreating||u._aiRecovering||(u._aiRetreatUntil??0)>this.ai.gameTime||(u._aiMissionUntil??0)>this.ai.gameTime||(u._aiScoutUntil??0)>this.ai.gameTime)
+        isMoving: !!(u.moveTarget||u._pathPending||u.isRetreating||u._aiRecovering||(u._aiRetreatUntil??0)>this.ai.gameTime||(u._aiMissionUntil??0)>this.ai.gameTime||(u._aiScoutUntil??0)>this.ai.gameTime||(u._aiDefenseUntil??0)>this.ai.gameTime)
       };
     });
 
@@ -108,7 +110,7 @@ export class AIWorkerBridge {
         id: u.id, type: u.type, health: u.health, domain: u.domain,
         x: pos.x, z: pos.z,
         inCombat: !!(u.attackTarget && u.attackTarget.alive),
-        isMoving: !!(u.moveTarget||u._pathPending||u.isRetreating||u._aiRecovering||(u._aiRetreatUntil??0)>this.ai.gameTime||(u._aiMissionUntil??0)>this.ai.gameTime||(u._aiScoutUntil??0)>this.ai.gameTime)
+        isMoving: !!(u.moveTarget||u._pathPending||u.isRetreating||u._aiRecovering||(u._aiRetreatUntil??0)>this.ai.gameTime||(u._aiMissionUntil??0)>this.ai.gameTime||(u._aiScoutUntil??0)>this.ai.gameTime||(u._aiDefenseUntil??0)>this.ai.gameTime)
       };
     });
 
@@ -243,7 +245,7 @@ export class AIWorkerBridge {
               .filter(Boolean);
             if (units.length > 0) {
               const targetPos = new THREE.Vector3(cmd.targetX, 0, cmd.targetZ);
-              ai.sendUnitsToTarget(units, targetPos);
+              ai.attackWaves.launch(units,targetPos,{flank:!!cmd.flank});
             }
             break;
           }

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {planFormation} from '../systems/FormationPlanner.js';
 import {issueUnitMove} from '../systems/MovementOrders.js';
-export function readyForWave(unit,time){return unit.alive&&unit.damage>0&&!unit.isGarrisoned&&!unit.isRetreating&&!unit._aiRecovering&&!unit._pathPending&&!unit.attackTarget&&!unit.moveTarget&&unit.speed>0&&!(unit.empDisabledTimer>0)&&!unit._siegeMode&&unit.health/unit.maxHealth>.55&&(unit._aiRetreatUntil??0)<=time&&(unit._aiMissionUntil??0)<=time&&(unit._aiScoutUntil??0)<=time;}
+export function readyForWave(unit,time){return unit.alive&&unit.damage>0&&!unit.isGarrisoned&&!unit.isRetreating&&!unit._aiRecovering&&!unit._pathPending&&!unit.attackTarget&&!unit.moveTarget&&unit.speed>0&&!(unit.empDisabledTimer>0)&&!unit._siegeMode&&unit.health/unit.maxHealth>.55&&(unit._aiRetreatUntil??0)<=time&&(unit._aiMissionUntil??0)<=time&&(unit._aiScoutUntil??0)<=time&&(unit._aiDefenseUntil??0)<=time;}
 const support=u=>['mortar','spg'].includes(u.type);
 export class AttackWaves {
   constructor(ai){this.ai=ai;this.waves=[];}
@@ -60,7 +60,7 @@ export class AttackWaves {
   update(){
     const time=this.ai.gameTime;
     for(const wave of this.waves){
-      wave.units=wave.units.filter(u=>u.alive&&!u.isRetreating&&(u._aiRetreatUntil??0)<=time);
+      wave.units=wave.units.filter(u=>u.alive&&!u.isRetreating&&(u._aiRetreatUntil??0)<=time&&(u._aiDefenseUntil??0)<=time);
       if(!wave.units.length)continue;
       if(wave.initialSize>=5&&wave.units.length<=wave.initialSize*.5){
         for(const unit of wave.units)this.ai.retreatUnit(unit);

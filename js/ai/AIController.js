@@ -1,3 +1,4 @@
+import {baseDefense,canEngage} from './CombatDecisions.js';
 import {buildingReserve} from './AIBudget.js';
 import {AttackWaves,readyForWave} from './AttackWaves.js';
 import * as THREE from 'three';
@@ -982,6 +983,7 @@ export class AIController {
 
     // GD-130: Retreat damaged/valuable units
     this.retreatDamagedUnits();
+    this.defendBase();
 
     // GD-058: Use nation ability
     this.considerNationAbility();
@@ -1202,28 +1204,30 @@ export class AIController {
     }
   }
 
+  defendBase(){
+    if((this._nextDefenseCheck??0)>this.gameTime)return;
+    this._nextDefenseCheck=this.gameTime+2;
+    const response=baseDefense(this);if(!response)return;
+    const assigned=this.attackWaves.order(response.units,response.position,true);
+    for(const unit of assigned){unit._aiDefenseUntil=this.gameTime+10;unit._aiDefensePosition=response.position.clone();unit._aiMissionUntil=0;}
+  }
+
   checkFocusFire(unit) {
-    // Find enemies nearby that are already low HP - focus them down
-    const enemies = this.game.getEntitiesByTeam(this.enemyTeam);
-    let weakest = null;
-    let weakestHPRatio = 1;
-    const range = unit.range * 4;
-
-    for (const enemy of enemies) {
-      if (!enemy.alive) continue;
-      const dist = unit.distanceTo(enemy);
-      if (dist > range) continue;
-
-      const hpRatio = enemy.health / enemy.maxHealth;
-      if (hpRatio < weakestHPRatio && hpRatio < 0.5) {
-        weakestHPRatio = hpRatio;
-        weakest = enemy;
-      }
+    if(unit.attackTarget&&!canEngage(unit,unit.attackTarget))unit.attackTarget=null;
+    let best=unit.attackTarget,bestScore=-Infinity;
+    for(const enemy of this.observedEnemies()){
+      const distance=unit.distanceTo(enemy);
+      if(distance>unit.range*3||!canEngage(unit,enemy,distance))continue;
+      const remaining=enemy.health-(this.game.combatSystem?.getCommittedDamage?.(enemy)??0);
+      if(remaining<=0)continue;
+      const modifier=DAMAGE_MODIFIERS[unit.type]?.[enemy.isBuilding?'building':enemy.type]??1;
+      const effective=unit.damage*modifier*Math.max(.1,1-(enemy.armor??0)*.02);
+      const score=modifier*2+(remaining<=effective?3:1-remaining/enemy.maxHealth)+(enemy.damage>0?1:0)-(distance/(unit.range*3))*.3;
+      // A small preference prevents target thrashing between similar candidates.
+      const stableScore=score+(enemy===unit.attackTarget ? .35 : 0);
+      if(stableScore>bestScore){bestScore=stableScore;best=enemy;}
     }
-
-    if (weakest && weakest !== unit.attackTarget) {
-      unit.attackEntity(weakest, true);
-    }
+    if(best&&best!==unit.attackTarget)unit.attackEntity(best,true);
   }
 
   retreatUnit(unit) {
@@ -1299,13 +1303,13 @@ export class AIController {
   }
 
   findNearestEnemy(unit, maxRange) {
-    const enemies = this.game.getEntitiesByTeam(this.enemyTeam);
+    const enemies = this.observedEnemies();
     let nearest = null;
     let nearestDist = maxRange;
 
     for (const enemy of enemies) {
-      if (!enemy.alive) continue;
       const dist = unit.distanceTo(enemy);
+      if (!canEngage(unit,enemy,dist)) continue;
       if (dist < nearestDist) {
         nearestDist = dist;
         nearest = enemy;
