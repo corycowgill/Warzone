@@ -1562,3 +1562,9 @@ body.spectate-mode .construction-launcher { display:none; }
 #build-menu::-webkit-scrollbar-thumb { background:#8b7549; }
 #build-menu { z-index:1200; }
 @media(max-width:800px) { .construction-launcher,#build-menu { left:50%; } }
+#build-placement-guide { position:fixed; top:152px; left:50%; transform:translateX(-50%); width:min(380px,calc(100vw - 24px)); padding:16px; display:grid; gap:8px; color:var(--ivory); background:#17262bf5; border:1px solid var(--brass); box-shadow:var(--hud-shadow); z-index:112; pointer-events:auto; }
+#build-placement-guide strong { font-size:15px; color:var(--brass); }
+#build-placement-guide span { font-size:12px; line-height:1.5; }
+#build-placement-guide small { font-size:11px; color:var(--muted); }
+#build-placement-cancel { padding:9px; background:#26363b; border:1px solid #52605c; color:var(--ivory); cursor:pointer; }
+@media(max-height:550px) { #build-placement-guide { top:100px; } }

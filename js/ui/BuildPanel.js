@@ -20,6 +20,7 @@ export class BuildPanel {
     this.ghostValid = false;
 
     this.populateBuildMenu();
+    document.getElementById('build-placement-cancel')?.addEventListener('click', () => this.cancelBuildPlacement());
     document.getElementById('build-menu-close')?.addEventListener('click', () => this.closeBuildMenu());
     const categories = document.getElementById('build-categories');
     categories?.replaceChildren();
@@ -221,6 +222,11 @@ export class BuildPanel {
 
     this.buildPlacementMode = true;
     this.buildPlacementType = buildingType;
+    const guide = document.getElementById('build-placement-guide');
+    guide?.classList.remove('hidden');
+    const name = document.getElementById('build-placement-name');
+    if (name) name.textContent = `Placing ${this.hud.formatName(buildingType)}`;
+    this._setPlacementStatus('Move the preview onto open ground.');
     // Close menu visually without canceling placement
     if (this.buildMenu) this.buildMenu.classList.add('hidden');
     this.buildMenuOpen = false;
@@ -233,6 +239,7 @@ export class BuildPanel {
   }
 
   cancelBuildPlacement() {
+    document.getElementById('build-placement-guide')?.classList.add('hidden');
     this.buildPlacementMode = false;
     this.buildPlacementType = null;
     document.body.style.cursor = 'default';
@@ -249,6 +256,7 @@ export class BuildPanel {
       ? this.game.getLocalTeam()
       : (this.game.mode === '2P' ? this.game.activeTeam : 'player');
 
+    let placed = false;
     if (this.game.isMultiplayer && this.game.lockstepManager?.enabled) {
       // In MP, validate locally for instant feedback, then queue through lockstep.
       // The actual building creation happens when the lockstep turn is confirmed.
@@ -256,6 +264,7 @@ export class BuildPanel {
         this.buildPlacementType, activeTeam, worldPos
       );
       if (canBuild) {
+        placed = true;
         this.game.lockstepManager.queueCommand(
           LockstepManager.buildCommand(this.buildPlacementType, worldPos)
         );
@@ -268,11 +277,19 @@ export class BuildPanel {
         worldPos
       );
       if (result) {
+        placed = true;
         this.hud.showNotification(`${this.hud.formatName(this.buildPlacementType)} placed!`, '#a4bf92');
       }
     }
 
-    this.cancelBuildPlacement();
+    // Keep a failed preview active so the player can correct the location.
+    if (placed && !event.shiftKey) this.cancelBuildPlacement();
+    else this._setPlacementStatus(placed ? 'Placed. Choose another location, or Esc to finish.' : 'Unable to build here. Check terrain, spacing, resources and requirements.');
+  }
+
+  _setPlacementStatus(message) {
+    const label = document.getElementById('build-placement-status');
+    if (label && label.textContent !== message) label.textContent = message;
   }
 
   handleSuperweaponTarget(event) {
@@ -382,7 +399,7 @@ export class BuildPanel {
     group.userData.ghostRingMat = ringMat;
 
     this.ghostMesh = group;
-    this.ghostValid = false;
+    this.ghostValid = null;
 
     const scene = this.game.sceneManager?.scene;
     if (scene) scene.add(this.ghostMesh);
@@ -408,6 +425,7 @@ export class BuildPanel {
 
     // Check placement validity
     const valid = this.checkPlacementValid(worldPos);
+    this._setPlacementStatus(valid ? 'Open ground — click to place.' : 'Blocked — use clear, buildable ground away from other structures.');
     if (valid !== this.ghostValid) {
       this.ghostValid = valid;
       const color = valid ? 0x00ff44 : 0xff3333;
