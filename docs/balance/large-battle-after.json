@@ -1,0 +1,22 @@
+{
+  "maxCorpses":12,"maxLabels":24,"damageTextureCache":27,
+  "scenario":"50-vs-50 mixed armies; actual renderer and simulation; no AI production",
+  "wallSeconds":55.793899999976155,"simulationSeconds":7.46666666666665,"hidden":false,
+  "initial":{"player":50,"enemy":50},"remaining":{"player":10,"enemy":12},"attacks":266,
+  "metrics":{
+    "frames":58,"fps":1.063917601416111,"frameMs":939.9224137931035,
+    "p95Ms":1014,"maxMs":1016.4000000953674,"simulationMs":7.293103452386527,
+    "visualMs":4.179310346471852,"renderMs":23.648275864535364,"draws":1222,"triangles":1491210
+  },
+  "stages":{
+    "combatSystem":{"calls":224,"meanMs":0.679910713008472,"totalMs":152.2999997138977,"maxMs":8.899999976158142},
+    "neutralStructures":{"calls":224,"meanMs":0.029017857142857144,"totalMs":6.5,"maxMs":0.30000007152557373},
+    "damageNumbers":{"calls":266,"meanMs":0.07293233297821275,"totalMs":19.40000057220459,"maxMs":1.100000023841858},
+    "effectsManager":{"calls":59,"meanMs":0.5135593232461961,"totalMs":30.300000071525574,"maxMs":1.2999999523162842},
+    "weatherSystem":{"calls":59,"meanMs":0.0033898313166731493,"totalMs":0.20000004768371582,"maxMs":0.10000002384185791},
+    "instancedRenderer":{"calls":59,"meanMs":2.4271186327530168,"totalMs":143.19999933242798,"maxMs":6}
+  },
+  "buffer":{"width":1265,"height":625},"resources":{"geometries":354,"textures":71},
+  "userAgent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+  "validity":"Browser host scheduling and GPU may differ from a normal desktop tab. CPU submission is not GPU timing. Do not infer desktop FPS from a throttled host."
+}

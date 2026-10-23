@@ -428,35 +428,42 @@ export class EffectsManager {
 
   createDamageNumber(position, damage, effectiveness) {
     if (!this._canSpawn()) return;
-    // effectiveness: 'high' (red), 'normal' (white), 'low' (grey)
-    const canvas = document.createElement('canvas');
-    canvas.width = 128;
-    canvas.height = 64;
-    const ctx = canvas.getContext('2d');
+    if(this.activeEffects.filter(e=>e.type==='damageNumber').length>=24)return;
+    this._damageTextCache??=new Map();
+    const key=Math.round(damage)+'/'+effectiveness;
+    let texture=this._damageTextCache.get(key);
+    if(!texture){
+      // effectiveness: 'high' (red), 'normal' (white), 'low' (grey)
+      const canvas = document.createElement('canvas');
+      canvas.width = 128;
+      canvas.height = 64;
+      const ctx = canvas.getContext('2d');
 
-    const dmgText = Math.round(damage).toString();
-    ctx.font = 'bold 48px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+      const dmgText = Math.round(damage).toString();
+      ctx.font = 'bold 48px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
 
-    // Color by effectiveness
-    let fillColor;
-    if (effectiveness === 'high') {
-      fillColor = '#ff3333';
-    } else if (effectiveness === 'low') {
-      fillColor = '#999999';
-    } else {
-      fillColor = '#ffffff';
+      // Color by effectiveness
+      let fillColor;
+      if (effectiveness === 'high') {
+        fillColor = '#ff3333';
+      } else if (effectiveness === 'low') {
+        fillColor = '#999999';
+      } else {
+        fillColor = '#ffffff';
+      }
+
+      // Draw text with black outline for readability
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 4;
+      ctx.strokeText(dmgText, 64, 32);
+      ctx.fillStyle = fillColor;
+      ctx.fillText(dmgText, 64, 32);
+
+      texture = new THREE.CanvasTexture(canvas);
+      if(this._damageTextCache.size<32)this._damageTextCache.set(key,texture);
     }
-
-    // Draw text with black outline for readability
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 4;
-    ctx.strokeText(dmgText, 64, 32);
-    ctx.fillStyle = fillColor;
-    ctx.fillText(dmgText, 64, 32);
-
-    const texture = new THREE.CanvasTexture(canvas);
     const material = new THREE.SpriteMaterial({
       map: texture,
       transparent: true,
@@ -481,6 +488,7 @@ export class EffectsManager {
       group: sprite,
       material: material,
       texture: texture,
+      ownsTexture: this._damageTextCache.get(key)!==texture,
       lifetime: 1.0,
       elapsed: 0,
       startY: sprite.position.y
@@ -490,6 +498,7 @@ export class EffectsManager {
   // GD-064: Gold salvage text
   createSalvageText(position, amount) {
     if (!this._canSpawn()) return;
+    if(this.activeEffects.filter(e=>e.type==='damageNumber').length>=24)return;
     const canvas = document.createElement('canvas');
     canvas.width = 128;
     canvas.height = 64;
@@ -1079,6 +1088,8 @@ export class EffectsManager {
     this.update(0);
     for (const sprite of this._spritePool) sprite.material.dispose();
     this._spritePool.length = 0;
+    for(const texture of this._damageTextCache?.values()??[])texture.dispose();
+    this._damageTextCache?.clear();
     for (const texture of [this._fireTexture, this._smokeTexture, this._sparkTexture, this._shadowTexture]) texture?.dispose();
   }
 
@@ -1105,7 +1116,7 @@ export class EffectsManager {
         this.scene.remove(effect.group);
         if (effect.type === 'damageNumber') {
           effect.material.dispose();
-          effect.texture.dispose();
+          if(effect.ownsTexture!==false)effect.texture.dispose();
         } else if (effect.type === 'trail') {
           if (effect.material) effect.material.dispose();
           if (effect.geometry) effect.geometry.dispose();

@@ -1,4 +1,5 @@
 import {startingArmy} from '../world/StartingDeployment.js';
+import {trimCorpses,disposeCorpse} from '../rendering/CorpseBudget.js';
 import {isEditing} from '../systems/InputPolicy.js';
 import { RenderQuality } from '../rendering/RenderQuality.js';
 import { FrameMetrics } from './FrameMetrics.js';
@@ -996,7 +997,7 @@ export class Game {
       corpseGroup.remove(child);
       child.traverse(c => {
         if (c.isMesh && c.geometry) c.geometry.dispose();
-        if (child === entity._typeLabel) c.material?.map?.dispose();
+        if (child === entity._typeLabel || child === entity._statusBadge) c.material?.map?.dispose();
         if (c.material) c.material.dispose();
       });
     }
@@ -1047,6 +1048,7 @@ export class Game {
 
     // The corpse now owns this group; the dead entity no longer owns a live mesh.
     entity.mesh = null;
+    trimCorpses(this._corpses,this.sceneManager.scene,this.sceneManager.camera,settingsManager.settings.graphics.quality);
   }
 
   removeProjectile(projectile) {
@@ -1503,11 +1505,7 @@ export class Game {
           corpse._materials[m].opacity = opacity;
         }
         if (corpse.timer <= 0) {
-          this.sceneManager.scene.remove(corpse.mesh);
-          corpse.mesh.traverse(child => {
-            if (child.geometry) child.geometry.dispose();
-            if (child.material) child.material.dispose();
-          });
+          disposeCorpse(corpse,this.sceneManager.scene);
           this._corpses.splice(i, 1);
         }
       }
