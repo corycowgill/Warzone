@@ -1,4 +1,5 @@
 import {BattleFeedback} from './BattleFeedback.js';
+import {OrderFeedback} from './OrderFeedback.js';
 import {isEditing,localTeam} from '../systems/InputPolicy.js';
 import { UNIT_STATS, BUILDING_STATS, GAME_CONFIG, RESEARCH_UPGRADES, TECH_BRANCHES, FACTION_UNITS, VICTORY_CONDITIONS } from '../core/Constants.js';
 import { BuildPanel } from './BuildPanel.js';
@@ -40,6 +41,7 @@ export class HUD {
 
     this.setupEventListeners();
     this.battleFeedback=new BattleFeedback(this);
+    this.orderFeedback=new OrderFeedback(this);
   }
 
   _createControlGroupBar() {
@@ -318,6 +320,7 @@ export class HUD {
   hide() {
     this.notifications.feed?.clear();
     this.battleFeedback?.clear();
+    this.orderFeedback?.clear();
     this.visible = false;
     this.hudEl?.classList.add('hidden');
   }
@@ -325,6 +328,7 @@ export class HUD {
   update() {
     if (!this.visible) return;
     this.battleFeedback?.update();
+    this.orderFeedback?.update();
     this.updateResourceDisplay();
     this.productionPanel.updateProductionPanel();
     if (this.buildPanel.buildMenuOpen && (!this._buildRefreshAt || performance.now() >= this._buildRefreshAt)) {

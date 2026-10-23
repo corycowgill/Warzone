@@ -21,7 +21,14 @@ export function steerStep(unit,dx,dz,amount,sepX=0,sepZ=0){
   const options=[[sx/len,sz/len],[dx/distance,dz/distance]];
   // Sliding is a last resort; never turn an invalid diagonal into corner cutting.
   options.push(Math.abs(dx)>Math.abs(dz)?[Math.sign(dx),0]:[0,Math.sign(dz)]);
-  for(const [vx,vz] of options){const x=pos.x+vx*amount,z=pos.z+vz*amount;if(canTraverse(unit,x,z))return {x,z};}
+  options.push(Math.abs(dx)>Math.abs(dz)?[0,Math.sign(dz)]:[Math.sign(dx),0]);
+  for(const [vx,vz] of options){
+    // Crowds may deflect a unit sideways, but must not send it backwards.
+    if(vx*dx+vz*dz<=0)continue;
+    const x=pos.x+vx*amount,z=pos.z+vz*amount;
+    if((dx-vx*amount)**2+(dz-vz*amount)**2>=distance*distance)continue;
+    if(canTraverse(unit,x,z))return {x,z};
+  }
   return null;
 }
 export function separationVector(unit,other){

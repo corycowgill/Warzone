@@ -1568,3 +1568,5 @@ body.spectate-mode .construction-launcher { display:none; }
 #build-placement-guide small { font-size:11px; color:var(--muted); }
 #build-placement-cancel { padding:9px; background:#26363b; border:1px solid #52605c; color:var(--ivory); cursor:pointer; }
 @media(max-height:550px) { #build-placement-guide { top:100px; } }
+.selected-order-status { position:fixed; bottom:230px; left:50%; transform:translateX(-50%); max-width:min(460px,calc(100vw - 32px)); padding:7px 12px; background:#14252ee8; border:1px solid #83c8ff66; color:#d9e5e6; font-size:11px; line-height:1.5; pointer-events:none; text-align:center; z-index:95; }
+@media(max-width:800px) { .selected-order-status { bottom:180px; max-width:45vw; font-size:10px; } }

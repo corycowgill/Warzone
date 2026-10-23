@@ -1,5 +1,9 @@
 import * as THREE from 'three';
 import {FORMATION_CONFIG} from '../core/Constants.js';
+// Closest alternatives first, shared by every slot rather than scanning square corners.
+const alternatives=[];
+for(let z=-12;z<=12;z++)for(let x=-12;x<=12;x++)alternatives.push({x,z,d:x*x+z*z});
+alternatives.sort((a,b)=>a.d-b.d||a.z-b.z||a.x-b.x);
 // Allocate near-side slots first and match each to its closest remaining unit.
 export function planFormation(units,position,offsets,heading,game){
   const pending=[...units].sort((a,b)=>a.id-b.id),reserved=[];
@@ -20,13 +24,12 @@ export function planFormation(units,position,offsets,heading,game){
       if(unit.domain!=='air'&&game.pathfinding?.isPassable){const grid=terrain.worldToGrid(x,z);if(!game.pathfinding.isPassable(grid.x,grid.z,unit.domain))return false;}
       return !reserved.some(p=>Math.hypot(p.x-x,p.z-z)<radius+p.radius+.2);
     };
-    // Search whole rings, stopping at the closest usable ring; no random jitter.
-    for(let ring=0;ring<=12&&!target;ring++)for(let dz=-ring;dz<=ring&&!target;dz++)for(let dx=-ring;dx<=ring;dx++){
-      if(ring&&Math.abs(dx)!==ring&&Math.abs(dz)!==ring)continue;
-      const x=slot.x+dx*scale,z=slot.z+dz*scale;
+    for(const offset of alternatives){
+      const x=slot.x+offset.x*scale,z=slot.z+offset.z*scale;
       if(valid(x,z)){target=new THREE.Vector3(x,terrain?.getHeightAt(x,z)??0,z);break;}
     }
     if(target){reserved.push({x:target.x,z:target.z,radius});plans.push({unit,target});}
+    else game.eventBus?.emit('command:blocked',{unit,position:slot});
   }
   return plans;
 }
