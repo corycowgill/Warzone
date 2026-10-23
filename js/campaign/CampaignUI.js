@@ -20,6 +20,7 @@ export class CampaignUI {
 
   showCampaignSelect() {
     this._hideCampaignScreens();
+    this.game.uiManager?.hideAll();
 
     if (!this._campaignSelectEl) {
       this._createCampaignSelectEl();
@@ -27,136 +28,82 @@ export class CampaignUI {
 
     this._populateMissionList();
     this._campaignSelectEl.classList.remove('hidden');
+    this._campaignSelectEl.querySelector('#campaign-back-btn').focus();
   }
 
   _createCampaignSelectEl() {
-    this._campaignSelectEl = document.createElement('div');
-    this._campaignSelectEl.id = 'campaign-select';
-    this._campaignSelectEl.className = 'hidden';
-    this._campaignSelectEl.style.cssText = `
-      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(10, 15, 30, 0.97);
-      display: flex; align-items: center; justify-content: center;
-      z-index: 1000; font-family: 'Courier New', monospace;
-    `;
-
-    this._campaignSelectEl.innerHTML = `
-      <div style="max-width:800px;width:90%;max-height:90vh;overflow-y:auto;padding:30px;">
-        <h2 style="color:#00ff41;font-size:28px;text-align:center;margin-bottom:5px;text-transform:uppercase;letter-spacing:3px;">Campaign</h2>
-        <div id="campaign-stars-total" style="text-align:center;color:#ffcc00;font-size:14px;margin-bottom:20px;"></div>
-        <div id="campaign-difficulty-select" style="text-align:center;margin-bottom:20px;">
-          <span style="color:#8a9aaa;font-size:12px;margin-right:10px;">Difficulty:</span>
-          <button class="campaign-diff-btn" data-diff="easy" style="padding:6px 16px;margin:0 4px;background:rgba(22,33,62,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:3px;color:#88cc88;cursor:pointer;font-family:inherit;font-size:12px;">Easy</button>
-          <button class="campaign-diff-btn selected" data-diff="normal" style="padding:6px 16px;margin:0 4px;background:rgba(0,255,65,0.1);border:1px solid #00ff41;border-radius:3px;color:#ffcc44;cursor:pointer;font-family:inherit;font-size:12px;box-shadow:0 0 10px rgba(0,255,65,0.2);">Normal</button>
-          <button class="campaign-diff-btn" data-diff="hard" style="padding:6px 16px;margin:0 4px;background:rgba(22,33,62,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:3px;color:#ff6644;cursor:pointer;font-family:inherit;font-size:12px;">Hard</button>
-        </div>
+    const el = document.createElement('section');
+    this._campaignSelectEl = el;
+    el.id = 'campaign-select';
+    el.className = 'campaign-screen hidden';
+    el.setAttribute('aria-label', 'Campaign command');
+    el.innerHTML = `
+      <div class="campaign-shell">
+        <header class="campaign-header"><div><span class="campaign-eyebrow">STRATEGIC COMMAND / OPERATIONS</span><h1>Campaign</h1><p>Three theaters. Twelve operations. One path to victory.</p></div><button id="campaign-back-btn" class="campaign-back">← Main menu</button></header>
+        <div class="campaign-toolbar"><div id="campaign-stars-total"></div><fieldset class="campaign-difficulty"><legend>Operation difficulty</legend>${['easy','normal','hard'].map(diff => `<button type="button" class="campaign-diff-btn" data-diff="${diff}" aria-pressed="false">${diff}</button>`).join('')}</fieldset></div>
+        <p id="campaign-difficulty-help" class="campaign-help"></p>
         <div id="campaign-mission-list"></div>
-        <div style="text-align:center;margin-top:20px;">
-          <button id="campaign-back-btn" style="padding:10px 30px;background:rgba(22,33,62,0.6);border:1px solid rgba(255,255,255,0.15);border-radius:4px;color:#aaa;cursor:pointer;font-family:inherit;font-size:14px;font-weight:600;letter-spacing:1px;">BACK</button>
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(this._campaignSelectEl);
-
-    // Difficulty buttons
-    this._campaignSelectEl.querySelectorAll('.campaign-diff-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        this._campaignSelectEl.querySelectorAll('.campaign-diff-btn').forEach(b => {
-          b.classList.remove('selected');
-          b.style.background = 'rgba(22,33,62,0.6)';
-          b.style.borderColor = 'rgba(255,255,255,0.08)';
-          b.style.boxShadow = 'none';
-        });
-        btn.classList.add('selected');
-        btn.style.background = 'rgba(0,255,65,0.1)';
-        btn.style.borderColor = '#00ff41';
-        btn.style.boxShadow = '0 0 10px rgba(0,255,65,0.2)';
-        this.campaignManager.currentDifficulty = btn.dataset.diff;
-      });
-    });
-
-    // Back button
-    this._campaignSelectEl.querySelector('#campaign-back-btn').addEventListener('click', () => {
-      this._campaignSelectEl.classList.add('hidden');
+        <footer class="campaign-footer">Earn up to three stars per operation. Complete each mission to unlock the next.</footer>
+      </div>`;
+    document.body.appendChild(el);
+    el.querySelectorAll('.campaign-diff-btn').forEach(button => button.addEventListener('click', () => {
+      this.campaignManager.currentDifficulty = button.dataset.diff;
+      this._updateDifficulty();
+    }));
+    el.querySelector('#campaign-back-btn').addEventListener('click', () => {
+      el.classList.add('hidden');
       this.game.uiManager.showMainMenu();
+      document.getElementById('btn-campaign')?.focus();
+    });
+    el.addEventListener('keydown', event => {
+      if (event.key === 'Escape') el.querySelector('#campaign-back-btn').click();
     });
   }
 
+  _updateDifficulty() {
+    const difficulty = this.campaignManager.currentDifficulty;
+    this._campaignSelectEl.querySelectorAll('.campaign-diff-btn').forEach(button => {
+      const selected = button.dataset.diff === difficulty;
+      button.classList.toggle('selected', selected);
+      button.setAttribute('aria-pressed', String(selected));
+    });
+    this._campaignSelectEl.querySelector('#campaign-difficulty-help').textContent = {
+      easy: 'Easy — more starting resources and fewer enemy forces. Learn the battlefield at your pace.',
+      normal: 'Normal — balanced resources and enemy forces. The intended command experience.',
+      hard: 'Hard — fewer resources and stronger, larger enemy forces. Every order counts.'
+    }[difficulty];
+  }
+
   _populateMissionList() {
-    const listEl = this._campaignSelectEl.querySelector('#campaign-mission-list');
-    const starsEl = this._campaignSelectEl.querySelector('#campaign-stars-total');
-    listEl.innerHTML = '';
-
-    const totalStars = this.campaignManager.getTotalStars();
-    const maxStars = this.campaignManager.getMaxStars();
-    starsEl.textContent = `Stars: ${'★'.repeat(totalStars)}${'☆'.repeat(maxStars - totalStars)} (${totalStars}/${maxStars})`;
-
-    const acts = this.campaignManager.getMissionsByAct();
-
+    const list = this._campaignSelectEl.querySelector('#campaign-mission-list');
+    list.replaceChildren();
+    const manager = this.campaignManager;
+    const stars = manager.getTotalStars(), max = manager.getMaxStars();
+    const acts = manager.getMissionsByAct();
+    const missions = acts.flatMap(act => act.missions);
+    const completed = missions.filter(mission => mission.completed).length;
+    this._campaignSelectEl.querySelector('#campaign-stars-total').innerHTML = `<strong>${completed}<span> / ${missions.length}</span></strong><span>OPERATIONS COMPLETE</span><span class="campaign-star-total">★ ${stars} / ${max}</span><progress value="${stars}" max="${max}" aria-label="Campaign stars"></progress>`;
+    this._updateDifficulty();
     for (const act of acts) {
-      // Act header
-      const actHeader = document.createElement('div');
-      actHeader.style.cssText = 'color:#00ff41;font-size:16px;font-weight:bold;margin:20px 0 10px 0;border-bottom:1px solid rgba(0,255,65,0.2);padding-bottom:5px;';
-      actHeader.textContent = act.name;
-      listEl.appendChild(actHeader);
-
+      const section = document.createElement('section');
+      section.className = 'campaign-act';
+      const heading = document.createElement('h2');
+      heading.textContent = act.name;
+      section.appendChild(heading);
+      const grid = document.createElement('div');
+      grid.className = 'campaign-mission-grid';
+      section.appendChild(grid);
       for (const mission of act.missions) {
-        const card = document.createElement('div');
-        const locked = !mission.unlocked;
-        const completed = mission.completed;
-        const stars = mission.stars || 0;
-
-        card.style.cssText = `
-          display: flex; justify-content: space-between; align-items: center;
-          padding: 12px 16px; margin-bottom: 6px;
-          background: ${locked ? 'rgba(30,30,40,0.5)' : completed ? 'rgba(0,255,65,0.05)' : 'rgba(22,33,62,0.6)'};
-          border: 1px solid ${locked ? 'rgba(255,255,255,0.04)' : completed ? 'rgba(0,255,65,0.2)' : 'rgba(255,255,255,0.1)'};
-          border-radius: 4px;
-          cursor: ${locked ? 'default' : 'pointer'};
-          opacity: ${locked ? '0.4' : '1'};
-          transition: all 0.2s;
-        `;
-
-        const starsStr = '★'.repeat(stars) + '☆'.repeat(3 - stars);
-        const nationColors = {
-          america: '#3355ff', britain: '#33aa33', france: '#6666ff',
-          germany: '#666666', japan: '#ff3333', austria: '#cc6633'
-        };
-        const nationColor = nationColors[mission.playerNation] || '#888';
-
-        card.innerHTML = `
-          <div style="flex:1;">
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span style="color:${nationColor};font-size:11px;font-weight:bold;text-transform:uppercase;">${mission.playerNation}</span>
-              <span style="color:${locked ? '#444' : '#ccc'};font-size:14px;font-weight:bold;">Mission ${mission.missionNumber}: ${mission.name}</span>
-            </div>
-            <div style="color:#666;font-size:11px;margin-top:2px;max-width:500px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-              ${locked ? 'Complete the previous mission to unlock.' : mission.briefing.substring(0, 100) + '...'}
-            </div>
-          </div>
-          <div style="text-align:right;min-width:80px;">
-            <div style="color:#ffcc00;font-size:16px;">${locked ? '🔒' : starsStr}</div>
-            ${mission.bestTime ? `<div style="color:#666;font-size:10px;">${Math.floor(mission.bestTime / 60)}:${String(Math.round(mission.bestTime % 60)).padStart(2, '0')}</div>` : ''}
-          </div>
-        `;
-
-        if (!locked) {
-          card.addEventListener('mouseenter', () => {
-            card.style.borderColor = '#00ff41';
-            card.style.background = 'rgba(0,255,65,0.08)';
-          });
-          card.addEventListener('mouseleave', () => {
-            card.style.borderColor = completed ? 'rgba(0,255,65,0.2)' : 'rgba(255,255,255,0.1)';
-            card.style.background = completed ? 'rgba(0,255,65,0.05)' : 'rgba(22,33,62,0.6)';
-          });
-          card.addEventListener('click', () => {
-            this.showBriefing(mission);
-          });
-        }
-
-        listEl.appendChild(card);
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = `campaign-mission ${mission.unlocked ? 'available' : 'locked'} ${mission.completed ? 'completed' : ''}`;
+        card.disabled = !mission.unlocked;
+        const status = !mission.unlocked ? 'Locked' : mission.completed ? 'Completed · Replay' : 'Ready to deploy';
+        card.innerHTML = `<span class="campaign-card-top"><span>OP / ${String(mission.missionNumber).padStart(2,'0')}</span><span class="campaign-status">${status}</span></span><strong>${mission.name}</strong><span class="campaign-nation">${mission.playerNation === 'britain' ? 'Great Britain' : mission.playerNation}</span><span class="campaign-card-summary">${mission.unlocked ? mission.briefing.slice(0,125) + (mission.briefing.length > 125 ? '…' : '') : 'Complete the previous operation to unlock.'}</span><span class="campaign-card-bottom"><span aria-label="${mission.stars || 0} of 3 stars">${'★'.repeat(mission.stars || 0)}${'☆'.repeat(3-(mission.stars || 0))}</span><span>${mission.bestTime ? `BEST ${Math.floor(mission.bestTime/60)}:${String(Math.floor(mission.bestTime%60)).padStart(2,'0')}` : mission.unlocked ? 'View briefing →' : 'Awaiting orders'}</span></span>`;
+        card.addEventListener('click', () => this.showBriefing(mission));
+        grid.appendChild(card);
       }
+      list.appendChild(section);
     }
   }
 
@@ -164,83 +111,35 @@ export class CampaignUI {
 
   showBriefing(mission) {
     this._hideCampaignScreens();
-
-    if (!this._briefingEl) {
-      this._createBriefingEl();
-    }
-
-    const nationNames = {
-      america: 'America', britain: 'Great Britain', france: 'France',
-      germany: 'Germany', japan: 'Japan', austria: 'Austria'
-    };
-
+    if (!this._briefingEl) this._createBriefingEl();
+    const nation = name => name === 'britain' ? 'Great Britain' : name;
     const content = this._briefingEl.querySelector('#briefing-content');
-    const objectives = mission.objectives || [];
-    const primaryObjs = objectives.filter(o => o.priority === 'primary' && !o.hidden);
-    const secondaryObjs = objectives.filter(o => o.priority === 'secondary' && !o.hidden);
-
-    content.innerHTML = `
-      <h2 style="color:#00ff41;font-size:24px;margin-bottom:5px;text-transform:uppercase;letter-spacing:2px;">
-        Mission ${mission.missionNumber}: ${mission.name}
-      </h2>
-      <div style="color:#888;font-size:12px;margin-bottom:15px;">
-        <span style="color:#ffcc00;">Act ${mission.act}</span>
-        &nbsp;|&nbsp; Play as: <span style="color:#00ff44;">${nationNames[mission.playerNation]}</span>
-        &nbsp;|&nbsp; Enemy: <span style="color:#ff4444;">${nationNames[mission.enemyNation]}</span>
-      </div>
-      <div style="color:#aaa;font-size:13px;line-height:1.6;margin-bottom:20px;white-space:pre-wrap;">${mission.briefing}</div>
-      <div style="border-top:1px solid rgba(0,255,65,0.15);padding-top:15px;">
-        <h3 style="color:#00ff41;font-size:14px;margin-bottom:8px;">PRIMARY OBJECTIVES</h3>
-        ${primaryObjs.map(o => `
-          <div style="color:#ccc;font-size:12px;margin-bottom:4px;padding-left:10px;">
-            <span style="color:#ffcc00;">&#9654;</span> ${o.name} <span style="color:#666;">- ${o.description}</span>
-          </div>
-        `).join('')}
-        ${secondaryObjs.length > 0 ? `
-          <h3 style="color:#ffcc00;font-size:14px;margin:12px 0 8px 0;">SECONDARY OBJECTIVES</h3>
-          ${secondaryObjs.map(o => `
-            <div style="color:#999;font-size:12px;margin-bottom:4px;padding-left:10px;">
-              <span style="color:#888;">&#9655;</span> ${o.name} <span style="color:#555;">- ${o.description}</span>
-            </div>
-          `).join('')}
-        ` : ''}
-      </div>
-      <div style="text-align:center;margin-top:25px;display:flex;gap:10px;justify-content:center;">
-        <button id="briefing-start-btn" style="padding:12px 40px;background:rgba(0,255,65,0.15);border:2px solid #00ff41;border-radius:4px;color:#00ff41;cursor:pointer;font-family:inherit;font-size:16px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;">
-          DEPLOY
-        </button>
-        <button id="briefing-back-btn" style="padding:12px 30px;background:rgba(22,33,62,0.6);border:1px solid rgba(255,255,255,0.15);border-radius:4px;color:#aaa;cursor:pointer;font-family:inherit;font-size:14px;font-weight:600;letter-spacing:1px;">
-          BACK
-        </button>
-      </div>
-    `;
-
-    // Wire buttons
+    const objectives = (mission.objectives || []).filter(objective => !objective.hidden);
+    content.innerHTML = `<div class="campaign-eyebrow">ACT ${mission.act} / OPERATION ${String(mission.missionNumber).padStart(2,'0')}</div><h1>${mission.name}</h1><div class="campaign-briefing-meta"><span>COMMAND / ${nation(mission.playerNation)}</span><span>OPPOSITION / ${nation(mission.enemyNation)}</span><span>${this.campaignManager.currentDifficulty} difficulty</span></div><p class="campaign-briefing-copy">${mission.briefing}</p><div class="campaign-objectives">${['primary','secondary'].map(priority => {
+      const entries = objectives.filter(objective => objective.priority === priority);
+      return entries.length ? `<section><h2>${priority} objectives</h2><ul>${entries.map(objective => `<li><strong>${objective.name}</strong><p>${objective.description || ''}</p></li>`).join('')}</ul></section>` : '';
+    }).join('')}</div><footer class="campaign-briefing-actions"><button id="briefing-back-btn" class="campaign-back">← Operations</button><button id="briefing-start-btn" class="campaign-deploy">Deploy to battle →</button></footer>`;
     content.querySelector('#briefing-start-btn').addEventListener('click', () => {
       this._briefingEl.classList.add('hidden');
       this.campaignManager.startMission(mission.id, this.campaignManager.currentDifficulty);
     });
-    content.querySelector('#briefing-back-btn').addEventListener('click', () => {
-      this._briefingEl.classList.add('hidden');
-      this.showCampaignSelect();
-    });
-
+    content.querySelector('#briefing-back-btn').addEventListener('click', () => this.showCampaignSelect());
     this._briefingEl.classList.remove('hidden');
+    const heading = content.querySelector('h1');
+    heading.tabIndex = -1;
+    heading.focus({preventScroll: true});
+    this._briefingEl.scrollTop = 0;
   }
 
   _createBriefingEl() {
-    this._briefingEl = document.createElement('div');
+    this._briefingEl = document.createElement('section');
     this._briefingEl.id = 'campaign-briefing';
-    this._briefingEl.className = 'hidden';
-    this._briefingEl.style.cssText = `
-      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(10, 15, 30, 0.97);
-      display: flex; align-items: center; justify-content: center;
-      z-index: 1000; font-family: 'Courier New', monospace;
-    `;
-    this._briefingEl.innerHTML = `
-      <div id="briefing-content" style="max-width:700px;width:90%;max-height:85vh;overflow-y:auto;padding:30px;"></div>
-    `;
+    this._briefingEl.className = 'campaign-screen hidden';
+    this._briefingEl.setAttribute('aria-label', 'Mission briefing');
+    this._briefingEl.innerHTML = '<div id="briefing-content" class="campaign-briefing-panel"></div>';
+    this._briefingEl.addEventListener('keydown', event => {
+      if (event.key === 'Escape') this.showCampaignSelect();
+    });
     document.body.appendChild(this._briefingEl);
   }
 
