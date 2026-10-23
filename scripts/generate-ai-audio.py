@@ -6,7 +6,7 @@ parser=argparse.ArgumentParser();parser.add_argument('--url',default='http://127
 args.url=args.url.rstrip('/')
 if urllib.parse.urlparse(args.url).hostname not in ('127.0.0.1','localhost','::1'):parser.error('Use a local ComfyUI server URL.')
 work=ROOT/'.tmp/audio-generation';work.mkdir(parents=True,exist_ok=True)
-plans=json.loads((ROOT/'scripts/audio-prompts.json').read_text())
+plans=json.loads((ROOT/'scripts/audio-prompts.json').read_text(encoding='utf-8'))
 def request(path,data=None):
     raw=None if data is None else json.dumps(data).encode()
     req=urllib.request.Request(args.url+path,data=raw,headers={'Content-Type':'application/json'})
@@ -26,7 +26,7 @@ def graph(name,p):
 for name,p in plans.items():
     if args.only and name not in args.only.split(','):continue
     marker=work/(name+'.json')
-    if marker.exists():print('Already generated',name,flush=True);continue
+    if marker.exists() and json.loads(marker.read_text(encoding='utf-8')).get('plan')==p:print('Already generated',name,flush=True);continue
     workflow=graph(name,p);submitted=request('/prompt',{'prompt':workflow,'client_id':'warzone-local-audio'})
     prompt_id=submitted['prompt_id'];print('Generating',name,prompt_id,flush=True);deadline=time.time()+1800
     while time.time()<deadline:

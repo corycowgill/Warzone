@@ -97,6 +97,14 @@ export class UIManager {
         this.game.settingsUI.open();
       }
     });
+    document.getElementById('btn-title-theme')?.addEventListener('click', () => {
+      const audio=this.game.soundManager;
+      if(!audio)return;
+      if(!audio.initialized)audio.initAudio();
+      if(!audio.initialized)return;
+      audio.setMusicEnabled(true);
+      audio.startMenuMusic();
+    });
 
     // Credits screen
     this._creditsScreen = new CreditsScreen();

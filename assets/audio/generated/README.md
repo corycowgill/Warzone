@@ -13,14 +13,16 @@ The model and encoder retain their upstream license terms. This pack documents g
 
 | Asset | Duration | Use |
 | --- | ---: | --- |
-| menu | 57.50 s | Orchestral title theme |
-| game | 77.56 s | Atmospheric planning underscore |
-| combat | 77.56 s | Combat intensity layer |
+| menu — Call to Command | 77.56 s | Dedicated orchestral title theme |
+| game — The Quiet Front | 117.50 s | Restrained planning and exploration score |
+| combat — Armored Advance | 77.56 s | Rhythmic combat variation |
 | victory / defeat | 7.99 s each | End-of-match cues |
 | 17 short effects | 0.25–3.20 s | Weapons, impacts, casualty equipment, interface, production, construction and abilities |
 | wind / water / distant | 17.02 s each | Environmental loops |
 
-The final Vorbis files total 5.30 MiB. Music and ambience are stereo; short effects are mono for positional playback. Files use 44.1 kHz audio and Vorbis quality 5.
+The final Vorbis files total 6.36 MiB. Music and ambience are stereo; short effects are mono for positional playback. Files use 44.1 kHz audio and Vorbis quality 5.
+
+The three longer music cues were generated specifically for title, planning and combat roles. Their prompts share an orchestral palette, D minor and 96 BPM, with a more heroic title melody and a quieter gameplay arrangement. These are generation instructions, not a guarantee of identical motifs or exact beat alignment between independently generated recordings. Gameplay music and the combat variation retain the existing intensity-driven blend. The title screen provides a **Play title theme** button to start music without entering a match; browser user-interaction requirements still apply.
 
 ## Preparation and runtime
 
@@ -40,8 +42,8 @@ python scripts/prepare-ai-audio.py
 npm run test:generated-audio
 ```
 
-The generator records workflows and copies FLAC outputs into the ignored `.tmp/audio-generation` directory. Existing per-asset completion records are skipped; use a fresh workspace to regenerate everything. Preparation requires NumPy and FFmpeg. The existing compatible ComfyUI Python environment was reused; no shared Python dependencies were upgraded.
+The generator records workflows and copies FLAC outputs into the ignored `.tmp/audio-generation` directory. Matching per-asset completion records are skipped; changing a prompt or seed triggers regeneration. Both scripts support `--only menu,game,combat` to update music while retaining the other recordings. JSON prompts are read as UTF-8 so track titles are preserved on Windows. Preparation requires NumPy and FFmpeg. The existing compatible ComfyUI Python environment was reused; no shared Python dependencies were upgraded.
 
 Open `/docs/audio-preview.html` through the game server for the actual mixer and individual recordings. Browser checks confirmed menu/game decoding, all 19 mixer effects, the combat-layer control and cannon dispatch without console warnings or errors. All 25 files also passed full FFmpeg decoding and finite-sample checks. Objective checks do not substitute for subjective listening; the preview is provided for final mix review.
 
-Validation: 148 Vitest tests plus `test:audio` and `test:generated-audio` pass, including loading deduplication, failure throttling, pending-loop cancellation, voice limits, asset hashes, channel layouts and sample rates.
+Validation: 149 Vitest tests plus `test:audio` and `test:generated-audio` pass, including loading deduplication, failure throttling, pending-loop cancellation, voice limits, asset hashes, channel layouts and sample rates.

@@ -22,3 +22,12 @@ it('uses decoded generated samples without building oscillator/noise buffers and
  expect(bank.load).toHaveBeenCalledTimes(GENERATED_SFX.length);expect(battle.play('produce')).toBe(true);expect(battle.play('not-a-track')).toBe(false);
  for(let i=0;i<100;i++){ctx.currentTime+=.1;battle.play('rifle');}expect(battle.voices.size).toBe(24);battle.stop();expect(battle.voices.size).toBe(0);
 });
+it('starts decoded looping music and releases it after the stop fade',async()=>{
+ vi.useFakeTimers();
+ try{
+  const ctx=context(),bank=new GeneratedAudio(ctx),buffer={duration:77.5};bank.buffers.set('menu',buffer);
+  const loop=bank.loop('menu',node());await Promise.resolve();const source=ctx.createBufferSource.mock.results[0].value;
+  expect(source.buffer).toBe(buffer);expect(source.loop).toBe(true);expect(source.start).toHaveBeenCalledOnce();
+  loop.stop();vi.runAllTimers();expect(loop.gain.disconnect).toHaveBeenCalled();expect(bank.buffers.has('menu')).toBe(false);
+ }finally{vi.useRealTimers();}
+});

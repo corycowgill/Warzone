@@ -14,5 +14,5 @@ document.querySelector('#cannon').onclick=async()=>{await ready('cannon');manage
 document.querySelector('#stop').onclick=()=>{manager.stopAllMusic();manager.stopAmbient();manager.battleAudio?.stop();status.textContent='Mixer stopped';};
 let previous=performance.now();function tick(now){manager.update(Math.min(.1,(now-previous)/1000));previous=now;requestAnimationFrame(tick);}requestAnimationFrame(tick);
 const manifest=await fetch('../assets/audio/generated/manifest.json').then(r=>r.json());
-for(const [name,asset]of Object.entries(manifest.assets)){const card=document.createElement('article'),title=document.createElement('p'),audio=document.createElement('audio');title.textContent=name+' · '+asset.seconds.toFixed(1)+' s';audio.controls=true;audio.preload='none';audio.src='../assets/audio/generated/'+asset.file;card.append(title,audio);document.querySelector('#tracks').append(card);}
+for(const [name,asset]of Object.entries(manifest.assets)){const card=document.createElement('article'),title=document.createElement('p'),audio=document.createElement('audio');title.textContent=(asset.title??name)+' · '+asset.seconds.toFixed(1)+' s';audio.controls=true;audio.preload='none';audio.src='../assets/audio/generated/'+asset.file;card.append(title,audio);document.querySelector('#tracks').append(card);}
 </script></body></html>
