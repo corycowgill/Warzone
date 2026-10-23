@@ -97,13 +97,19 @@ export class UIManager {
         this.game.settingsUI.open();
       }
     });
-    document.getElementById('btn-title-theme')?.addEventListener('click', () => {
+    document.getElementById('btn-title-theme')?.addEventListener('click', async event => {
       const audio=this.game.soundManager;
       if(!audio)return;
-      if(!audio.initialized)audio.initAudio();
-      if(!audio.initialized)return;
-      audio.setMusicEnabled(true);
-      audio.startMenuMusic();
+      const button=event.currentTarget;
+      button.disabled=true;
+      button.textContent='Loading title music…';
+      try {
+        const status=await audio.playTitleTheme();
+        button.textContent=status==='muted'?'Music muted — check Settings':'Title theme playing';
+      } catch(error) {
+        button.textContent='Retry title music';
+        button.title=error.message;
+      } finally { button.disabled=false; }
     });
 
     // Credits screen

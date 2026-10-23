@@ -44,6 +44,7 @@ export class SoundManager {
       if (!this.initialized) {
         this.initAudio();
       }
+      this.audioContext?.resume().catch(() => {});
     };
     document.addEventListener('click', this._initOnInteraction, { once: true });
     document.addEventListener('keydown', this._initOnInteraction, { once: true });
@@ -85,6 +86,7 @@ export class SoundManager {
   initAudio() {
     try {
       this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      this.audioContext.resume().catch(() => {});
 
       // Master gain
       this.masterGain = this.audioContext.createGain();
@@ -1014,6 +1016,26 @@ export class SoundManager {
   }
 
   // ==================== MUSIC SYSTEM ====================
+
+  async playTitleTheme() {
+    if (!this.initialized) this.initAudio();
+    if (!this.initialized) throw new Error('Audio is unavailable in this browser.');
+    // Call resume directly inside the click gesture, before fetching the recording.
+    await this.audioContext.resume();
+    if (this.audioContext.state !== 'running') throw new Error('Audio is paused. Click to retry.');
+    this.setMusicEnabled(true);
+    this.generatedAudio?.failed.delete('menu');
+    if (!this._menuMusic?.nodes.length) {
+      this.stopAllMusic();
+      this.startMenuMusic();
+    }
+    const ready = await this._menuMusic?.ready;
+    if (ready === false) {
+      this.stopAllMusic();
+      throw new Error('Title music could not load. Click to retry.');
+    }
+    return this.volume === 0 || this.musicVolume === 0 ? 'muted' : 'playing';
+  }
 
   startMenuMusic() {
     if (!this.initialized || !this.musicEnabled || this._currentMusicType === 'menu') return;

@@ -1,8 +1,21 @@
 import {it,expect,vi} from 'vitest';
 import {GeneratedAudio,GENERATED_SFX} from '../../js/audio/GeneratedAudio.js';
 import {BattleAudio} from '../../js/audio/BattleAudio.js';
+import {SoundManager} from '../../js/systems/SoundManager.js';
 const node=()=>({gain:{value:1},playbackRate:{value:1},pan:{value:0},connect:vi.fn(),disconnect:vi.fn(),start:vi.fn(),stop(){this.onended?.();}});
 function context(){return {currentTime:0,decodeAudioData:vi.fn(async()=>({duration:2})),createGain:node,createBufferSource:vi.fn(node),createStereoPanner:node};}
+it('unlocks an existing suspended title context before playing and reports mute',async()=>{
+ const audio=Object.create(SoundManager.prototype);
+ Object.assign(audio,{initialized:true,volume:.3,musicVolume:.25,generatedAudio:{failed:new Set(['menu'])},audioContext:{state:'suspended',resume:vi.fn(async()=>{audio.audioContext.state='running';})},setMusicEnabled:vi.fn(),stopAllMusic:vi.fn(),startMenuMusic:vi.fn(()=>{audio._menuMusic={nodes:[{}],ready:Promise.resolve(true)};})});
+ expect(await audio.playTitleTheme()).toBe('playing');expect(audio.audioContext.resume).toHaveBeenCalledOnce();expect(audio.generatedAudio.failed.has('menu')).toBe(false);
+ audio.volume=0;expect(await audio.playTitleTheme()).toBe('muted');expect(audio.startMenuMusic).toHaveBeenCalledOnce();
+});
+it('reports a failed title recording and permits a later retry',async()=>{
+ const audio=Object.create(SoundManager.prototype);
+ Object.assign(audio,{initialized:true,volume:.3,musicVolume:.25,audioContext:{state:'running',resume:vi.fn(async()=>{})},setMusicEnabled:vi.fn(),stopAllMusic:vi.fn(),startMenuMusic:vi.fn(()=>{audio._menuMusic={nodes:[],ready:Promise.resolve(false)};})});
+ await expect(audio.playTitleTheme()).rejects.toThrow('could not load');expect(audio.stopAllMusic).toHaveBeenCalledTimes(2);
+ audio.startMenuMusic.mockImplementation(()=>{audio._menuMusic={nodes:[{}],ready:Promise.resolve(true)};});expect(await audio.playTitleTheme()).toBe('playing');
+});
 it('deduplicates recording loads and remembers failures without fetch storms',async()=>{
  const fetch=vi.fn(async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(2)}));vi.stubGlobal('fetch',fetch);
  try{

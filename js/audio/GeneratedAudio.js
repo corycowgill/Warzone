@@ -22,12 +22,12 @@ export class GeneratedAudio {
       gain.gain.setTargetAtTime?.(0,context.currentTime,.025);
       setTimeout(()=>{for(const source of obj.nodes){try{source.stop();}catch{}source.disconnect();}gain.disconnect();obj.cleanup();},120);
     };
-    this.load(name).then(buffer=>{
+    obj.ready=this.load(name).then(buffer=>{
       if(obj.cancelled){obj.cleanup();return;}
-      if(!buffer){gain.disconnect();return;}
+      if(!buffer){gain.disconnect();return false;}
       const source=context.createBufferSource();source.buffer=buffer;source.loop=true;
       const level=gain.gain.value;gain.gain.value=0;gain.gain.setTargetAtTime?.(level,context.currentTime,.1);
-      source.connect(gain);obj.nodes.push(source);source.start();
+      source.connect(gain);obj.nodes.push(source);source.start();return true;
     });return obj;
   }
 }
