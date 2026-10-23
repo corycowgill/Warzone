@@ -327,6 +327,10 @@ export class HUD {
     this.battleFeedback?.update();
     this.updateResourceDisplay();
     this.productionPanel.updateProductionPanel();
+    if (this.buildPanel.buildMenuOpen && (!this._buildRefreshAt || performance.now() >= this._buildRefreshAt)) {
+      this.buildPanel.updateBuildMenuAvailability();
+      this._buildRefreshAt = performance.now() + 400;
+    }
     this.buildPanel.updateRallyPointVisuals();
     this.notifications.updateNationAbilityButton();
     this.notifications.updateDayNightIndicator();

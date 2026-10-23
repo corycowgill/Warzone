@@ -1532,3 +1532,33 @@ body[data-studio-intro] #main-menu { visibility:hidden; }
 .campaign-deploy:hover { background:#e5c48a; }
 @media(max-width:1050px) { .campaign-mission-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:600px) { .campaign-shell { padding:24px 18px; } .campaign-header { align-items:flex-start; flex-direction:column-reverse; gap:22px; } .campaign-toolbar { align-items:flex-start; flex-direction:column; } .campaign-mission-grid,.campaign-objectives { grid-template-columns:1fr; } .campaign-mission { min-height:190px; } .campaign-briefing-panel { margin:16px; padding:24px 20px; } .campaign-briefing-actions { flex-direction:column-reverse; } .campaign-deploy { min-height:48px; } }
+
+/* Persistent RTS construction entry point and categorized build palette. */
+.construction-launcher { position:fixed; top:82px; left:22px; display:flex; align-items:center; gap:12px; padding:12px 16px; min-height:58px; border:1px solid var(--brass); background:linear-gradient(135deg,#38433b,#1a2b30); color:var(--ivory); box-shadow:var(--hud-shadow); pointer-events:auto; cursor:pointer; text-align:left; z-index:110; }
+.construction-launcher strong { display:block; font-size:14px; }
+.construction-launcher small { display:block; color:#b5bdb0; font-size:10px; margin-top:4px; }
+.construction-launcher kbd { margin-left:12px; border:1px solid #cfaa6770; padding:4px 7px; color:var(--brass); font-size:11px; }
+.construction-symbol { font-size:25px; color:var(--brass); }
+.construction-launcher:hover,.construction-launcher[aria-expanded="true"] { background:#465447; border-color:#f2ce89; }
+#build-menu { left:22px; right:auto; top:150px; width:340px; max-height:calc(100dvh - 365px); border-top:2px solid var(--brass); z-index:111; }
+.construction-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.construction-heading h4 { margin:0; border:0; padding:0; }
+#build-menu-close { width:32px; height:32px; background:transparent; border:1px solid #52605c; color:var(--ivory); font-size:22px; cursor:pointer; }
+.construction-help { font-size:12px; line-height:1.5; color:var(--muted); margin:10px 0 14px; }
+#build-categories { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:12px; }
+#build-categories button { padding:8px; border:1px solid #52605c; color:var(--muted); background:#17262b; font-size:11px; cursor:pointer; }
+#build-categories button[aria-pressed="true"] { border-color:var(--brass); color:var(--brass); background:#cfaa6718; }
+#build-options [hidden] { display:none !important; }
+#build-options .cmd-btn { min-height:64px; margin-bottom:7px !important; }
+#build-options .cmd-btn:disabled { cursor:not-allowed; }
+.build-availability { display:block; color:var(--brass); font-size:10px; margin-top:6px; }
+#build-options .cmd-btn:disabled .build-availability { color:#dbb5a0; }
+body.spectate-mode .construction-launcher { display:none; }
+@media(max-width:800px) { .construction-launcher { left:12px; top:94px; padding:8px 12px; min-height:46px; gap:8px; } .construction-launcher small { display:none; } .construction-launcher strong { font-size:12px; } .construction-symbol { font-size:20px; } #build-menu { left:12px; top:148px; width:min(340px,calc(100vw - 24px)); max-height:calc(100dvh - 290px); } }
+@media(max-height:550px) { .construction-launcher { top:55px; min-height:38px; padding:6px 10px; } .construction-launcher small { display:none; } #build-menu { top:100px; max-height:calc(100dvh - 125px); } }
+/* Keep construction clear of the nation ability and tutorial at the left edge. */
+.construction-launcher { left:50%; transform:translateX(-50%); }
+#build-menu { left:50%; transform:translateX(-50%); scrollbar-color:#8b7549 #142128; }
+#build-menu::-webkit-scrollbar-thumb { background:#8b7549; }
+#build-menu { z-index:1200; }
+@media(max-width:800px) { .construction-launcher,#build-menu { left:50%; } }

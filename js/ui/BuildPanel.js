@@ -20,6 +20,22 @@ export class BuildPanel {
     this.ghostValid = false;
 
     this.populateBuildMenu();
+    document.getElementById('build-menu-close')?.addEventListener('click', () => this.closeBuildMenu());
+    const categories = document.getElementById('build-categories');
+    categories?.replaceChildren();
+    this.category = 'all';
+    for (const [id, label] of [['all','All'],['economy','Economy'],['military','Military'],['defense','Defense'],['technology','Tech']]) {
+      if (!categories) break;
+      const button = document.createElement('button');
+      button.textContent = label;
+      button.setAttribute('aria-pressed', String(id === 'all'));
+      button.addEventListener('click', () => {
+        this.category = id;
+        categories.querySelectorAll('button').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+        this.buildOptions.querySelectorAll('[data-build-type]').forEach(item => item.hidden = id !== 'all' && item.dataset.category !== id);
+      });
+      categories.appendChild(button);
+    }
   }
 
   populateBuildMenu() {
@@ -34,6 +50,7 @@ export class BuildPanel {
       const btn = document.createElement('button');
       btn.className = 'cmd-btn';
       btn.dataset.buildType = type;
+      btn.dataset.category = ['resourcedepot','supplydepot','munitionscache','supplyexchange'].includes(type) ? 'economy' : ['turret','aaturret','bunker','wall'].includes(type) ? 'defense' : ['techlab','superweapon'].includes(type) ? 'technology' : 'military';
       btn.style.cssText = `
         display: block;
         width: 100%;
@@ -79,6 +96,7 @@ export class BuildPanel {
         <span style="color:#d6b36d;float:right;">${stats.cost} SP</span>
         <br><small style="color:#999;">${descStr}</small>
         ${reqStr}
+        <span class="build-availability"></span>
       `;
       btn.addEventListener('click', () => {
         this.enterBuildPlacement(type);
@@ -142,12 +160,14 @@ export class BuildPanel {
       }
 
       const enabled = hasReqs && canAfford && !atLimit;
-      btn.style.opacity = enabled ? '1' : '0.5';
+      btn.disabled = !enabled;
+      btn.style.opacity = enabled ? '1' : '0.75';
       btn.style.cursor = enabled ? 'pointer' : 'not-allowed';
       // Update tooltip with limit info
-      if (limit !== undefined) {
-        btn.title = atLimit ? `Limit reached${limitStr}` : `Remaining${limitStr}`;
-      }
+      const reason = !hasReqs ? `Requires ${requires.filter(req => !teamBuildings.some(b => b.type === req && b.alive)).map(req => this.hud.formatName(req)).join(', ')}` : atLimit ? `Limit reached${limitStr}` : !canAfford ? `Need ${stats.cost} SP` : 'Ready to place';
+      btn.title = reason;
+      const label = btn.querySelector('.build-availability');
+      if (label) label.textContent = reason;
     });
   }
 
@@ -161,17 +181,21 @@ export class BuildPanel {
 
   openBuildMenu() {
     if (!this.buildMenu) return;
+    if (this.game.state !== 'PLAYING' || this.game.mode === 'SPECTATE' || this.game.isSpectating) return;
+    this.cancelBuildPlacement();
     // Hide production panel while build menu is open to prevent overlap
     this.hud.productionPanel.hideProductionOptions();
     this.updateBuildMenuAvailability();
     this.buildMenu.classList.remove('hidden');
     this.buildMenuOpen = true;
+    document.getElementById('cmd-build')?.setAttribute('aria-expanded', 'true');
   }
 
   closeBuildMenu() {
     if (!this.buildMenu) return;
     this.buildMenu.classList.add('hidden');
     this.buildMenuOpen = false;
+    document.getElementById('cmd-build')?.setAttribute('aria-expanded', 'false');
     this.cancelBuildPlacement();
     // Restore production panel if a building is selected
     const selected = this.game.selectionManager?.getSelected() || [];
@@ -200,6 +224,7 @@ export class BuildPanel {
     // Close menu visually without canceling placement
     if (this.buildMenu) this.buildMenu.classList.add('hidden');
     this.buildMenuOpen = false;
+    document.getElementById('cmd-build')?.setAttribute('aria-expanded', 'false');
     document.body.style.cursor = 'crosshair';
     this.hud.showNotification(`Click to place ${this.hud.formatName(buildingType)}. ESC to cancel.`, '#d6b36d');
 

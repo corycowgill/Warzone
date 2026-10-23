@@ -358,9 +358,12 @@
       <div id="production-options"></div>
     </div>
 
-    <!-- Build Menu (right side, shown when building) -->
+    <button id="cmd-build" class="construction-launcher" aria-controls="build-menu" aria-expanded="false" title="Open construction (B). No unit selection needed."><span class="construction-symbol" aria-hidden="true">⌂ +</span><span><strong>Build Structures</strong><small>Expand your base</small></span><kbd>B</kbd></button>
+    <!-- Construction is accessible without selecting a unit. -->
     <div id="build-menu" class="hidden">
-      <h4 class="production-title">Build Structure</h4>
+      <div class="construction-heading"><h4 class="production-title">Construction</h4><button id="build-menu-close" aria-label="Close construction menu">×</button></div>
+      <p class="construction-help">Choose a structure, then click the battlefield to place it. No builder required.</p>
+      <div id="build-categories" role="group" aria-label="Structure categories"></div>
       <div id="build-options"></div>
     </div>
   </div>
