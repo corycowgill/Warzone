@@ -23,6 +23,7 @@
     "test:batching": "node scripts/verify-unit-batching.mjs",
     "test:vfx": "node scripts/verify-vfx.mjs",
     "test:audio": "node scripts/verify-audio.mjs",
+    "test:generated-audio": "node scripts/verify-generated-audio.mjs",
     "test:gameplay": "node scripts/verify-gameplay.mjs",
     "analyze:balance": "node scripts/analyze-balance.mjs",
     "analyze:balance:baseline": "node scripts/reproduce-balance-baseline.mjs",

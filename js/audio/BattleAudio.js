@@ -1,4 +1,5 @@
-// Original, deterministic layered sound design. Buffers are built once, then reused.
+import {GENERATED_SFX} from './GeneratedAudio.js';
+// Generated recordings are the game default; synthesis is retained for legacy callers and diagnostics.
 export const SOUND_PROFILES = {
   rifle: [.18, 150, .025, 2600], auto: [.24, 115, .035, 1700],
   cannon: [.65, 82, .18, 850], heavy: [.85, 64, .25, 650],
@@ -46,9 +47,16 @@ export function synthesizeBattleSound(family, sampleRate = 44100, variant = 0) {
 }
 
 export class BattleAudio {
-  constructor(context, destination, game) {
+  constructor(context, destination, game, bank=null) {
     this.context=context;this.destination=destination;this.game=game;
     this.buffers=new Map();this.voices=new Set();this.last=new Map();
+    this.bank=bank;
+    if(bank){
+      this.ready=Promise.all(GENERATED_SFX.map(async family=>{
+        const buffer=await bank.load(family);
+        if(buffer)this.buffers.set(family,[buffer]);
+      }));return;
+    }
     for (const family of Object.keys(SOUND_PROFILES)) {
       this.buffers.set(family, [0,1,2].map(variant=>{
         const data=synthesizeBattleSound(family,context.sampleRate,variant);
@@ -59,10 +67,11 @@ export class BattleAudio {
   }
   play(family, position) {
     const ctx=this.context, now=ctx.currentTime;
+    const buffers=this.buffers.get(family)||(!this.bank?this.buffers.get('rifle'):null);
+    if(!buffers?.length)return false;
     if (this.voices.size>=24 || now-(this.last.get(family)??-Infinity)<.055) return false;
     this.last.set(family,now);
     const source=ctx.createBufferSource(),gain=ctx.createGain(),pan=ctx.createStereoPanner();
-    const buffers=this.buffers.get(family)||this.buffers.get('rifle');
     source.buffer=buffers[Math.floor(Math.random()*buffers.length)];
     source.playbackRate.value=.96+Math.random()*.08;
     const target=this.game?.cameraController?.target, camera=this.game?.sceneManager?.camera;

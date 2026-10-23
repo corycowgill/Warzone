@@ -1,3 +1,4 @@
+import {GeneratedAudio} from '../audio/GeneratedAudio.js';
 import {BattleAudio, weaponFamily} from '../audio/BattleAudio.js';
 
 export class SoundManager {
@@ -111,7 +112,8 @@ export class SoundManager {
       this.ambientGain = this.audioContext.createGain();
       this.ambientGain.gain.value = 0.5;
       this.ambientGain.connect(this.limiter);
-      this.battleAudio = new BattleAudio(this.audioContext, this.sfxGain, this.game);
+      this.generatedAudio = new GeneratedAudio(this.audioContext);
+      this.battleAudio = new BattleAudio(this.audioContext, this.sfxGain, this.game,this.generatedAudio);
 
       this.initialized = true;
       this.applySettings(this.game?.settingsManager?.settings?.audio || {});
@@ -199,6 +201,8 @@ export class SoundManager {
       }
     }
 
+    if(this.generatedAudio&&this._gameMusic?.gain)this._gameMusic.gain.gain.setTargetAtTime(1-this._combatIntensity*.85,this.audioContext.currentTime,.4);
+
     // Fade combat music layer based on intensity
     if (this._combatMusic && this._combatMusic.gain) {
       const targetVol = Math.min(1.0, this._combatIntensity);
@@ -237,6 +241,10 @@ export class SoundManager {
     const now = Date.now();
     if (this._lastPingTime && now - this._lastPingTime < 3000) return;
     this._lastPingTime = now;
+    if(this.generatedAudio){
+      const target=this.game.cameraController?.target;
+      this.battleAudio.play('error',target?{x:target.x+direction*50,z:target.z}:undefined);return;
+    }
 
     if (!this.audioContext) return;
     const ctx = this.audioContext;
@@ -282,15 +290,15 @@ export class SoundManager {
       case 'explosion': this.battleAudio.play('explosion', options?.position); break;
       case 'impact': this.battleAudio.play(unitType === 'artillery' ? 'explosion' : 'impact', options?.position); break;
       case 'ui': this.battleAudio.play('ui'); break;
-      case 'produce': this.playProduce(); break;
-      case 'move': this.playMoveAck(unitType); this.playVoiceLine('move'); break;
-      case 'select': this.playSelectAck(unitType); this.playVoiceLine('select'); break;
-      case 'acknowledge': this.playAttackAck(unitType); this.playVoiceLine('attack'); break;
-      case 'build': this.playBuild(); break;
-      case 'ability': this.playAbility(); break;
-      case 'error': this.playError(); break;
-      case 'victory': this.playVictoryFanfare(); break;
-      case 'defeat': this.playDefeatSting(); break;
+      case 'produce': this.battleAudio.play('produce'); break;
+      case 'move': this.battleAudio.play('ui'); this.playVoiceLine('move'); break;
+      case 'select': this.battleAudio.play('ui'); this.playVoiceLine('select'); break;
+      case 'acknowledge': this.battleAudio.play('ui'); this.playVoiceLine('attack'); break;
+      case 'build': this.battleAudio.play('build'); break;
+      case 'ability': this.battleAudio.play('ability'); break;
+      case 'error': this.battleAudio.play('error'); break;
+      case 'victory': this.battleAudio.play('victory'); break;
+      case 'defeat': this.battleAudio.play('defeat'); break;
     }
   }
 
@@ -1011,15 +1019,15 @@ export class SoundManager {
     if (!this.initialized || !this.musicEnabled || this._currentMusicType === 'menu') return;
     this.stopAllMusic();
     this._currentMusicType = 'menu';
-    this._menuMusic = this._createMenuMusicLoop();
+    this._menuMusic = this.generatedAudio?.loop('menu',this.musicGain)??this._createMenuMusicLoop();
   }
 
   startGameMusic() {
     if (!this.initialized || !this.musicEnabled || this._currentMusicType === 'game') return;
     this.stopAllMusic();
     this._currentMusicType = 'game';
-    this._gameMusic = this._createGameMusicLoop();
-    this._combatMusic = this._createCombatMusicLayer();
+    this._gameMusic = this.generatedAudio?.loop('game',this.musicGain)??this._createGameMusicLoop();
+    this._combatMusic = this.generatedAudio?.loop('combat',this.musicGain,0)??this._createCombatMusicLayer();
   }
 
   stopAllMusic() {
@@ -1046,6 +1054,8 @@ export class SoundManager {
 
   _stopMusicObj(obj) {
     if (!obj) return;
+    if(obj.stop){obj.stop();return;}
+    obj.cancelled=true;obj.cleanup?.();
     try {
       if (obj.nodes) {
         for (const node of obj.nodes) {
@@ -1687,6 +1697,12 @@ export class SoundManager {
     if (!this.initialized || !this.audioContext || !this.ambientEnabled) return;
     this.stopAmbient();
 
+    if(this.generatedAudio){
+      this._ambientWind=this.generatedAudio.loop('wind',this.ambientGain,.28);
+      if(this.game.terrain?.mapTemplate!=='plains')this._ambientWater=this.generatedAudio.loop('water',this.ambientGain,.15);
+      this._ambientArtillery=this.generatedAudio.loop('distant',this.ambientGain,.12);
+      return;
+    }
     const ctx = this.audioContext;
 
     // Wind (filtered brown noise)
@@ -1808,6 +1824,8 @@ export class SoundManager {
     const stops = [this._ambientWind, this._ambientBirds, this._ambientArtillery, this._ambientWater];
     for (const obj of stops) {
       if (!obj) continue;
+      if(obj.stop){obj.stop();continue;}
+      obj.cancelled=true;obj.cleanup?.();
       if (obj.interval) clearInterval(obj.interval);
       if (obj.nodes) {
         for (const n of obj.nodes) {
