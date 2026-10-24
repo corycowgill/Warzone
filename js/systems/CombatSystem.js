@@ -73,7 +73,6 @@ export class CombatSystem {
     // Performance: use cached unit lists instead of filter() every frame
     const playerUnits = this.game.getUnits('player');
     const enemyUnits = this.game.getUnits('enemy');
-    const camera = this.game.sceneManager.camera;
 
     const firstTeam=(this._combatTick++)%2;
 
@@ -152,13 +151,6 @@ export class CombatSystem {
             this.performTurretAttack(turret, turret.attackTarget);
           }
         }
-      }
-    }
-
-    // Update all entity health bars
-    for (const entity of this.game.entities) {
-      if (entity.alive) {
-        entity.updateHealthBar(camera);
       }
     }
 

@@ -1,4 +1,5 @@
 import {startingArmy} from '../world/StartingDeployment.js';
+import {updateEntityOverlays} from '../rendering/EntityOverlays.js';
 import {trimCorpses,disposeCorpse} from '../rendering/CorpseBudget.js';
 import {isEditing} from '../systems/InputPolicy.js';
 import { RenderQuality } from '../rendering/RenderQuality.js';
@@ -1417,6 +1418,7 @@ export class Game {
 
     // Camera
     if (this.cameraController) this.cameraController.update(frameDelta);
+    if (this.sceneManager?.camera) updateEntityOverlays(this.entities, this.sceneManager.camera);
 
     // Minimap
     if (this.minimap) this.minimap.update(Math.min(frameDelta, .1));

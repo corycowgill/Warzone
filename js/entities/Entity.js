@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+const barParentRotation = new THREE.Quaternion();
+const barCameraRotation = new THREE.Quaternion();
 
 export class Entity {
   static nextId = 1;
@@ -159,21 +161,27 @@ export class Entity {
       }
     }
 
-    const ratio = this.health / this.maxHealth;
+    const ratio = this.maxHealth > 0 ? Math.max(0, Math.min(1, this.health / this.maxHealth)) : 0;
     // Performance: cache the fill mesh reference instead of getObjectByName every frame
     if (!this._healthFill) {
       this._healthFill = this.healthBar.getObjectByName('healthFill');
     }
     const fill = this._healthFill;
-    if (fill) {
+    if (fill && (ratio !== this._lastHealthRatio || fill !== this._lastHealthFill)) {
       fill.scale.x = ratio;
       fill.position.x = -(1 - ratio) * 1.25;
       fill.material.color.setHex(ratio > 0.6 ? 0x76d6a4 : ratio > 0.3 ? 0xf1c46d : 0xf47b70);
+      this._lastHealthRatio = ratio;
+      this._lastHealthFill = fill;
     }
 
     // Billboard - face camera
     if (camera) {
-      this.healthBar.quaternion.copy(camera.quaternion);
+      camera.getWorldQuaternion(barCameraRotation);
+      if (this.healthBar.parent) {
+        this.healthBar.parent.getWorldQuaternion(barParentRotation);
+        this.healthBar.quaternion.copy(barParentRotation).invert().multiply(barCameraRotation);
+      } else this.healthBar.quaternion.copy(barCameraRotation);
     }
   }
 
