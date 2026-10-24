@@ -13,3 +13,11 @@ Validation: 219 tests pass, including seven tutorial regression cases; controls 
 The completion screen offers a fresh Easy headquarters-destruction skirmish on Plains, retaining the tutorial's faction choices. It tears down the old match before starting the new one; duplicate exit actions are ignored. Return to Menu uses the same normal match teardown instead of reloading the browser.
 
 The debrief explains the victory objective, focuses its primary action, labels the dialog, and uses the established brass/ivory command palette with wrapping buttons and visible keyboard focus. Validation: 221 tests pass, including teardown order, fresh match configuration, duplicate-click prevention and menu exit. Browser visual validation remains outstanding. Combat target recovery remains follow-up work.
+
+## Reachable combat practice
+
+Targets now spawn relative to a live, nongarrisoned player infantry unit (or another land unit), using a deterministic bounded search. Placement rejects map edges, unwalkable tiles, nearby buildings/units, missing routes and paths redirected away from the destination. Each attempt uses at most four route checks and maintains at most three live practice enemies.
+
+During the two combat lessons, a five-second simulation timer checks whether a nearby practice target remains; defeated targets can be replaced. The grenade lesson also checks on entry. Existing live practice enemies count toward the cap even if the player moves away, preventing an accumulating replacement army. Recovery does not run in other lessons or while simulation updates are paused.
+
+Validation: 226 tests plus controls and interface checks. New cases cover boundary placement, blocked terrain, unreachable/redirected routes, bounded path work, replacement caps and recovery timing. Fresh browser playthrough remains outstanding. This does not recover an army after all player infantry are lost, nor guarantee a placement when the nearby terrain is entirely blocked.

@@ -1,3 +1,4 @@
+import {Vector3} from 'three';
 import {it, expect, vi, afterEach} from 'vitest';
 import {TutorialSystem} from '../../js/systems/TutorialSystem.js';
 import {EventBus} from '../../js/core/EventBus.js';
@@ -79,4 +80,51 @@ it('returns to the menu through normal teardown without starting another match',
  tutorial._exitTutorial(false);
  expect(tutorial.game.restart).toHaveBeenCalledTimes(1);
  expect(tutorial.game.startGame).not.toHaveBeenCalled();
+});
+
+function practice(origin = new Vector3(250, 0, 250)) {
+ const soldier = {...unit(),domain:'land',getPosition:()=>origin};
+ const game = {entities:[soldier],terrain:{isWalkable:()=>true},
+   pathfinding:{findPathForDomain:vi.fn((start,end)=>[end.clone()])}};
+ game.createUnit = vi.fn((type,team,pos)=>{
+   const enemy={...unit(team,type),getPosition:()=>pos.clone()}; game.entities.push(enemy); return enemy;
+ });
+ return {tutorial:new TutorialSystem(game),game};
+}
+it('places practice enemies inside map bounds on reachable ground near actual infantry',()=>{
+ const {tutorial,game}=practice(); tutorial._spawnTutorialEnemies();
+ expect(game.createUnit).toHaveBeenCalledTimes(3);
+ for(const [,team,pos] of game.createUnit.mock.calls){
+  expect(team).toBe('enemy'); expect(pos.x).toBeGreaterThanOrEqual(2); expect(pos.x).toBeLessThan(254);
+  expect(pos.z).toBeGreaterThanOrEqual(2); expect(pos.z).toBeLessThan(254);
+ }
+ expect(game.pathfinding.findPathForDomain.mock.calls.length).toBeLessThanOrEqual(4);
+});
+it('does not spawn on blocked terrain or across an unreachable route and bounds route probes',()=>{
+ const {tutorial,game}=practice(new Vector3(100,0,100));
+ game.terrain.isWalkable=()=>false; tutorial._spawnTutorialEnemies();
+ expect(game.createUnit).not.toHaveBeenCalled();
+ game.terrain.isWalkable=()=>true; game.pathfinding.findPathForDomain.mockReturnValue(null);
+ tutorial._spawnTutorialEnemies(); expect(game.createUnit).not.toHaveBeenCalled();
+ expect(game.pathfinding.findPathForDomain).toHaveBeenCalledTimes(4);
+});
+it('replenishes defeated practice targets without accumulating extra live enemies',()=>{
+ const {tutorial,game}=practice(new Vector3(100,0,100));
+ tutorial._ensurePracticeTargets(); tutorial._ensurePracticeTargets();
+ expect(game.createUnit).toHaveBeenCalledTimes(3);
+ tutorial._practiceTargets.forEach(enemy=>enemy.alive=false);
+ tutorial._ensurePracticeTargets(); expect(game.createUnit).toHaveBeenCalledTimes(6);
+ tutorial._ensurePracticeTargets(); expect(game.createUnit).toHaveBeenCalledTimes(6);
+});
+it('rejects a route redirected away from the requested practice tile',()=>{
+ const {tutorial,game}=practice(new Vector3(100,0,100));
+ game.pathfinding.findPathForDomain.mockReturnValue([new Vector3(1,0,1)]);
+ tutorial._spawnTutorialEnemies(); expect(game.createUnit).not.toHaveBeenCalled();
+});
+it('checks target recovery on simulation time only during combat lessons',()=>{
+ const {tutorial}=fixture(9); const ensure=vi.spyOn(tutorial,'_ensurePracticeTargets');
+ tutorial.update(4); expect(ensure).not.toHaveBeenCalled();
+ tutorial.update(1); expect(ensure).toHaveBeenCalledTimes(1);
+ tutorial.currentStep=7; tutorial.update(10); expect(ensure).toHaveBeenCalledTimes(1);
+ tutorial.dispose();
 });

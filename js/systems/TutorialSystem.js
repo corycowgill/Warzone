@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { GAME_CONFIG, BUILDING_STATS } from '../core/Constants.js';
 import { PRODUCTION_HOTKEYS } from '../ui/ProductionShortcuts.js';
 
 /**
@@ -104,6 +105,7 @@ export class TutorialSystem {
         }
       },
       {
+        onSetup: () => this._ensurePracticeTargets(),
         title: 'Use an Ability',
         hint: 'Select an infantry unit, press G, then click an enemy to throw a Grenade. Wait for the ability to recharge if needed.',
         event: 'ability:used',
@@ -143,6 +145,14 @@ export class TutorialSystem {
       return;
     }
 
+    if (this.currentStep === 8 || this.currentStep === 9) {
+      this._practiceTimer = (this._practiceTimer || 0) + delta;
+      if (this._practiceTimer >= 5) {
+        this._practiceTimer = 0;
+        this._ensurePracticeTargets();
+      }
+    }
+
     // Animate pulse indicator
     this._pulseTime += delta;
 
@@ -164,6 +174,7 @@ export class TutorialSystem {
     this.active = false;
     this._cleanupListeners();
     this._advanceRemaining = null;
+    this._practiceTargets = [];
     if (this._hintTimeout) clearTimeout(this._hintTimeout);
     this._hintTimeout = null;
     if (this._overlay && this._overlay.parentNode) {
@@ -316,6 +327,7 @@ export class TutorialSystem {
     this._cleanupListeners();
     this.currentStep = index;
     this._stepTimer = 0;
+    this._practiceTimer = 0;
 
     const step = this.steps[index];
     if (!step) return;
@@ -495,29 +507,57 @@ export class TutorialSystem {
     }
   }
 
+  _practiceAnchor() {
+    const units = (this.game.entities || []).filter(e => e.alive && e.isUnit &&
+      e.team === 'player' && !e.isGarrisoned && (e.domain === 'land' || e.type === 'infantry'));
+    return units.find(e => e.type === 'infantry') || units[0];
+  }
+
+  _ensurePracticeTargets() {
+    const anchor = this._practiceAnchor();
+    if (!anchor) return;
+    const origin = anchor.getPosition();
+    const nearby = (this._practiceTargets || []).some(e => e.alive &&
+      e.getPosition().distanceToSquared(origin) <= 60 * 60);
+    if (!nearby) this._spawnTutorialEnemies();
+  }
+
   _spawnTutorialEnemies() {
-    // Spawn a few weak enemy infantry near the player's units
-    const playerUnits = this.game.entities.filter(
-      e => e.isUnit && e.team === 'player' && e.alive
-    );
-    if (playerUnits.length === 0) return;
-
-    // Find average position of player units
-    const avg = new THREE.Vector3();
-    for (const u of playerUnits) {
-      avg.add(u.mesh.position);
-    }
-    avg.divideScalar(playerUnits.length);
-
-    // Spawn enemies offset from player position
-    const offset = 40;
-    for (let i = 0; i < 3; i++) {
-      const pos = new THREE.Vector3(
-        avg.x + offset + i * 5,
-        0,
-        avg.z + (i - 1) * 5
-      );
-      this.game.createUnit('infantry', 'enemy', pos);
+    const anchor = this._practiceAnchor();
+    const terrain = this.game.terrain;
+    const paths = this.game.pathfinding;
+    if (!anchor || !terrain || !paths) return;
+    const origin = anchor.getPosition();
+    const worldSize = GAME_CONFIG.mapSize * GAME_CONFIG.worldScale;
+    const existing = (this.game.entities || []).filter(e => e.alive && !e.isGarrisoned);
+    let routeChecks = 0;
+    let spawned = 0;
+    this._practiceTargets = (this._practiceTargets || []).filter(e => e.alive);
+    // Never accumulate an army of replacement enemies if the player moves away.
+    if (this._practiceTargets.length >= 3) return;
+    for (const radius of [20, 28, 36, 12]) {
+      for (let i = 0; i < 12; i++) {
+        const angle = i * Math.PI / 6;
+        const pos = new THREE.Vector3(origin.x + Math.cos(angle) * radius, 0,
+          origin.z + Math.sin(angle) * radius);
+        if (pos.x < 2 || pos.z < 2 || pos.x >= worldSize - 2 || pos.z >= worldSize - 2 ||
+            !terrain.isWalkable(pos.x, pos.z)) continue;
+        if (existing.some(e => {
+          const size = e.isBuilding ? (BUILDING_STATS[e.type]?.size || 2) * 2 + 2 : 3;
+          return e.getPosition().distanceToSquared(pos) < size * size;
+        })) continue;
+        if (routeChecks >= 4) return;
+        routeChecks++;
+        const route = paths.findPathForDomain(origin, pos, 'land');
+        if (!route?.length || route[route.length - 1].distanceToSquared(pos) > 9) continue;
+        const enemy = this.game.createUnit('infantry', 'enemy', pos);
+        if (enemy) {
+          this._practiceTargets.push(enemy);
+          existing.push(enemy);
+          spawned++;
+        }
+        if (spawned >= 3 || this._practiceTargets.length >= 3) return;
+      }
     }
   }
 
