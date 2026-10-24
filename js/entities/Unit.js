@@ -1,3 +1,4 @@
+import {resumeRestoredMovement} from '../systems/SavedMovement.js';
 import {steerStep,canTraverse,separationVector} from '../systems/NavigationSteering.js';
 import * as THREE from 'three';
 import { Entity } from './Entity.js';
@@ -340,6 +341,7 @@ export class Unit extends Entity {
     if (this.empDisabledTimer > 0) return;
 
     this._orderRevision++;
+    this._restoredMoveGoal = null;
     this._queuedMoveOrders = [];
     this._pathPending = false;
     this._holdPosition = false;
@@ -404,6 +406,7 @@ export class Unit extends Entity {
   stop() {
     this._queuedMoveOrders = [];
     this._orderRevision++;
+    this._restoredMoveGoal = null;
     this._pathPending = false;
     this._holdPosition = false;
     this._attackMoveDestination = null;
@@ -566,6 +569,7 @@ export class Unit extends Entity {
     if (!points || points.length < 2) return;
     this._queuedMoveOrders = [];
     this._orderRevision++;
+    this._restoredMoveGoal = null;
     this._pathPending = false;
     this._holdPosition = false;
     this._attackMoveDestination = null;
@@ -604,6 +608,8 @@ export class Unit extends Entity {
       // While disabled: cannot attack or move
       return;
     }
+
+    if (this._restoredMoveGoal) resumeRestoredMovement(this, this.game);
 
     // Tick attack cooldown (CombatSystem sets cooldown, we just count down)
     if (this.attackCooldown > 0) {

@@ -1,3 +1,4 @@
+import {resumeRestoredMovement} from '../systems/SavedMovement.js';
 /**
  * Save/Load System for Warzone RTS
  * Serializes and deserializes full game state to/from JSON.
@@ -112,11 +113,13 @@ export class SaveSystem {
         position: this._vec3(z.position),
         radius: z.radius,
         timer: z.timer,
+        team: z.team,
       })),
       flareZones: (game._flareZones || []).map(z => ({
         position: this._vec3(z.position),
         radius: z.radius,
         timer: z.timer,
+        team: z.team,
       })),
     };
 
@@ -193,7 +196,9 @@ export class SaveSystem {
           attackMoveDestination: e._attackMoveDestination ? this._vec3(e._attackMoveDestination) : null,
           holdPosition: e._holdPosition || false,
           queuedMoveOrders: (e._queuedMoveOrders || []).map(w => this._vec3(w)),
-          pendingMoveGoal: e._pathPending && e._pendingMoveGoal ? this._vec3(e._pendingMoveGoal) : null,
+          pendingMoveGoal: e._pathPending && e._pendingMoveGoal ? this._vec3(e._pendingMoveGoal) : e._restoredMoveGoal ? this._vec3(e._restoredMoveGoal) : null,
+          retreatTarget: e.retreatTarget ? this._vec3(e.retreatTarget) : null,
+          formationSpeed: e.formationSpeed ?? null,
           isRetreating: e.isRetreating || false,
           aiRecovering: e._aiRecovering || false,
           aiRetreatUntil: e._aiRetreatUntil || 0,
@@ -365,11 +370,13 @@ export class SaveSystem {
       position: new THREE.Vector3(z.position.x, z.position.y, z.position.z),
       radius: z.radius,
       timer: z.timer,
+      team: z.team,
     }));
     game._flareZones = (saveData.flareZones || []).map(z => ({
       position: new THREE.Vector3(z.position.x, z.position.y, z.position.z),
       radius: z.radius,
       timer: z.timer,
+      team: z.team,
     }));
 
     // --- Recreate entities ---
@@ -457,7 +464,8 @@ export class SaveSystem {
         entity._holdPosition = u.holdPosition || false;
         if (u.attackMoveDestination) entity._attackMoveDestination = new THREE.Vector3(u.attackMoveDestination.x,u.attackMoveDestination.y,u.attackMoveDestination.z);
         entity._queuedMoveOrders = (u.queuedMoveOrders || []).map(w => new THREE.Vector3(w.x,w.y,w.z));
-        if (u.pendingMoveGoal && !u.attackMoveDestination) entity._queuedMoveOrders.unshift(new THREE.Vector3(u.pendingMoveGoal.x,u.pendingMoveGoal.y,u.pendingMoveGoal.z));
+        if (u.pendingMoveGoal) entity._restoredMoveGoal = new THREE.Vector3(u.pendingMoveGoal.x,u.pendingMoveGoal.y,u.pendingMoveGoal.z);
+        entity.formationSpeed = Number.isFinite(u.formationSpeed) && u.formationSpeed > 0 ? u.formationSpeed : null;
         entity.isRetreating = u.isRetreating || false;
         entity._aiRecovering = u.aiRecovering || false;
         entity._aiRetreatUntil = u.aiRetreatUntil || 0;
@@ -479,6 +487,12 @@ export class SaveSystem {
 
         if (u.waypoints && u.waypoints.length > 0) {
           entity.waypoints = u.waypoints.map(w => new THREE.Vector3(w.x, w.y, w.z));
+        }
+
+        if (entity.isRetreating) {
+          const goal = u.retreatTarget || u.pendingMoveGoal || u.waypoints?.at(-1) || u.moveTarget;
+          if (goal) entity.retreatTarget = new THREE.Vector3(goal.x, goal.y, goal.z);
+          else entity.isRetreating = false; // Legacy saves without a route must not lock out combat forever.
         }
 
         // Defer attack target resolution until all entities are created
@@ -513,6 +527,11 @@ export class SaveSystem {
       if (target && target.alive) {
         entity.attackTarget = target;
       }
+    }
+
+    // All saved units/buildings and target references exist before requesting routes.
+    for (const entity of idMap.values()) {
+      if (entity.isUnit && entity._restoredMoveGoal) resumeRestoredMovement(entity, game);
     }
 
     // --- Restore research ---
