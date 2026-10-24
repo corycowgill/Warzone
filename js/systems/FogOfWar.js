@@ -117,6 +117,9 @@ export class FogOfWar {
   _throttleInterval = 3;
 
   update(dt) {
+    // Reveal lifetimes follow simulation time, independent of grid throttling or workers.
+    this.updateCombatReveals(dt ?? 0.016);
+
     // Throttle: run full fog computation every 3 ticks (10Hz) instead of every tick (30Hz)
     this._throttleCounter++;
     if (this._throttleCounter < this._throttleInterval) {
@@ -126,10 +129,11 @@ export class FogOfWar {
     }
     this._throttleCounter = 0;
 
-    const delta = dt || 0.016;
-
-    // Update combat reveal timers (must run on main thread — reads entity state)
-    this.updateCombatReveals(delta);
+    // Keep one computation in flight; do not race a sync grid against stale worker output.
+    if (this._worker && this._workerBusy) {
+      this.updateEntityVisibility();
+      return;
+    }
 
     // Try worker path first
     if (this._worker && !this._workerBusy) {
@@ -297,9 +301,6 @@ export class FogOfWar {
       }
     }
 
-    // Step 2c: Firing position reveal - enemies that recently attacked become briefly visible
-    this.updateCombatReveals(delta);
-
     // Step 3: Update the fog texture
     this.updateTexture();
 
@@ -368,20 +369,13 @@ export class FogOfWar {
 
   /**
    * Reveal enemies that are currently attacking (muzzle flash / firing visibility).
+   * Actual shots start the timer in CombatSystem.
    * Gives a 2-second reveal window so players can react to being shot at from fog.
    */
   updateCombatReveals(delta) {
     for (const entity of this.game.entities) {
-      if (entity.team === this.team || !entity.alive) continue;
-
-      // Detect that the entity just fired (attackCooldown was just reset)
-      if (entity.attackCooldown > 0 && entity.attackCooldown < 0.5) {
-        entity._combatRevealTimer = 2.0;
-      }
-
-      // Tick down reveal timer
-      if (entity._combatRevealTimer && entity._combatRevealTimer > 0) {
-        entity._combatRevealTimer -= delta;
+      if (entity._combatRevealTimer > 0) {
+        entity._combatRevealTimer = Math.max(0, entity._combatRevealTimer - Math.max(0, delta));
       }
     }
   }

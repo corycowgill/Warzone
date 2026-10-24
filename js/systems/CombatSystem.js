@@ -124,6 +124,7 @@ export class CombatSystem {
             }
             const infDmg = Math.max(1, (UNIT_STATS.infantry?.damage || 8) * 0.5);
             apc.attackTarget.takeDamage(infDmg);
+            apc._combatRevealTimer = 2;
             inf.attackCooldown = 1 / (UNIT_STATS.infantry?.attackRate || 1.5);
             if (!apc.attackTarget.alive) {
               if (inf.addKill) inf.addKill();
@@ -307,6 +308,7 @@ export class CombatSystem {
     }
 
     // Reset attack cooldown on the attacker (this is the ONLY place it's set)
+    attacker._combatRevealTimer = 2;
     attacker.attackCooldown = 1 / attacker.attackRate;
 
     // GD-074: Submarine stealth reveal on firing
@@ -454,6 +456,7 @@ export class CombatSystem {
     const finalDmg = Math.max(1, baseDmg * modifier * armorReduction * terrainMod * ditchMod * tDiffMod);
 
     defender.takeDamage(finalDmg);
+    turret._combatRevealTimer = 2;
     turret.attackCooldown = 1 / turret.attackRate;
 
     // Spatial awareness: notify if player unit attacked off-screen
