@@ -1,3 +1,4 @@
+import {productionPrice} from './ProductionPricing.js';
 import {buildingEligibility} from './BuildingRules.js';
 import * as THREE from 'three';
 import { UNIT_STATS, BUILDING_STATS, TECH_TREE, NATIONS, GAME_CONFIG, CONSTRUCTION_CONFIG } from '../core/Constants.js';
@@ -111,6 +112,7 @@ export class ProductionSystem {
 
     // Clear production from building
     building.currentProduction = null;
+    building._productionReceipts?.shift();
     building.productionTimer = 0;
 
     this.game.eventBus.emit('production:complete', {
@@ -118,6 +120,22 @@ export class ProductionSystem {
       unitType,
       unit
     });
+  }
+
+  requestProductionBatch(building, unitType, requested = 1) {
+    if (!building?.alive) return 0;
+    const price = productionPrice(this.game, building.team, unitType);
+    const resources = this.game.teams[building.team];
+    const space = Math.max(0, 5 - building.productionQueue.length - (building.currentProduction ? 1 : 0));
+    const affordable = Math.min(price.sp ? Math.floor(resources.sp / price.sp) : 5, price.mu ? Math.floor((resources.mu || 0) / price.mu) : 5);
+    const count = Math.min(Math.max(1, Math.floor(requested)), space, affordable);
+    if (!count) { this.requestProduction(building, unitType); return 0; }
+    let queued = 0;
+    for (let index = 0; index < count; index++) {
+      if (!this.requestProduction(building, unitType)) break;
+      queued++;
+    }
+    return queued;
   }
 
   requestProduction(building, unitType) {
@@ -176,22 +194,7 @@ export class ProductionSystem {
       return false;
     }
 
-    // Check cost (with nation cost reduction)
-    const stats = UNIT_STATS[unitType];
-    if (!stats) return false;
-
-    let cost = stats.cost;
-    const nationKey = this.game.teams[building.team]?.nation;
-    if (nationKey) {
-      const nationData = NATIONS[nationKey];
-      if (nationData && nationData.bonuses && nationData.bonuses.costReduction) {
-        cost = Math.round(cost * nationData.bonuses.costReduction);
-      }
-    }
-    // War Economy nation ability cost reduction
-    if (this.game.nationAbilitySystem) {
-      cost = Math.round(cost * this.game.nationAbilitySystem.getCostMultiplier(building.team));
-    }
+    const {sp: cost, mu: muCost} = productionPrice(this.game, building.team, unitType);
 
     if (!this.game.resourceSystem.canAfford(building.team, cost)) {
       this.game.eventBus.emit('production:error', {
@@ -203,7 +206,6 @@ export class ProductionSystem {
     }
 
     // Check MU cost for advanced units (plane, battleship, carrier, submarine, commander, etc.)
-    const muCost = unitType === 'commander' ? 200 : (stats.muCost || 0);
     if (muCost > 0) {
       if (!this.game.resourceSystem.canAffordMU(building.team, muCost)) {
         this.game.eventBus.emit('production:error', {
@@ -234,7 +236,7 @@ export class ProductionSystem {
     this.game.resourceSystem.spend(building.team, cost);
 
     // Queue the unit in the building
-    building.queueUnit(unitType);
+    building.queueUnit(unitType, {sp: cost, mu: muCost});
 
     this.game.eventBus.emit('production:started', {
       building,
@@ -273,21 +275,13 @@ export class ProductionSystem {
     }
     const stats = UNIT_STATS[unitType];
     if (!stats) return false;
-    let cost = stats.cost;
-    const nationKey = this.game.teams[building.team]?.nation;
-    if (nationKey) {
-      const nationData = NATIONS[nationKey];
-      if (nationData?.bonuses?.costReduction) cost = Math.round(cost * nationData.bonuses.costReduction);
-    }
-    if (this.game.nationAbilitySystem) {
-      cost = Math.round(cost * this.game.nationAbilitySystem.getCostMultiplier(building.team));
-    }
+    const {sp: cost, mu: muCost} = productionPrice(this.game, building.team, unitType);
+
     if (!this.game.resourceSystem.canAfford(building.team, cost)) {
       this.game.eventBus.emit('production:error', { message: `Not enough SP (need ${cost})`, reason: 'cost' });
       if (this.game.soundManager) this.game.soundManager.play('error');
       return false;
     }
-    const muCost = unitType === 'commander' ? 200 : (stats.muCost || 0);
     if (muCost > 0 && !this.game.resourceSystem.canAffordMU(building.team, muCost)) {
       this.game.eventBus.emit('production:error', { message: `Not enough MU (need ${muCost})`, reason: 'cost' });
       if (this.game.soundManager) this.game.soundManager.play('error');
@@ -372,7 +366,7 @@ export class ProductionSystem {
    * @param {number} index - 0 = current production, 1+ = queue index
    * @returns {boolean} true if cancelled successfully
    */
-  cancelProduction(building, index) {
+  cancelProduction(building, index = 0) {
     if (!building || !building.alive) return false;
 
     // In multiplayer, queue cancel through lockstep (skip if executing a lockstep turn)
@@ -380,22 +374,22 @@ export class ProductionSystem {
       this.game.lockstepManager.queueCommand({
         type: 'CANCEL_PRODUCE',
         entityIds: [building.id],
+        data: {index},
       });
       return true;
     }
 
+    const payment = building._productionReceipts?.[index];
     const cancelled = building.cancelQueueItem(index);
     if (!cancelled) return false;
 
     // Refund full cost (SP + MU)
     const stats = UNIT_STATS[cancelled];
     if (stats) {
-      this.game.resourceSystem.addIncome(building.team, stats.cost);
-      // Refund MU cost if applicable
-      const muRefund = cancelled === 'commander' ? 200 : (stats.muCost || 0);
-      if (muRefund > 0) {
-        this.game.resourceSystem.addMUIncome(building.team, muRefund);
-      }
+      // Legacy queues have no receipt; use their current effective price.
+      const muRefund = payment?.mu ?? productionPrice(this.game, building.team, cancelled).mu;
+      const spRefund = payment?.sp ?? productionPrice(this.game, building.team, cancelled).sp;
+      this.game.resourceSystem.refund(building.team, spRefund, muRefund);
       this.game.eventBus.emit('resource:changed', {
         player: this.game.teams.player.sp,
         enemy: this.game.teams.enemy.sp,
@@ -407,7 +401,7 @@ export class ProductionSystem {
     this.game.eventBus.emit('production:cancelled', {
       building,
       unitType: cancelled,
-      refund: stats ? stats.cost : 0
+      refund: payment?.sp ?? (stats ? productionPrice(this.game, building.team, cancelled).sp : 0)
     });
 
     return true;

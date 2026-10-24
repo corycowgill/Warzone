@@ -494,7 +494,7 @@ export class LockstepManager {
 
       case CommandType.CANCEL_PRODUCE:
         if (buildings.length > 0) {
-          game.productionSystem.cancelProduction(buildings[0]);
+          game.productionSystem.cancelProduction(buildings[0], cmd.data?.index ?? 0);
         }
         break;
 

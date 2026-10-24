@@ -216,6 +216,7 @@ export class SaveSystem {
           tier: e.tier || 1,
           productionQueue: [...(e.productionQueue || [])],
           currentProduction: e.currentProduction || null,
+          productionReceipts: (e._productionReceipts || []).map(receipt => receipt ? {...receipt} : null),
           productionTimer: e.productionTimer || 0,
           spawnAngleIndex:e._spawnAngleIndex??0,
           _productionTotalTime: e._productionTotalTime || 0,
@@ -400,6 +401,7 @@ export class SaveSystem {
         entity.tier = b.tier || 1;
         entity.productionQueue = [...(b.productionQueue || [])];
         entity.currentProduction = b.currentProduction || null;
+        entity._productionReceipts = (b.productionReceipts || []).map(receipt => receipt ? {...receipt} : null);
         entity.productionTimer = b.productionTimer || 0;
         entity._spawnAngleIndex=b.spawnAngleIndex??0;
         entity._productionTotalTime = b._productionTotalTime || 0;

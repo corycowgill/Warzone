@@ -137,6 +137,12 @@ export class ResourceSystem {
     return true;
   }
 
+  refund(team, sp, mu = 0) {
+    // Returning a payment is not gathered income or timed-victory score.
+    this.game.teams[team].sp += sp;
+    this.game.teams[team].mu = (this.game.teams[team].mu || 0) + mu;
+  }
+
   addIncome(team, amount) {
     this.game.teams[team].sp += amount;
     // Track total resources gathered for timed victory scoring

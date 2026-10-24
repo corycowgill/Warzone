@@ -1,3 +1,4 @@
+import {productionPrice} from '../systems/ProductionPricing.js';
 import { commandIcon, unitIcon } from './UIIcons.js';
 import { UNIT_STATS } from '../core/Constants.js';
 
@@ -154,12 +155,10 @@ export class CommandCard {
         buttons.push({
           icon: this._getUnitIcon(unitType),
           key: hk,
-          label: `${this.hud.formatName(unitType)} (${stats.cost}) Shift=5x`,
+          label: `${this.hud.formatName(unitType)} (${productionPrice(game, building.team, unitType).sp}) Shift=5x`,
           action: (e) => {
             const count = (e && e.shiftKey) ? 5 : 1;
-            for (let qi = 0; qi < count; qi++) {
-              game.productionSystem.requestProduction(building, unitType);
-            }
+            game.productionSystem.requestProductionBatch(building, unitType, count);
           }
         });
       }

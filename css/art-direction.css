@@ -1572,3 +1572,9 @@ body.spectate-mode .construction-launcher { display:none; }
 @media(max-width:800px) { .selected-order-status { bottom:180px; max-width:45vw; font-size:10px; } }
 .battle-status { flex-wrap:wrap; max-width:min(320px,50vw); justify-content:flex-end; }
 .battle-status .battle-threat { color:#f3c5ae; border-color:#db837877; font-size:11px; }
+.production-entry { display:flex; gap:5px; margin-bottom:5px; }
+.production-entry > .cmd-btn { flex:1; min-width:0; margin:0 !important; }
+.production-bulk { flex:none; width:38px; color:var(--brass); background:#26383a; border:1px solid #71806a80; cursor:pointer; font-weight:700; }
+.production-bulk:hover { border-color:var(--brass); background:#3c514b; }
+#prod-queue-icons button { min-height:44px; min-width:52px; }
+#prod-queue-icons small { font-size:8px; color:#d6b36d; }

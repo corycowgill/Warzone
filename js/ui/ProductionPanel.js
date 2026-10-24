@@ -1,3 +1,5 @@
+import {productionPrice} from '../systems/ProductionPricing.js';
+import {localTeam} from '../systems/InputPolicy.js';
 import { unitIcon } from './UIIcons.js';
 import { UNIT_STATS, TECH_TREE, RESEARCH_UPGRADES, TECH_BRANCHES, FACTION_UNITS } from '../core/Constants.js';
 
@@ -19,13 +21,14 @@ export class ProductionPanel {
 
   showProductionButtons(building) {
     if (!this.productionPanel || !this.productionOptions) return;
+    if (building.team !== localTeam(this.game)) {this.hideProductionOptions();return;}
     // Don't show production panel when build menu is open (they overlap)
     if (this.hud.buildPanel.buildMenuOpen) return;
 
     this.productionPanel.classList.remove('hidden');
     this.productionOptions.innerHTML = '';
 
-    const activeTeam = this.game.mode === '2P' ? this.game.activeTeam : 'player';
+    const activeTeam = localTeam(this.game);
 
     for (const unitType of building.produces) {
       const stats = UNIT_STATS[unitType];
@@ -53,7 +56,8 @@ export class ProductionPanel {
         overflow: visible;
       `;
 
-      const canAfford = this.game.resourceSystem ? this.game.resourceSystem.canAfford(activeTeam, stats.cost) : false;
+      const price = productionPrice(this.game, activeTeam, unitType);
+      const canAfford = this.game.resourceSystem ? this.game.resourceSystem.canAffordBoth(activeTeam, price.sp, price.mu) : false;
       const hasTech = this.game.productionSystem ? this.game.productionSystem.hasTechRequirements(activeTeam, unitType) : true;
       const available = canAfford && hasTech;
 
@@ -74,7 +78,7 @@ export class ProductionPanel {
       const factionOverride = playerNation && FACTION_UNITS[playerNation] ? FACTION_UNITS[playerNation][unitType] : null;
       const displayName = factionOverride ? factionOverride.name : this.hud.formatName(unitType);
       const factionDesc = factionOverride ? `<div style="color:#88ddff;font-size:10px;">${factionOverride.description}</div>` : '';
-      const effectiveCost = factionOverride?.statsOverride?.cost || stats.cost;
+      const effectiveCost = price.sp;
 
       btn.innerHTML = `
         <span class="production-emblem" aria-hidden="true">${unitIcon(unitType)}</span><div class="production-copy">
@@ -83,30 +87,23 @@ export class ProductionPanel {
           ${reqHtml}
         </div>
         <div style="text-align:right;">
-          <span style="color:${canAfford ? '#d6b36d' : '#db8378'};">${effectiveCost} SP</span>
+          <span style="color:${canAfford ? '#d6b36d' : '#db8378'};">${effectiveCost} SP${price.mu ? ` / ${price.mu} MU` : ''}</span>
           <div style="color:#888;font-size:10px;">${stats.buildTime}s</div>
         </div>
       `;
       btn.title = `${displayName} (${effectiveCost} SP) — Shift+click to queue 5`;
 
-      btn.addEventListener('click', (e) => {
-        if (!building.alive || !this.game.productionSystem) return;
-        // Re-check affordability at click time (not creation time)
-        const clickTeam = this.game.mode === '2P' ? this.game.activeTeam : 'player';
-        const clickCanAfford = this.game.resourceSystem ? this.game.resourceSystem.canAfford(clickTeam, effectiveCost) : false;
-        const clickHasTech = this.game.productionSystem ? this.game.productionSystem.hasTechRequirements(clickTeam, unitType) : true;
-        if (clickCanAfford && clickHasTech) {
-          const count = e.shiftKey ? 5 : 1;
-          for (let i = 0; i < count; i++) {
-            this.game.productionSystem.requestProduction(building, unitType);
-          }
-          this.showProductionButtons(building);
-        } else if (!clickCanAfford) {
-          this.hud.showNotification('Not enough resources!', '#db8378');
-        } else {
-          this.hud.showNotification('Missing tech requirements!', '#db8378');
-        }
-      });
+      const queue = count => {
+        if (!building.alive || building.team !== localTeam(this.game)) return;
+        this.game.productionSystem?.requestProductionBatch(building, unitType, count);
+        this.showProductionButtons(building);
+      };
+      btn.addEventListener('click', event => queue(event.shiftKey ? 5 : 1));
+      const bulk = document.createElement('button');
+      bulk.className = 'production-bulk';bulk.textContent = '+5';
+      bulk.title = `Queue up to five ${displayName} units within available resources and queue space`;
+      bulk.setAttribute('aria-label', `Queue five ${displayName}`);
+      bulk.addEventListener('click', () => queue(5));
 
       btn.addEventListener('mouseenter', () => {
         if (available) {
@@ -119,7 +116,8 @@ export class ProductionPanel {
         btn.style.borderColor = '#445544';
       });
 
-      this.productionOptions.appendChild(btn);
+      const entry = document.createElement('div');entry.className = 'production-entry';entry.append(btn, bulk);
+      this.productionOptions.appendChild(entry);
     }
   }
 
@@ -144,7 +142,10 @@ export class ProductionPanel {
 
     for (let i = 0; i < fullQueue.length; i++) {
       const item = fullQueue[i];
-      const icon = document.createElement('div');
+      const icon = document.createElement('button');
+      icon.type='button';
+      icon.disabled=building.team!==localTeam(this.game);
+      icon.setAttribute('aria-label', `Cancel ${this.hud.formatName(item.type)} at queue position ${i+1}`);
       icon.style.cssText = `
         position: relative;
         width: 42px;
@@ -166,7 +167,7 @@ export class ProductionPanel {
 
       // Short name
       const shortName = this.hud.formatName(item.type).substring(0, 6);
-      icon.innerHTML = `<span style="z-index:1;pointer-events:none;">${shortName}</span>`;
+      icon.innerHTML = `<span style="z-index:1;pointer-events:none;">${shortName}<br><small>× Cancel</small></span>`;
 
       // Progress bar for current item
       if (item.isCurrent && item.progress > 0) {
@@ -197,30 +198,32 @@ export class ProductionPanel {
         icon.appendChild(indicator);
       }
 
-      // Right-click to cancel
-      icon.addEventListener('contextmenu', (e) => {
+      // Click or right-click to cancel
+      const cancel = (e) => {
         e.preventDefault();
         e.stopPropagation();
+        if (building.team !== localTeam(this.game)) return;
         if (this.game.productionSystem) {
           const success = this.game.productionSystem.cancelProduction(building, i);
           if (success) {
-            const stats = UNIT_STATS[item.type];
-            this.hud.showNotification(`Cancelled ${this.hud.formatName(item.type)} (+${stats ? stats.cost : 0} SP refunded)`, '#ffaa00');
+            this.hud.showNotification(this.game.isMultiplayer ? 'Cancellation queued' : `Cancelled ${this.hud.formatName(item.type)} — resources refunded`, '#cfaa67');
             if (this.game.soundManager) this.game.soundManager.play('select');
             // Refresh display
             this.hud.selectionPanel.showSingleEntityInfo(building);
           }
         }
-      });
+      };
+      icon.addEventListener('click', cancel);
+      icon.addEventListener('contextmenu', cancel);
 
       // Hover effect
       icon.addEventListener('mouseenter', () => {
         icon.style.borderColor = '#ff6644';
         if (item.isCurrent) {
           const remaining = Math.ceil(building.getRemainingTime());
-          icon.title = `${this.hud.formatName(item.type)} - ${remaining}s remaining - Right-click to cancel`;
+          icon.title = `${this.hud.formatName(item.type)} - ${remaining}s remaining - Click or right-click to cancel`;
         } else {
-          icon.title = `${this.hud.formatName(item.type)} - Right-click to cancel`;
+          icon.title = `${this.hud.formatName(item.type)} - Click or right-click to cancel`;
         }
       });
       icon.addEventListener('mouseleave', () => {
@@ -242,7 +245,7 @@ export class ProductionPanel {
 
     const selected = this.game.selectionManager?.getSelected() || [];
     const building = selected.find(ent =>
-      ent.isBuilding && ent.alive && ent.produces && ent.produces.includes(unitType) && ent.team === 'player'
+      ent.isBuilding && ent.alive && ent.produces && ent.produces.includes(unitType) && ent.team === localTeam(this.game)
     );
     if (!building) return;
 
@@ -250,9 +253,7 @@ export class ProductionPanel {
     if (this.game.productionSystem) {
       // Cycle 15: Shift+hotkey queues 5 units
       const count = e.shiftKey ? 5 : 1;
-      for (let qi = 0; qi < count; qi++) {
-        this.game.productionSystem.requestProduction(building, unitType);
-      }
+      this.game.productionSystem.requestProductionBatch(building, unitType, count);
     }
   }
 
@@ -260,7 +261,7 @@ export class ProductionPanel {
   toggleResearchPanel() {
     const selected = this.game.selectionManager?.getSelected() || [];
     const building = selected.find(ent =>
-      ent.isBuilding && ent.alive && ent.team === 'player'
+      ent.isBuilding && ent.alive && ent.team === localTeam(this.game)
     );
     if (!building) return;
 
@@ -371,7 +372,7 @@ export class ProductionPanel {
   _updateProductionOverview() {
     if (!this._prodOverviewOpen || !this._prodOverviewEntries) return;
 
-    const activeTeam = this.game.mode === '2P' ? this.game.activeTeam : 'player';
+    const activeTeam = localTeam(this.game);
     const buildings = this.game.getBuildings(activeTeam).filter(b =>
       b.produces && b.produces.length > 0
     );

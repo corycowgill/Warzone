@@ -15,6 +15,7 @@ export class Building extends Entity {
     this.size = s.size || 2;
 
     this.productionQueue = [];
+    this._productionReceipts = [];
     this.productionTimer = 0;
     this.currentProduction = null;
     this.rallyPoint = position.clone().add(new THREE.Vector3(0, 0, 10));
@@ -90,13 +91,15 @@ export class Building extends Entity {
     return this.produces.includes(unitType);
   }
 
-  queueUnit(unitType) {
+  queueUnit(unitType, payment = null) {
     if (!this.canProduce(unitType)) return false;
 
     // Queue limit: max 5 total (current production + queued)
     const totalQueued = (this.currentProduction ? 1 : 0) + this.productionQueue.length;
     if (totalQueued >= 5) return false;
 
+    while (this._productionReceipts.length < totalQueued) this._productionReceipts.push(null);
+    this._productionReceipts.push(payment);
     this.productionQueue.push(unitType);
     return true;
   }
@@ -174,23 +177,20 @@ export class Building extends Entity {
 
   /**
    * Cancel a queued item at the given index. Returns the unit type cancelled, or null.
-   * Index 0 means cancel the currently building item; index >= 1 means cancel from the queue.
+   * Indices follow getFullQueue(): the active item first, or the first queued item when idle.
    */
   cancelQueueItem(index) {
+    const total = (this.currentProduction ? 1 : 0) + this.productionQueue.length;
+    if (!Number.isInteger(index) || index < 0 || index >= total) return null;
+    this._productionReceipts?.splice(index, 1);
     if (index === 0 && this.currentProduction) {
       const cancelled = this.currentProduction;
       this.currentProduction = null;
       this.productionTimer = 0;
       return cancelled;
-    } else if (index >= 1) {
-      // Queue indices are shifted by 1 (index 0 is currentProduction)
-      const queueIdx = index - 1;
-      if (queueIdx < this.productionQueue.length) {
-        const cancelled = this.productionQueue.splice(queueIdx, 1)[0];
-        return cancelled;
-      }
     }
-    return null;
+    const queueIndex = index - (this.currentProduction ? 1 : 0);
+    return this.productionQueue.splice(queueIndex, 1)[0] ?? null;
   }
 
   /**
