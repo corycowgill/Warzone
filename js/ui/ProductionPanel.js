@@ -11,6 +11,10 @@ export class ProductionPanel {
     this.productionPanel = document.getElementById('production-panel');
     this.productionQueue = document.getElementById('production-queue');
     this.productionOptions = document.getElementById('production-options');
+    if (this.productionQueue) {
+      this.productionQueue.innerHTML = '<div class="production-queue-label">Training queue <small>Click an item to cancel</small></div><div id="prod-queue-icons"></div>';
+      this.productionQueue.hidden = true;
+    }
 
     // Cycle 15: Production Overview Panel
     this._prodOverviewPanel = document.getElementById('prod-overview-panel');
@@ -26,9 +30,15 @@ export class ProductionPanel {
     if (this.hud.buildPanel.buildMenuOpen) return;
 
     this.productionPanel.classList.remove('hidden');
+    const activeTeam = localTeam(this.game);
+    const signature = building.produces.map(type => {
+      const price = productionPrice(this.game, activeTeam, type);
+      return [type,price.sp,price.mu,this.game.resourceSystem?.canAffordBoth(activeTeam,price.sp,price.mu),this.game.productionSystem?.hasTechRequirements(activeTeam,type)].join(':');
+    }).join('|') + ':' + this.hud.getPlayerNation();
+    if (this._optionsBuilding === building && this._optionsSignature === signature) return;
+    this._optionsBuilding = building;this._optionsSignature = signature;
     this.productionOptions.innerHTML = '';
 
-    const activeTeam = localTeam(this.game);
 
     for (const unitType of building.produces) {
       const stats = UNIT_STATS[unitType];
@@ -126,10 +136,7 @@ export class ProductionPanel {
     if (selected.length === 1 && selected[0].isBuilding && selected[0].alive) {
       this.hud.selectionPanel.showSingleEntityInfo(selected[0]);
     }
-    // Also refresh build menu availability when resources change
-    if (this.hud.buildPanel.buildMenuOpen) {
-      this.hud.buildPanel.updateBuildMenuAvailability();
-    }
+
   }
 
   hideProductionOptions() {
@@ -139,11 +146,23 @@ export class ProductionPanel {
   populateQueueIcons(building, fullQueue) {
     const container = document.getElementById('prod-queue-icons');
     if (!container) return;
+    if (this.productionQueue) this.productionQueue.hidden = !fullQueue.length;
+    const signature = fullQueue.map(item => `${item.type}:${item.isCurrent}`).join('|') + ':' + localTeam(this.game) + ':' + building.team;
+    if (this._queueBuilding === building && this._queueSignature === signature) {
+      const bar = container.querySelector('.queue-item-progress');
+      const current = fullQueue.find(item => item.isCurrent);
+      if (bar && current) bar.style.width = `${Math.round(Math.max(0,Math.min(1,current.progress))*100)}%`;
+      return;
+    }
+    const focusedIndex = this._queueBuilding === building && container.contains(document.activeElement) ? Number(document.activeElement.dataset.queueIndex) : null;
+    this._queueBuilding=building;this._queueSignature=signature;
+    container.replaceChildren();
 
     for (let i = 0; i < fullQueue.length; i++) {
       const item = fullQueue[i];
       const icon = document.createElement('button');
       icon.type='button';
+      icon.dataset.queueIndex=String(i);
       icon.disabled=building.team!==localTeam(this.game);
       icon.setAttribute('aria-label', `Cancel ${this.hud.formatName(item.type)} at queue position ${i+1}`);
       icon.style.cssText = `
@@ -170,8 +189,9 @@ export class ProductionPanel {
       icon.innerHTML = `<span style="z-index:1;pointer-events:none;">${shortName}<br><small>× Cancel</small></span>`;
 
       // Progress bar for current item
-      if (item.isCurrent && item.progress > 0) {
+      if (item.isCurrent) {
         const progressBar = document.createElement('div');
+        progressBar.className='queue-item-progress';
         progressBar.style.cssText = `
           position: absolute;
           bottom: 0;
@@ -232,6 +252,7 @@ export class ProductionPanel {
 
       container.appendChild(icon);
     }
+    if (focusedIndex !== null && container.children.length) container.children[Math.min(focusedIndex,container.children.length-1)].focus();
   }
 
   // Production hotkeys: when a production building is selected

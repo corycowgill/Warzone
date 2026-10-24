@@ -210,9 +210,9 @@ export class Building extends Entity {
   getTotalQueueCost() {
     let total = 0;
     const queue = this.getFullQueue();
-    for (const item of queue) {
+    for (const [index, item] of queue.entries()) {
       const stats = UNIT_STATS[item.type];
-      if (stats) total += stats.cost;
+      if (stats) total += this._productionReceipts?.[index]?.sp ?? stats.cost;
     }
     return total;
   }

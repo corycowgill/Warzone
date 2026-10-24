@@ -11,3 +11,11 @@ Each newly purchased order records its SP/MU payment. Cancellation refunds that 
 Older saves and queues created outside ProductionSystem have no historical payment receipt. Their cancellation uses the current effective price, since the original temporary-discount history cannot be reconstructed. Exact historical refunds are guaranteed for newly recorded orders, not unrecorded legacy purchases.
 
 Six new regression tests cover expired-discount refunds, idle/current queue cancellation, save serialization, multiplayer index preservation, bulk affordability/capacity and completion/receipt alignment. All 188 tests, controls and interface checks pass. UI behavior has not received a fresh native-browser visual review because browser automation is unavailable.
+
+## Stable production UI
+
+Training buttons now remain mounted while their building, faction pricing, affordability and technology availability are unchanged. Queue cancellation controls live in a permanent container in the production panel, alongside training options; selection-info refreshes no longer replace them. Progress changes only update the existing bar width. Structural queue changes rebuild the small queue and preserve focus on a remaining item in the same building. Empty queues hide their container.
+
+Removed the duplicate unthrottled construction-availability refresh from ProductionPanel; HUD retains its existing periodic refresh. Queue SP summaries use stored payments when available, rather than undiscounted list prices.
+
+Three additional regression tests verify 100 unchanged training refreshes without new elements, focused queue-button identity through progress updates, and focus/visibility after cancellation. The full suite passes 191 tests plus controls and interface checks. A fresh browser visual review remains unavailable.

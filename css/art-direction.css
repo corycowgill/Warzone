@@ -1578,3 +1578,6 @@ body.spectate-mode .construction-launcher { display:none; }
 .production-bulk:hover { border-color:var(--brass); background:#3c514b; }
 #prod-queue-icons button { min-height:44px; min-width:52px; }
 #prod-queue-icons small { font-size:8px; color:#d6b36d; }
+.production-queue-label { display:flex; flex-wrap:wrap; justify-content:space-between; gap:6px; color:var(--brass); font-size:11px; margin:8px 0; }
+.production-queue-label small { color:var(--muted); font-size:10px; }
+#prod-queue-icons { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:14px; }

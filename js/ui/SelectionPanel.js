@@ -145,8 +145,6 @@ export class SelectionPanel {
       // Show production queue as interactive icons
       const fullQueue = entity.getFullQueue();
       if (fullQueue.length > 0) {
-        statsHtml += `<div style="margin-top:6px;"><span style="color:#d6b36d;font-size:12px;">Production Queue</span><span style="color:#8b9e97;font-size:10px;margin-left:6px;">(right-click to cancel)</span></div>`;
-        statsHtml += `<div id="prod-queue-icons" style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;"></div>`;
         // Show queue summary
         const totalCost = entity.getTotalQueueCost();
         const totalTime = Math.ceil(entity.getTotalQueueTime());
@@ -286,9 +284,7 @@ export class SelectionPanel {
     // Populate production queue icons (after innerHTML is set)
     if (entity.isBuilding) {
       const fullQueue = entity.getFullQueue();
-      if (fullQueue.length > 0) {
-        this.hud.productionPanel.populateQueueIcons(entity, fullQueue);
-      }
+      this.hud.productionPanel.populateQueueIcons(entity, fullQueue);
     }
 
     // Wire up superweapon fire button (GD-059)
