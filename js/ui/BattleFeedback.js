@@ -20,13 +20,14 @@ export class BattleFeedback {
     }
     this.status=document.createElement('div');this.status.className='battle-status';
     this.blocked=document.createElement('span');this.blocked.hidden=true;this.status.appendChild(this.blocked);
+    this.threat=document.createElement('span');this.threat.className='battle-threat';this.threat.hidden=true;this.status.appendChild(this.threat);
     this.idleButton=document.createElement('button');this.idleButton.type='button';this.idleButton.hidden=true;
     this.idleButton.title='Select idle combat units';this.idleButton.onclick=()=>this.game.selectionManager?.selectEntities(this.idle.filter(u=>u.team===localTeam(this.game)&&idleCombatUnit(u)));
     this.status.appendChild(this.idleButton);this.root.appendChild(this.status);hud.hudEl?.appendChild(this.root);
     const own=units=>this.game.mode!=='SPECTATE'&&units?.some(u=>u.team===localTeam(this.game));
     const marker=(position,type)=>this.game.effectsManager?.createMoveMarker(position,type);
     this.game.eventBus.on('command:attack',({units,target})=>{if(own(units)&&target?.alive)marker(target.getPosition(),'attack');});
-    this.game.eventBus.on('command:retreat',({units})=>{if(own(units)){const hq=this.game.getHQ(localTeam(this.game));if(hq)marker(hq.getPosition(),'retreat');}});
+    this.game.eventBus.on('command:retreat',({units})=>{if(own(units)){const goal=units.find(unit=>unit.retreatTarget)?.retreatTarget;if(goal)marker(goal,'retreat');}});
     this.game.eventBus.on('command:blocked',({unit,position})=>{
       if(!own([unit])||!hud.visible)return;
       const now=performance.now();if(now<(this.blockedUntil??0)-1200)return;
@@ -36,13 +37,17 @@ export class BattleFeedback {
       if(!hud.visible||!own([defender])||damage<5)return;
       const edge=damageEdge(attacker.getPosition(),this.game.sceneManager.camera),hit=this.hits.get(edge);
       hit.until=performance.now()+650;hit.el.hidden=false;
+      const type=attacker.type;
+      const message=['mortar','spg','battleship'].includes(type)?'Artillery fire — spread out':['tank','heavytank','turret'].includes(type)&&damage>=20?'Heavy fire — reposition or retreat':null;
+      if(message){this.threat.textContent=message;this.threat.hidden=false;this.threatUntil=performance.now()+2500;}
     });
   }
-  clear(){for(const hit of this.hits.values()){hit.until=0;hit.el.hidden=true;}this.blocked.hidden=true;this.idleButton.hidden=true;this.nextScan=0;this.blockedUntil=0;this.idle=[];}
+  clear(){for(const hit of this.hits.values()){hit.until=0;hit.el.hidden=true;}this.blocked.hidden=true;this.threat.hidden=true;this.threatUntil=0;this.idleButton.hidden=true;this.nextScan=0;this.blockedUntil=0;this.idle=[];}
   update(){
     const now=performance.now();
     for(const hit of this.hits.values())hit.el.hidden=now>=hit.until||this.game.mode==='SPECTATE';
     this.blocked.hidden=now>=(this.blockedUntil??0);
+    this.threat.hidden=now>=(this.threatUntil??0)||this.game.mode==='SPECTATE';
     if(now<this.nextScan)return;this.nextScan=now+1000;
     this.idle=this.game.mode==='SPECTATE'?[]:this.game.getUnits(localTeam(this.game)).filter(idleCombatUnit);
     this.idleButton.textContent=`${this.idle.length} idle`;this.idleButton.hidden=!this.idle.length;

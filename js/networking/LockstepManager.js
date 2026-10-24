@@ -1,3 +1,4 @@
+import {retreatDestination} from '../systems/CombatDecisions.js';
 /**
  * LockstepManager - Deterministic lockstep synchronization for multiplayer RTS
  *
@@ -572,21 +573,8 @@ export class LockstepManager {
 
       case CommandType.RETREAT:
         for (const unit of units) {
-          const friendlyBuildings = game.getBuildings(team);
-          if (friendlyBuildings.length > 0) {
-            let nearest = null;
-            let nearestDist = Infinity;
-            for (const b of friendlyBuildings) {
-              const d = unit.distanceTo(b);
-              if (d < nearestDist) {
-                nearestDist = d;
-                nearest = b;
-              }
-            }
-            if (nearest) {
-              unit.startRetreat(nearest.getPosition());
-            }
-          }
+          const destination = retreatDestination(unit, game);
+          if (destination) unit.startRetreat(destination);
         }
         break;
 

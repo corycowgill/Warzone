@@ -1,3 +1,4 @@
+import {retreatDestination} from './CombatDecisions.js';
 import {planFormation} from './FormationPlanner.js';
 import {isEditing,screenToNDC} from './InputPolicy.js';
 import * as THREE from 'three';
@@ -643,27 +644,25 @@ export class CommandSystem {
             : (this.game.mode === '2P' ? this.game.activeTeam : 'player');
           const friendlyBuildings = this.game.getBuildings(retreatTeam);
           if (friendlyBuildings.length > 0) {
+            const retreatingUnits = [];
             if (this._isMP) {
               this._queueLockstep(LockstepManager.retreatCommand(retreatUnits.map(u => u.id)));
+              retreatingUnits.push(...retreatUnits);
             } else {
               for (const unit of retreatUnits) {
-                let nearestBuilding = null;
-                let nearestDist = Infinity;
-                for (const building of friendlyBuildings) {
-                  const dist = unit.distanceTo(building);
-                  if (dist < nearestDist) {
-                    nearestDist = dist;
-                    nearestBuilding = building;
-                  }
-                }
-                if (nearestBuilding) {
-                  unit.startRetreat(nearestBuilding.getPosition());
+                const destination = retreatDestination(unit, this.game);
+                if (destination) {
+                  unit.startRetreat(destination);
+                  if (unit.isRetreating) retreatingUnits.push(unit);
                 }
               }
             }
-            this.game.eventBus.emit('command:retreat', { units: retreatUnits });
-            this.game.eventBus.emit('notification', { message: 'Retreating!', color: '#ffffff' });
-            if (this.game.soundManager) this.game.soundManager.play('move');
+            if (retreatingUnits.length) {
+              this.game.eventBus.emit('command:retreat', { units: retreatingUnits });
+              this.game.eventBus.emit('notification', { message: this._isMP ? 'Retreat order queued' : `${retreatingUnits.length} units retreating`, color: '#ffffff' });
+              this.game.soundManager?.play('move');
+            }
+            if (!this._isMP && retreatingUnits.length < retreatUnits.length) this.game.eventBus.emit('notification', {message:'Some units cannot retreat. Check mobility or try a manual move.',color:'#e1bd7b'});
           } else {
             this.game.eventBus.emit('notification', { message: 'No buildings to retreat to!', color: '#ff4444' });
           }

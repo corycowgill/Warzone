@@ -1,3 +1,4 @@
+import {automaticTargetScore} from './CombatDecisions.js';
 import {difficultyDamage} from '../core/MatchRules.js';
 import * as THREE from 'three';
 import { DAMAGE_MODIFIERS, NATIONS, UNIT_ABILITIES, UNIT_STATS, SALVAGE_CONFIG, BUILDING_STATS } from '../core/Constants.js';
@@ -893,7 +894,7 @@ export class CombatSystem {
     const nearby = this.game.spatialGrid.query(pos.x, pos.z, autoRange);
 
     let nearestEnemy = null;
-    let nearestDist = Infinity;
+    let bestScore = -Infinity;
 
     // Player units should only auto-acquire visible targets
     const fog = this.game.fogOfWar;
@@ -923,6 +924,7 @@ export class CombatSystem {
       }
 
       const dist = unit.distanceTo(enemy);
+      if (dist > autoRange) continue;
 
       // Minimum range check
       if (unitStats && unitStats.minRange && dist < unitStats.minRange * 3) continue;
@@ -931,8 +933,9 @@ export class CombatSystem {
       const committedDmg = this.getCommittedDamage(enemy);
       if (enemy.health - committedDmg <= 0) continue;
 
-      if (dist < nearestDist) {
-        nearestDist = dist;
+      const score = automaticTargetScore(unit, enemy, dist, enemy.health - committedDmg);
+      if (score > bestScore || (score === bestScore && enemy.id < nearestEnemy?.id)) {
+        bestScore = score;
         nearestEnemy = enemy;
       }
     }

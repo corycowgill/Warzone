@@ -443,7 +443,8 @@ export class Unit extends Entity {
 
     // Determine badge state — priority: stance/order overrides, then activity status
     let badgeState = '';
-    if (this.isRetreating) badgeState = 'retreat';
+    if (this.empDisabledTimer > 0) badgeState = 'disabled';
+    else if (this.isRetreating) badgeState = 'retreat';
     else if (this.stance === 'holdfire') badgeState = 'holdfire';
     else if (this._holdPosition) badgeState = 'holding';
     else if (this.stance === 'defensive') badgeState = 'defensive';
@@ -476,6 +477,7 @@ export class Unit extends Entity {
 
     // Create badge — use canvas-based icons for activity states, circles for stances
     const badgeColors = {
+      disabled: 0xbf9aff,
       holdfire: 0xffcc00,
       holding: 0xe1bd7b,
       defensive: 0x4488ff,
@@ -595,6 +597,7 @@ export class Unit extends Entity {
     // Tick EMP disable timer
     if (this.empDisabledTimer > 0) {
       this.empDisabledTimer -= deltaTime;
+      this.updateStatusBadge();
       if (this.empDisabledTimer <= 0) {
         this.empDisabledTimer = 0;
       }

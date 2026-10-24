@@ -23,6 +23,8 @@ it('filters local damage, expires cues, selects idle units and clears on HUD hid
   const mine={alive:true,damage:10,team:'enemy',getPosition:()=>new Vector3()},foe={...mine,team:'player',getPosition:()=>new Vector3(-20,0,-10)};
   const marker=vi.fn(),select=vi.fn(),hud={visible:true,hudEl:node(),game:{mode:'1P',isMultiplayer:true,getLocalTeam:()=>'enemy',getUnits:()=>[mine],sceneManager:{camera},eventBus:bus,effectsManager:{createMoveMarker:marker},selectionManager:{selectEntities:select}}};
   const feedback=new BattleFeedback(hud);feedback.update();feedback.idleButton.onclick();expect(select).toHaveBeenCalledWith([mine]);
+  bus.emit('combat:attack',{attacker:{...foe,type:'spg'},defender:mine,damage:25});expect(feedback.threat.textContent).toContain('Artillery');expect(feedback.threat.hidden).toBe(false);
+  now+=2600;feedback.update();expect(feedback.threat.hidden).toBe(true);
   bus.emit('combat:attack',{attacker:foe,defender:mine,damage:20});expect(feedback.hits.get('left').el.hidden).toBe(false);
   now+=700;feedback.update();expect(feedback.hits.get('left').el.hidden).toBe(true);
   bus.emit('combat:attack',{attacker:mine,defender:foe,damage:20});expect([...feedback.hits.values()].every(h=>h.el.hidden)).toBe(true);
