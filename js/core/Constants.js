@@ -161,7 +161,7 @@ export const NATIONS = {
       tankDamage: 1.0,
       tankSpeed: 1.0,
       productionSpeed: 1.10,    // +10% faster production
-      incomeBonus: 4,           // +4 SP/s base income
+      incomeBonus: 2,           // +2 SP/s; retains cheaper units and faster production
       allArmor: 1.0,
       airDamage: 1.0,
       airSpeed: 1.0,

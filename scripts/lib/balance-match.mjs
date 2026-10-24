@@ -23,7 +23,7 @@ import {GAME_CONFIG,BUILDING_STATS,AI_DIFFICULTY} from '../../js/core/Constants.
 
 // Actual core simulation without renderer, active abilities, research, neutral loot,
 // fog rendering or worker scheduling. Results screen for pacing; they are not live win rates.
-export function runMatch({seed=6819,map='river',nations=['america','germany'],difficulty='normal',limit=360,dt=.1}={}){
+export function runMatch({seed=6819,map='river',nations=['america','germany'],difficulty='normal',limit=360,dt=.1,armySize=4,aiSeed=null,observeStalls=false}={}){
   // Warm the render-only projectile pool before resetting deterministic streams.
   const dummy={type:'infantry',getPosition:()=>new THREE.Vector3()};new Projectile(dummy,dummy,0).dispose();
   Entity.nextId=1;
@@ -38,7 +38,8 @@ export function runMatch({seed=6819,map='river',nations=['america','germany'],di
     addProjectile(p){p.dispose();},
   };
   Date.now=()=>Math.round(game.gameElapsed*1000);
-  const report={seed,map,nations,difficulty,firstCombat:null,firstHQDamage:null,construction:{player:[],enemy:[]},waves:{player:0,enemy:0},duration:limit,winner:'timeout',peakArmy:{player:0,enemy:0}};
+  const report={seed,map,nations,difficulty,firstCombat:null,firstHQDamage:null,construction:{player:[],enemy:[]},waves:{player:0,enemy:0},duration:limit,winner:'timeout',peakArmy:{player:0,enemy:0},armySize,blockedOrders:0,damageByType:{},killsByType:{}};
+  const tickTimes=[],motion=new Map();report.stalledEpisodes=0;report.maxSimultaneousStalls=0;game.eventBus.on('command:blocked',()=>report.blockedOrders++);
   function prepare(e,pos){e.mesh=new THREE.Group();e.mesh.position.copy(pos);e.game=game;e.takeDamage=function(damage){this.health=Math.max(0,this.health-damage);if(!this.health)this.alive=false;};e.updateHealthBar=()=>{};game.entities.push(e);return e;}
   const factory=new UnitFactory(game);factory.applyFactionVisuals=()=>{};
   game.createUnit=(type,team,pos)=>{const u=prepare(factory.create(type,team,pos),pos);u.applyNationBonuses(game.teams[team].nation);u.ability=null;u.updateStatusBadge=()=>{};u.updateProceduralAnimation=()=>{};u.updateFactionPassives=()=>{};u._updateVeterancyVisual=()=>{};game.stats[team].unitsProduced++;return u;};
@@ -56,29 +57,49 @@ export function runMatch({seed=6819,map='river',nations=['america','germany'],di
     game.pathfinding=Object.assign(Object.create(PathfindingSystem.prototype),{game,gridSize:128,worldScale:2,_wallBlockedCells:new Set(),_wallCacheDirty:true});
     game.pathfinding.findPathAsync=(start,end,domain)=>Promise.resolve(game.pathfinding.findPathForDomain(start,end,domain));
     game.resourceSystem=new ResourceSystem(game);game.productionSystem=new ProductionSystem(game);game.combatSystem=new CombatSystem(game);game.spatialGrid=new SpatialGrid(12);
-    game.eventBus.on('combat:kill',({attacker,defender})=>{if(defender.isUnit){game.stats[defender.team].unitsLost++;game.stats[attacker.team].enemiesKilled++;}else game.stats[defender.team].buildingsLost++;});
-    game.eventBus.on('combat:attack',({attacker,defender,damage})=>{if(report.firstCombat===null)report.firstCombat=+game.gameElapsed.toFixed(1);if(defender.type==='headquarters'&&report.firstHQDamage===null)report.firstHQDamage=+game.gameElapsed.toFixed(1);});
+    game.eventBus.on('combat:kill',({attacker,defender})=>{report.killsByType[attacker.type]=(report.killsByType[attacker.type]??0)+1;if(defender.isUnit){game.stats[defender.team].unitsLost++;game.stats[attacker.team].enemiesKilled++;}else game.stats[defender.team].buildingsLost++;});
+    game.eventBus.on('combat:attack',({attacker,defender,damage})=>{report.damageByType[attacker.type]=(report.damageByType[attacker.type]??0)+damage;if(report.firstCombat===null)report.firstCombat=+game.gameElapsed.toFixed(1);if(defender.type==='headquarters'&&report.firstHQDamage===null)report.firstHQDamage=+game.gameElapsed.toFixed(1);});
     for(const [team,x,bx,ux] of [['player',30,45,50],['enemy',196,181,176]]){
       game.createBuilding('headquarters',team,new THREE.Vector3(x,2,128));game.createBuilding('barracks',team,new THREE.Vector3(bx,2,113));
       for(const unit of startingArmy(team))game.createUnit(unit.type,team,new THREE.Vector3(unit.x,2,unit.z));
+      for(let i=4;i<armySize;i++){const direction=team==='player'?1:-1;const px=x+direction*(20+(i%12)*3),pz=75+Math.floor(i/12)*3;const type=['infantry','tank','scoutcar','mortar','heavytank','aahalftrack'][i%6];if(game.terrain.isWalkable(px,pz))game.createUnit(type,team,new THREE.Vector3(px,2,pz));}
     }
-    const ais=[new AIController(game,'player',difficulty),new AIController(game,'enemy',difficulty)];
+    const ais=['player','enemy'].map(team=>{const matchRng=game.rng;if(aiSeed!==null)game.rng=new SeededRandom(aiSeed);try{return new AIController(game,team,difficulty);}finally{game.rng=matchRng;}});
+    report.strategies=ais.map(ai=>ai.strategy);report.controlledAiSeed=aiSeed;
     const bridges=ais.map((ai,i)=>{
       ai._workerManaged=true;
-      const bridge=Object.assign(Object.create(AIWorkerBridge.prototype),{game,team:ai.team,ai,difficulty,_workerRngState:seed+i*139,timer:0});
+      const bridge=Object.assign(Object.create(AIWorkerBridge.prototype),{game,team:ai.team,ai,difficulty,_workerRngState:aiSeed??seed+i*139,timer:0});
       const context={self:{postMessage(message){bridge._workerRngState=message.rngState;bridge._executeCommands(message.commands);}}};vm.runInNewContext(workerSource,context);bridge.context=context;return bridge;
     });
     for(let tick=0;tick<limit/dt;tick++){
+      const tickStart=performance.now();
       game.gameElapsed=tick*dt;
       game.spatialGrid.clear();for(const e of game.entities)if(e.alive)game.spatialGrid.insert(e);
       for(const e of game.entities)if(e.alive)e.update(dt);
       game.combatSystem.update(dt);game.resourceSystem.update(dt);game.productionSystem.update(dt);
       for(const bridge of bridges){bridge.ai.update(dt);bridge.timer+=dt;if(bridge.timer>=bridge.ai.tacticalInterval){bridge.timer=0;bridge.context.self.onmessage({data:{type:'aiDecide',team:bridge.team,state:bridge._snapshotState()}});}}
       for(const team of ['player','enemy'])report.peakArmy[team]=Math.max(report.peakArmy[team],game.getUnits(team).length);
+      if(observeStalls && tick%Math.max(1,Math.round(1/dt))===0){
+        let stalled=0;const aliveIds=new Set();
+        for(const unit of game.entities){
+          if(!unit.alive||!unit.isUnit)continue;aliveIds.add(unit.id);
+          const p=unit.getPosition(),previous=motion.get(unit.id);
+          const assigned=unit.moveTarget&&!unit.attackTarget&&!unit._pathPending&&!unit.isGarrisoned&&!(unit.empDisabledTimer>0)&&unit.speed>0&&p.distanceTo(unit.moveTarget)>3;
+          const stationary=assigned&&previous&&p.distanceTo(previous.position)<.25;
+          const seconds=stationary?previous.seconds+1:0;
+          if(seconds===4)report.stalledEpisodes++;
+          if(seconds>=4)stalled++;
+          motion.set(unit.id,{position:p.clone(),seconds});
+        }
+        for(const id of motion.keys())if(!aliveIds.has(id))motion.delete(id);
+        report.maxSimultaneousStalls=Math.max(report.maxSimultaneousStalls,stalled);
+      }
+      tickTimes.push(performance.now()-tickStart);
       if(!game.getHQ('player')||!game.getHQ('enemy')){report.duration=+game.gameElapsed.toFixed(1);report.winner=game.getHQ('player')?'player':game.getHQ('enemy')?'enemy':'draw';break;}
       if(tick%100===0)game.entities=game.entities.filter(e=>e.alive);
     }
     report.waves=Object.fromEntries(ais.map(ai=>[ai.team,ai.attackWaveCount]));report.economy=game.stats;report.hqHP=Object.fromEntries(['player','enemy'].map(team=>[team,game.getHQ(team)?.health??0]));
+    tickTimes.sort((a,b)=>a-b);report.cpuStepMs={median:tickTimes[Math.floor(tickTimes.length*.5)]??0,p95:tickTimes[Math.floor(tickTimes.length*.95)]??0,max:tickTimes.at(-1)??0};
     game.terrain.dispose();return report;
   }finally{Math.random=random;Date.now=wallNow;assetManager.getTeamTintedModel=originalModel;Entity.prototype.createTypeLabel=originalLabel;}
 }

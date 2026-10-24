@@ -27,7 +27,10 @@
     "test:gameplay": "node scripts/verify-gameplay.mjs",
     "analyze:balance": "node scripts/analyze-balance.mjs",
     "analyze:balance:baseline": "node scripts/reproduce-balance-baseline.mjs",
-    "analyze:assets": "node scripts/analyze-roster-budget.mjs"
+    "analyze:assets": "node scripts/analyze-roster-budget.mjs",
+    "analyze:balance:full": "node scripts/analyze-full-sweep.mjs",
+    "analyze:balance:mirror": "node scripts/analyze-mirror-matches.mjs",
+    "analyze:movement-stress": "node scripts/analyze-movement-stress.mjs"
   },
   "dependencies": {
     "@gltf-transform/core": "^4.3.0",

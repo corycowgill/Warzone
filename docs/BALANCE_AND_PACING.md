@@ -44,3 +44,7 @@ Formation orders position mortars and self-propelled guns behind the assault lin
 Five new regression tests cover the flank-to-objective transition, inaccessible-flank fallback, casualty withdrawal, recovery eligibility and artillery formation placement. The suite now passes 131 tests. Tactics, gameplay and performance verification also pass.
 
 `docs/balance/combat-ai.json` records the follow-up fixture run: 17/18 matches finished within the cap, median completed duration 166.2 seconds, median first contact 36.2 seconds, and no finishes before 90 seconds. One river fixture reached the six-minute cap. This is a limitation to investigate with live playtesting, not proof of a stalemate or improved faction balance. Reproduce with `npm run analyze:balance -- docs/balance/combat-ai.json`; the same harness exclusions above apply. No browser frame-rate improvement is claimed.
+
+## Full matchup audit — 2026-10-24
+
+See [the full-match audit](balance/FULL_MATCH_AUDIT.md) for all-pair coverage, strategy-seed controls, the AI construction fix, France income adjustment, large-army CPU/movement results and explicit rendered-playtest limitations.

@@ -1,0 +1,5833 @@
+{
+  "controlledAi": true,
+  "maps": [
+    "plains"
+  ],
+  "seeds": [
+    24817
+  ],
+  "method": "Headless core simulation, normal difficulty, every unordered faction pair with sides reversed over the specified maps and seeds, 600 simulated seconds. Excludes rendering, abilities, research, neutral objectives and loot. CPU step time is not browser FPS. Stress spawns skip unwalkable tiles; peak counts are actual.",
+  "summary": {
+    "matches": 30,
+    "finished": 29,
+    "playerWins": 17,
+    "enemyWins": 12,
+    "rates": {
+      "america": {
+        "matches": 10,
+        "wins": 4,
+        "timeouts": 0
+      },
+      "britain": {
+        "matches": 10,
+        "wins": 10,
+        "timeouts": 0
+      },
+      "france": {
+        "matches": 10,
+        "wins": 4,
+        "timeouts": 1
+      },
+      "germany": {
+        "matches": 10,
+        "wins": 5,
+        "timeouts": 0
+      },
+      "japan": {
+        "matches": 10,
+        "wins": 4,
+        "timeouts": 0
+      },
+      "austria": {
+        "matches": 10,
+        "wins": 2,
+        "timeouts": 1
+      }
+    }
+  },
+  "results": [
+    {
+      "seed": 24817,
+      "map": "plains",
+      "nations": [
+        "america",
+        "britain"
+      ],
+      "difficulty": "normal",
+      "firstCombat": 33.7,
+      "firstHQDamage": 254.2,
+      "construction": {
+        "player": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 23.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 47.9
+          },
+          {
+            "type": "warfactory",
+            "time": 86.9
+          },
+          {
+            "type": "turret",
+            "time": 98.9
+          },
+          {
+            "type": "aaturret",
+            "time": 113.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 134.9
+          },
+          {
+            "type": "airfield",
+            "time": 152.9
+          },
+          {
+            "type": "techlab",
+            "time": 173.9
+          },
+          {
+            "type": "barracks",
+            "time": 254.9
+          },
+          {
+            "type": "aaturret",
+            "time": 269.9
+          }
+        ],
+        "enemy": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 20.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 41.9
+          },
+          {
+            "type": "warfactory",
+            "time": 74.9
+          },
+          {
+            "type": "turret",
+            "time": 86.9
+          },
+          {
+            "type": "aaturret",
+            "time": 101.9
+          },
+          {
+            "type": "airfield",
+            "time": 122.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 140.9
+          },
+          {
+            "type": "techlab",
+            "time": 155.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 263.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 275.9
+          },
+          {
+            "type": "aaturret",
+            "time": 281.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 296.9
+          }
+        ]
+      },
+      "waves": {
+        "player": 0,
+        "enemy": 7
+      },
+      "duration": 354,
+      "winner": "enemy",
+      "peakArmy": {
+        "player": 17,
+        "enemy": 35
+      },
+      "armySize": 4,
+      "blockedOrders": 35,
+      "damageByType": {
+        "turret": 1908.5499999999997,
+        "infantry": 4255.310749999975,
+        "mortar": 503.42,
+        "scoutcar": 34.449999999999996,
+        "apc": 52,
+        "drone": 1971.5700000000008,
+        "tank": 2896.7258250000004
+      },
+      "killsByType": {
+        "turret": 26,
+        "infantry": 36,
+        "mortar": 6,
+        "drone": 17,
+        "tank": 23
+      },
+      "stalledEpisodes": 0,
+      "maxSimultaneousStalls": 0,
+      "strategies": [
+        "turtle",
+        "turtle"
+      ],
+      "controlledAiSeed": 24817,
+      "economy": {
+        "player": {
+          "resourcesGathered": 9533,
+          "unitsProduced": 63,
+          "unitsLost": 54,
+          "enemiesKilled": 47,
+          "buildingsBuilt": 14,
+          "buildingsLost": 7
+        },
+        "enemy": {
+          "resourcesGathered": 13410,
+          "unitsProduced": 79,
+          "unitsLost": 47,
+          "enemiesKilled": 54,
+          "buildingsBuilt": 16,
+          "buildingsLost": 0
+        }
+      },
+      "hqHP": {
+        "player": 0,
+        "enemy": 1000
+      },
+      "cpuStepMs": {
+        "median": 0.08459999999990941,
+        "p95": 0.3530999999999267,
+        "max": 5.328100000000006
+      }
+    },
+    {
+      "seed": 24817,
+      "map": "plains",
+      "nations": [
+        "britain",
+        "america"
+      ],
+      "difficulty": "normal",
+      "firstCombat": 30.2,
+      "firstHQDamage": 275.1,
+      "construction": {
+        "player": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 20.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 41.9
+          },
+          {
+            "type": "warfactory",
+            "time": 77.9
+          },
+          {
+            "type": "turret",
+            "time": 86.9
+          },
+          {
+            "type": "aaturret",
+            "time": 101.9
+          },
+          {
+            "type": "airfield",
+            "time": 122.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 140.9
+          },
+          {
+            "type": "techlab",
+            "time": 155.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 266.9
+          }
+        ],
+        "enemy": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 23.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 47.9
+          },
+          {
+            "type": "warfactory",
+            "time": 86.9
+          },
+          {
+            "type": "turret",
+            "time": 98.9
+          },
+          {
+            "type": "aaturret",
+            "time": 113.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 134.9
+          },
+          {
+            "type": "airfield",
+            "time": 152.9
+          },
+          {
+            "type": "techlab",
+            "time": 173.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 233.9
+          },
+          {
+            "type": "barracks",
+            "time": 254.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 269.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 284.9
+          }
+        ]
+      },
+      "waves": {
+        "player": 4,
+        "enemy": 0
+      },
+      "duration": 289.4,
+      "winner": "player",
+      "peakArmy": {
+        "player": 34,
+        "enemy": 14
+      },
+      "armySize": 4,
+      "blockedOrders": 7,
+      "damageByType": {
+        "turret": 731.25,
+        "tank": 4282.4267500000005,
+        "drone": 1004.8500000000001,
+        "infantry": 1839.0871499999987,
+        "scoutcar": 24,
+        "mortar": 380.786,
+        "aaturret": 60
+      },
+      "killsByType": {
+        "turret": 8,
+        "drone": 9,
+        "tank": 29,
+        "infantry": 17,
+        "mortar": 1,
+        "aaturret": 1
+      },
+      "stalledEpisodes": 0,
+      "maxSimultaneousStalls": 0,
+      "strategies": [
+        "turtle",
+        "turtle"
+      ],
+      "controlledAiSeed": 24817,
+      "economy": {
+        "player": {
+          "resourcesGathered": 9462,
+          "unitsProduced": 55,
+          "unitsLost": 21,
+          "enemiesKilled": 39,
+          "buildingsBuilt": 13,
+          "buildingsLost": 0
+        },
+        "enemy": {
+          "resourcesGathered": 8891,
+          "unitsProduced": 41,
+          "unitsLost": 39,
+          "enemiesKilled": 21,
+          "buildingsBuilt": 16,
+          "buildingsLost": 5
+        }
+      },
+      "hqHP": {
+        "player": 1000,
+        "enemy": 0
+      },
+      "cpuStepMs": {
+        "median": 0.03669999999999618,
+        "p95": 0.20640000000003056,
+        "max": 5.761799999999994
+      }
+    },
+    {
+      "seed": 24817,
+      "map": "plains",
+      "nations": [
+        "america",
+        "france"
+      ],
+      "difficulty": "normal",
+      "firstCombat": 33.7,
+      "firstHQDamage": 313.1,
+      "construction": {
+        "player": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 23.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 47.9
+          },
+          {
+            "type": "warfactory",
+            "time": 86.9
+          },
+          {
+            "type": "turret",
+            "time": 98.9
+          },
+          {
+            "type": "aaturret",
+            "time": 113.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 134.9
+          },
+          {
+            "type": "airfield",
+            "time": 152.9
+          },
+          {
+            "type": "techlab",
+            "time": 173.9
+          },
+          {
+            "type": "barracks",
+            "time": 311.9
+          }
+        ],
+        "enemy": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 20.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 41.9
+          },
+          {
+            "type": "warfactory",
+            "time": 74.9
+          },
+          {
+            "type": "turret",
+            "time": 86.9
+          },
+          {
+            "type": "aaturret",
+            "time": 101.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 122.9
+          },
+          {
+            "type": "airfield",
+            "time": 137.9
+          },
+          {
+            "type": "techlab",
+            "time": 158.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 314.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 341.9
+          }
+        ]
+      },
+      "waves": {
+        "player": 2,
+        "enemy": 7
+      },
+      "duration": 343.3,
+      "winner": "enemy",
+      "peakArmy": {
+        "player": 27,
+        "enemy": 49
+      },
+      "armySize": 4,
+      "blockedOrders": 34,
+      "damageByType": {
+        "turret": 946.8999999999999,
+        "infantry": 6862.0267625000515,
+        "drone": 1426.8600000000004,
+        "mortar": 881.3199999999997,
+        "scoutcar": 92.93,
+        "tank": 1630.5344999999998,
+        "aaturret": 120,
+        "apc": 35.00000000000001
+      },
+      "killsByType": {
+        "turret": 12,
+        "infantry": 70,
+        "drone": 19,
+        "tank": 18,
+        "mortar": 4
+      },
+      "stalledEpisodes": 0,
+      "maxSimultaneousStalls": 0,
+      "strategies": [
+        "turtle",
+        "turtle"
+      ],
+      "controlledAiSeed": 24817,
+      "economy": {
+        "player": {
+          "resourcesGathered": 10095,
+          "unitsProduced": 75,
+          "unitsLost": 68,
+          "enemiesKilled": 50,
+          "buildingsBuilt": 13,
+          "buildingsLost": 5
+        },
+        "enemy": {
+          "resourcesGathered": 11563,
+          "unitsProduced": 98,
+          "unitsLost": 50,
+          "enemiesKilled": 68,
+          "buildingsBuilt": 14,
+          "buildingsLost": 0
+        }
+      },
+      "hqHP": {
+        "player": 0,
+        "enemy": 1000
+      },
+      "cpuStepMs": {
+        "median": 0.054600000000050386,
+        "p95": 0.35190000000000055,
+        "max": 6.274000000000115
+      }
+    },
+    {
+      "seed": 24817,
+      "map": "plains",
+      "nations": [
+        "france",
+        "america"
+      ],
+      "difficulty": "normal",
+      "firstCombat": 33.7,
+      "firstHQDamage": 257.5,
+      "construction": {
+        "player": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 20.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 41.9
+          },
+          {
+            "type": "warfactory",
+            "time": 74.9
+          },
+          {
+            "type": "turret",
+            "time": 86.9
+          },
+          {
+            "type": "aaturret",
+            "time": 101.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 122.9
+          },
+          {
+            "type": "airfield",
+            "time": 137.9
+          },
+          {
+            "type": "techlab",
+            "time": 155.9
+          },
+          {
+            "type": "aaturret",
+            "time": 338.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 392.9
+          },
+          {
+            "type": "barracks",
+            "time": 401.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 428.9
+          }
+        ],
+        "enemy": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 23.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 47.9
+          },
+          {
+            "type": "warfactory",
+            "time": 86.9
+          },
+          {
+            "type": "turret",
+            "time": 98.9
+          },
+          {
+            "type": "aaturret",
+            "time": 113.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 134.9
+          },
+          {
+            "type": "airfield",
+            "time": 152.9
+          },
+          {
+            "type": "techlab",
+            "time": 173.9
+          },
+          {
+            "type": "aaturret",
+            "time": 191.9
+          },
+          {
+            "type": "barracks",
+            "time": 260.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 341.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 410.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 422.9
+          }
+        ]
+      },
+      "waves": {
+        "player": 10,
+        "enemy": 3
+      },
+      "duration": 471.9,
+      "winner": "enemy",
+      "peakArmy": {
+        "player": 40,
+        "enemy": 28
+      },
+      "armySize": 4,
+      "blockedOrders": 5,
+      "damageByType": {
+        "turret": 2854.95,
+        "drone": 2744.1315000000004,
+        "infantry": 6466.040237499995,
+        "mortar": 1090.7895,
+        "apc": 192.82,
+        "tank": 9713.115544999999,
+        "aaturret": 120
+      },
+      "killsByType": {
+        "turret": 26,
+        "drone": 23,
+        "infantry": 73,
+        "mortar": 7,
+        "apc": 2,
+        "tank": 94,
+        "aaturret": 1
+      },
+      "stalledEpisodes": 0,
+      "maxSimultaneousStalls": 0,
+      "strategies": [
+        "turtle",
+        "turtle"
+      ],
+      "controlledAiSeed": 24817,
+      "economy": {
+        "player": {
+          "resourcesGathered": 16047,
+          "unitsProduced": 150,
+          "unitsLost": 137,
+          "enemiesKilled": 82,
+          "buildingsBuilt": 16,
+          "buildingsLost": 5
+        },
+        "enemy": {
+          "resourcesGathered": 16933,
+          "unitsProduced": 110,
+          "unitsLost": 82,
+          "enemiesKilled": 137,
+          "buildingsBuilt": 17,
+          "buildingsLost": 2
+        }
+      },
+      "hqHP": {
+        "player": 0,
+        "enemy": 595.0000000000018
+      },
+      "cpuStepMs": {
+        "median": 0.08799999999996544,
+        "p95": 0.316899999999805,
+        "max": 7.478900000000067
+      }
+    },
+    {
+      "seed": 24817,
+      "map": "plains",
+      "nations": [
+        "america",
+        "germany"
+      ],
+      "difficulty": "normal",
+      "firstCombat": 33.7,
+      "firstHQDamage": 368.9,
+      "construction": {
+        "player": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 23.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 47.9
+          },
+          {
+            "type": "warfactory",
+            "time": 86.9
+          },
+          {
+            "type": "turret",
+            "time": 98.9
+          },
+          {
+            "type": "aaturret",
+            "time": 113.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 134.9
+          },
+          {
+            "type": "airfield",
+            "time": 152.9
+          },
+          {
+            "type": "techlab",
+            "time": 173.9
+          },
+          {
+            "type": "aaturret",
+            "time": 374.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 416.9
+          }
+        ],
+        "enemy": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 23.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 47.9
+          },
+          {
+            "type": "warfactory",
+            "time": 86.9
+          },
+          {
+            "type": "turret",
+            "time": 98.9
+          },
+          {
+            "type": "aaturret",
+            "time": 113.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 134.9
+          },
+          {
+            "type": "airfield",
+            "time": 152.9
+          },
+          {
+            "type": "techlab",
+            "time": 173.9
+          },
+          {
+            "type": "barracks",
+            "time": 365.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 377.9
+          }
+        ]
+      },
+      "waves": {
+        "player": 8,
+        "enemy": 4
+      },
+      "duration": 417.8,
+      "winner": "player",
+      "peakArmy": {
+        "player": 50,
+        "enemy": 29
+      },
+      "armySize": 4,
+      "blockedOrders": 8,
+      "damageByType": {
+        "turret": 1465.95,
+        "mortar": 1313.3039999999992,
+        "aaturret": 60,
+        "drone": 2584.375200000003,
+        "infantry": 7236.3167000000285,
+        "scoutcar": 19.05,
+        "tank": 2721.5814499999997,
+        "apc": 127.41599999999994
+      },
+      "killsByType": {
+        "turret": 18,
+        "drone": 31,
+        "infantry": 78,
+        "tank": 17,
+        "mortar": 13,
+        "apc": 2
+      },
+      "stalledEpisodes": 0,
+      "maxSimultaneousStalls": 0,
+      "strategies": [
+        "turtle",
+        "turtle"
+      ],
+      "controlledAiSeed": 24817,
+      "economy": {
+        "player": {
+          "resourcesGathered": 13241,
+          "unitsProduced": 113,
+          "unitsLost": 63,
+          "enemiesKilled": 88,
+          "buildingsBuilt": 14,
+          "buildingsLost": 0
+        },
+        "enemy": {
+          "resourcesGathered": 12865,
+          "unitsProduced": 91,
+          "unitsLost": 88,
+          "enemiesKilled": 63,
+          "buildingsBuilt": 14,
+          "buildingsLost": 8
+        }
+      },
+      "hqHP": {
+        "player": 1000,
+        "enemy": 0
+      },
+      "cpuStepMs": {
+        "median": 0.07230000000004111,
+        "p95": 0.2994000000003325,
+        "max": 6.655099999999948
+      }
+    },
+    {
+      "seed": 24817,
+      "map": "plains",
+      "nations": [
+        "germany",
+        "america"
+      ],
+      "difficulty": "normal",
+      "firstCombat": 33.7,
+      "firstHQDamage": 321.7,
+      "construction": {
+        "player": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 23.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 47.9
+          },
+          {
+            "type": "warfactory",
+            "time": 86.9
+          },
+          {
+            "type": "turret",
+            "time": 98.9
+          },
+          {
+            "type": "aaturret",
+            "time": 113.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 134.9
+          },
+          {
+            "type": "airfield",
+            "time": 152.9
+          },
+          {
+            "type": "techlab",
+            "time": 173.9
+          },
+          {
+            "type": "aaturret",
+            "time": 269.9
+          }
+        ],
+        "enemy": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 23.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 47.9
+          },
+          {
+            "type": "warfactory",
+            "time": 86.9
+          },
+          {
+            "type": "turret",
+            "time": 98.9
+          },
+          {
+            "type": "aaturret",
+            "time": 113.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 134.9
+          },
+          {
+            "type": "airfield",
+            "time": 152.9
+          },
+          {
+            "type": "techlab",
+            "time": 173.9
+          },
+          {
+            "type": "barracks",
+            "time": 320.9
+          }
+        ]
+      },
+      "waves": {
+        "player": 4,
+        "enemy": 4
+      },
+      "duration": 329.6,
+      "winner": "player",
+      "peakArmy": {
+        "player": 32,
+        "enemy": 29
+      },
+      "armySize": 4,
+      "blockedOrders": 21,
+      "damageByType": {
+        "turret": 920.725,
+        "drone": 705.8999999999999,
+        "aaturret": 180,
+        "infantry": 2043.715449999999,
+        "scoutcar": 8,
+        "mortar": 258.8745,
+        "tank": 6968.213831250002
+      },
+      "killsByType": {
+        "turret": 13,
+        "aaturret": 2,
+        "infantry": 25,
+        "drone": 7,
+        "mortar": 2,
+        "tank": 57
+      },
+      "stalledEpisodes": 0,
+      "maxSimultaneousStalls": 0,
+      "strategies": [
+        "turtle",
+        "turtle"
+      ],
+      "controlledAiSeed": 24817,
+      "economy": {
+        "player": {
+          "resourcesGathered": 10187,
+          "unitsProduced": 64,
+          "unitsLost": 32,
+          "enemiesKilled": 69,
+          "buildingsBuilt": 13,
+          "buildingsLost": 0
+        },
+        "enemy": {
+          "resourcesGathered": 9695,
+          "unitsProduced": 69,
+          "unitsLost": 69,
+          "enemiesKilled": 32,
+          "buildingsBuilt": 13,
+          "buildingsLost": 5
+        }
+      },
+      "hqHP": {
+        "player": 1000,
+        "enemy": 0
+      },
+      "cpuStepMs": {
+        "median": 0.033800000000155705,
+        "p95": 0.19549999999981083,
+        "max": 4.5715000000000146
+      }
+    },
+    {
+      "seed": 24817,
+      "map": "plains",
+      "nations": [
+        "america",
+        "japan"
+      ],
+      "difficulty": "normal",
+      "firstCombat": 33.7,
+      "firstHQDamage": 371.8,
+      "construction": {
+        "player": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 23.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 47.9
+          },
+          {
+            "type": "warfactory",
+            "time": 86.9
+          },
+          {
+            "type": "turret",
+            "time": 98.9
+          },
+          {
+            "type": "aaturret",
+            "time": 113.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 134.9
+          },
+          {
+            "type": "airfield",
+            "time": 152.9
+          },
+          {
+            "type": "techlab",
+            "time": 173.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 359.9
+          },
+          {
+            "type": "barracks",
+            "time": 374.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 404.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 458.9
+          },
+          {
+            "type": "aaturret",
+            "time": 485.9
+          }
+        ],
+        "enemy": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 23.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 47.9
+          },
+          {
+            "type": "warfactory",
+            "time": 86.9
+          },
+          {
+            "type": "turret",
+            "time": 98.9
+          },
+          {
+            "type": "aaturret",
+            "time": 113.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 134.9
+          },
+          {
+            "type": "airfield",
+            "time": 152.9
+          },
+          {
+            "type": "techlab",
+            "time": 173.9
+          },
+          {
+            "type": "aaturret",
+            "time": 461.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 545.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 569.9
+          },
+          {
+            "type": "barracks",
+            "time": 578.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 587.9
+          }
+        ]
+      },
+      "waves": {
+        "player": 9,
+        "enemy": 16
+      },
+      "duration": 588.2,
+      "winner": "player",
+      "peakArmy": {
+        "player": 44,
+        "enemy": 30
+      },
+      "armySize": 4,
+      "blockedOrders": 22,
+      "damageByType": {
+        "turret": 2368.4,
+        "mortar": 1306.5484999999999,
+        "drone": 4514.810340000013,
+        "infantry": 11332.593425000085,
+        "apc": 175.45199999999997,
+        "scoutcar": 34.449999999999996,
+        "aaturret": 300,
+        "tank": 9926.94587499999,
+        "plane": 1393.9258750000001
+      },
+      "killsByType": {
+        "turret": 29,
+        "infantry": 101,
+        "mortar": 21,
+        "aaturret": 4,
+        "scoutcar": 1,
+        "tank": 99,
+        "drone": 46,
+        "plane": 19
+      },
+      "stalledEpisodes": 0,
+      "maxSimultaneousStalls": 0,
+      "strategies": [
+        "turtle",
+        "turtle"
+      ],
+      "controlledAiSeed": 24817,
+      "economy": {
+        "player": {
+          "resourcesGathered": 22190,
+          "unitsProduced": 192,
+          "unitsLost": 151,
+          "enemiesKilled": 161,
+          "buildingsBuilt": 17,
+          "buildingsLost": 2
+        },
+        "enemy": {
+          "resourcesGathered": 19112,
+          "unitsProduced": 163,
+          "unitsLost": 161,
+          "enemiesKilled": 151,
+          "buildingsBuilt": 17,
+          "buildingsLost": 6
+        }
+      },
+      "hqHP": {
+        "player": 951.2,
+        "enemy": 0
+      },
+      "cpuStepMs": {
+        "median": 0.1048000000000684,
+        "p95": 0.46469999999999345,
+        "max": 4.845400000000154
+      }
+    },
+    {
+      "seed": 24817,
+      "map": "plains",
+      "nations": [
+        "japan",
+        "america"
+      ],
+      "difficulty": "normal",
+      "firstCombat": 33.7,
+      "firstHQDamage": 430.3,
+      "construction": {
+        "player": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 23.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 47.9
+          },
+          {
+            "type": "warfactory",
+            "time": 86.9
+          },
+          {
+            "type": "turret",
+            "time": 98.9
+          },
+          {
+            "type": "aaturret",
+            "time": 113.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 134.9
+          },
+          {
+            "type": "airfield",
+            "time": 152.9
+          },
+          {
+            "type": "techlab",
+            "time": 173.9
+          },
+          {
+            "type": "barracks",
+            "time": 263.9
+          }
+        ],
+        "enemy": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 23.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 47.9
+          },
+          {
+            "type": "warfactory",
+            "time": 86.9
+          },
+          {
+            "type": "turret",
+            "time": 98.9
+          },
+          {
+            "type": "aaturret",
+            "time": 113.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 134.9
+          },
+          {
+            "type": "airfield",
+            "time": 152.9
+          },
+          {
+            "type": "techlab",
+            "time": 173.9
+          },
+          {
+            "type": "barracks",
+            "time": 422.9
+          }
+        ]
+      },
+      "waves": {
+        "player": 7,
+        "enemy": 5
+      },
+      "duration": 445.7,
+      "winner": "player",
+      "peakArmy": {
+        "player": 26,
+        "enemy": 29
+      },
+      "armySize": 4,
+      "blockedOrders": 5,
+      "damageByType": {
+        "turret": 1785.875,
+        "drone": 2591.394000000003,
+        "infantry": 6080.616762499987,
+        "scoutcar": 8,
+        "mortar": 460.95799999999963,
+        "apc": 91.52,
+        "aaturret": 240,
+        "tank": 7877.706847499991
+      },
+      "killsByType": {
+        "turret": 21,
+        "drone": 29,
+        "infantry": 75,
+        "aaturret": 1,
+        "tank": 65
+      },
+      "stalledEpisodes": 0,
+      "maxSimultaneousStalls": 0,
+      "strategies": [
+        "turtle",
+        "turtle"
+      ],
+      "controlledAiSeed": 24817,
+      "economy": {
+        "player": {
+          "resourcesGathered": 14123,
+          "unitsProduced": 97,
+          "unitsLost": 72,
+          "enemiesKilled": 113,
+          "buildingsBuilt": 13,
+          "buildingsLost": 1
+        },
+        "enemy": {
+          "resourcesGathered": 13753,
+          "unitsProduced": 119,
+          "unitsLost": 113,
+          "enemiesKilled": 72,
+          "buildingsBuilt": 13,
+          "buildingsLost": 5
+        }
+      },
+      "hqHP": {
+        "player": 1000,
+        "enemy": 0
+      },
+      "cpuStepMs": {
+        "median": 0.06359999999995125,
+        "p95": 0.2784999999998945,
+        "max": 3.962499999999636
+      }
+    },
+    {
+      "seed": 24817,
+      "map": "plains",
+      "nations": [
+        "america",
+        "austria"
+      ],
+      "difficulty": "normal",
+      "firstCombat": 33.7,
+      "firstHQDamage": 223,
+      "construction": {
+        "player": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 23.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 47.9
+          },
+          {
+            "type": "warfactory",
+            "time": 86.9
+          },
+          {
+            "type": "turret",
+            "time": 98.9
+          },
+          {
+            "type": "aaturret",
+            "time": 113.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 134.9
+          },
+          {
+            "type": "airfield",
+            "time": 152.9
+          },
+          {
+            "type": "techlab",
+            "time": 173.9
+          },
+          {
+            "type": "barracks",
+            "time": 227.9
+          }
+        ],
+        "enemy": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 14.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 32.9
+          },
+          {
+            "type": "warfactory",
+            "time": 65.9
+          },
+          {
+            "type": "turret",
+            "time": 77.9
+          },
+          {
+            "type": "aaturret",
+            "time": 89.9
+          },
+          {
+            "type": "airfield",
+            "time": 110.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 128.9
+          },
+          {
+            "type": "techlab",
+            "time": 143.9
+          },
+          {
+            "type": "barracks",
+            "time": 365.9
+          }
+        ]
+      },
+      "waves": {
+        "player": 2,
+        "enemy": 13
+      },
+      "duration": 385.5,
+      "winner": "player",
+      "peakArmy": {
+        "player": 28,
+        "enemy": 45
+      },
+      "armySize": 4,
+      "blockedOrders": 42,
+      "damageByType": {
+        "turret": 2261.437499999998,
+        "infantry": 8138.886170000014,
+        "mortar": 145.6,
+        "tank": 9866.165732499994,
+        "drone": 1530.8100000000009,
+        "scoutcar": 7.6,
+        "apc": 61.400000000000006,
+        "aaturret": 60
+      },
+      "killsByType": {
+        "turret": 26,
+        "infantry": 73,
+        "tank": 94,
+        "drone": 15,
+        "mortar": 2,
+        "aaturret": 1
+      },
+      "stalledEpisodes": 0,
+      "maxSimultaneousStalls": 0,
+      "strategies": [
+        "turtle",
+        "turtle"
+      ],
+      "controlledAiSeed": 24817,
+      "economy": {
+        "player": {
+          "resourcesGathered": 11822,
+          "unitsProduced": 85,
+          "unitsLost": 57,
+          "enemiesKilled": 145,
+          "buildingsBuilt": 13,
+          "buildingsLost": 3
+        },
+        "enemy": {
+          "resourcesGathered": 12699,
+          "unitsProduced": 153,
+          "unitsLost": 145,
+          "enemiesKilled": 57,
+          "buildingsBuilt": 13,
+          "buildingsLost": 6
+        }
+      },
+      "hqHP": {
+        "player": 357.2000000000029,
+        "enemy": 0
+      },
+      "cpuStepMs": {
+        "median": 0.07669999999961874,
+        "p95": 0.3011000000005879,
+        "max": 5.670100000000275
+      }
+    },
+    {
+      "seed": 24817,
+      "map": "plains",
+      "nations": [
+        "austria",
+        "america"
+      ],
+      "difficulty": "normal",
+      "firstCombat": 32.3,
+      "firstHQDamage": 229.8,
+      "construction": {
+        "player": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 14.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 32.9
+          },
+          {
+            "type": "warfactory",
+            "time": 65.9
+          },
+          {
+            "type": "turret",
+            "time": 77.9
+          },
+          {
+            "type": "aaturret",
+            "time": 89.9
+          },
+          {
+            "type": "airfield",
+            "time": 110.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 128.9
+          },
+          {
+            "type": "techlab",
+            "time": 143.9
+          }
+        ],
+        "enemy": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 23.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 47.9
+          },
+          {
+            "type": "warfactory",
+            "time": 86.9
+          },
+          {
+            "type": "turret",
+            "time": 98.9
+          },
+          {
+            "type": "aaturret",
+            "time": 113.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 134.9
+          },
+          {
+            "type": "airfield",
+            "time": 152.9
+          },
+          {
+            "type": "techlab",
+            "time": 173.9
+          },
+          {
+            "type": "barracks",
+            "time": 230.9
+          },
+          {
+            "type": "barracks",
+            "time": 296.9
+          }
+        ]
+      },
+      "waves": {
+        "player": 10,
+        "enemy": 0
+      },
+      "duration": 299.4,
+      "winner": "player",
+      "peakArmy": {
+        "player": 43,
+        "enemy": 10
+      },
+      "armySize": 4,
+      "blockedOrders": 5,
+      "damageByType": {
+        "turret": 2084.4,
+        "infantry": 6507.673287500051,
+        "mortar": 355.6,
+        "drone": 302.3999999999999,
+        "scoutcar": 6.8,
+        "tank": 1456.1732499999998
+      },
+      "killsByType": {
+        "turret": 27,
+        "infantry": 59,
+        "mortar": 8,
+        "drone": 4,
+        "tank": 14
+      },
+      "stalledEpisodes": 0,
+      "maxSimultaneousStalls": 0,
+      "strategies": [
+        "turtle",
+        "turtle"
+      ],
+      "controlledAiSeed": 24817,
+      "economy": {
+        "player": {
+          "resourcesGathered": 9793,
+          "unitsProduced": 104,
+          "unitsLost": 62,
+          "enemiesKilled": 46,
+          "buildingsBuilt": 12,
+          "buildingsLost": 0
+        },
+        "enemy": {
+          "resourcesGathered": 8932,
+          "unitsProduced": 47,
+          "unitsLost": 46,
+          "enemiesKilled": 62,
+          "buildingsBuilt": 14,
+          "buildingsLost": 4
+        }
+      },
+      "hqHP": {
+        "player": 1000,
+        "enemy": 0
+      },
+      "cpuStepMs": {
+        "median": 0.04160000000047148,
+        "p95": 0.2360000000007858,
+        "max": 5.409700000000157
+      }
+    },
+    {
+      "seed": 24817,
+      "map": "plains",
+      "nations": [
+        "britain",
+        "france"
+      ],
+      "difficulty": "normal",
+      "firstCombat": 30.2,
+      "firstHQDamage": 293.9,
+      "construction": {
+        "player": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 20.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 41.9
+          },
+          {
+            "type": "warfactory",
+            "time": 77.9
+          },
+          {
+            "type": "turret",
+            "time": 86.9
+          },
+          {
+            "type": "aaturret",
+            "time": 101.9
+          },
+          {
+            "type": "airfield",
+            "time": 122.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 140.9
+          },
+          {
+            "type": "techlab",
+            "time": 155.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 296.9
+          }
+        ],
+        "enemy": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 20.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 41.9
+          },
+          {
+            "type": "warfactory",
+            "time": 74.9
+          },
+          {
+            "type": "turret",
+            "time": 86.9
+          },
+          {
+            "type": "aaturret",
+            "time": 101.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 122.9
+          },
+          {
+            "type": "airfield",
+            "time": 137.9
+          },
+          {
+            "type": "techlab",
+            "time": 155.9
+          },
+          {
+            "type": "aaturret",
+            "time": 275.9
+          },
+          {
+            "type": "barracks",
+            "time": 281.9
+          }
+        ]
+      },
+      "waves": {
+        "player": 4,
+        "enemy": 3
+      },
+      "duration": 306.8,
+      "winner": "player",
+      "peakArmy": {
+        "player": 32,
+        "enemy": 33
+      },
+      "armySize": 4,
+      "blockedOrders": 26,
+      "damageByType": {
+        "turret": 987.9,
+        "infantry": 2787.5794000000024,
+        "drone": 1025.2200000000003,
+        "mortar": 513.8000000000001,
+        "scoutcar": 85.33000000000001,
+        "apc": 31.84,
+        "aaturret": 292.79999999999995,
+        "tank": 5669.479899999995,
+        "plane": 294
+      },
+      "killsByType": {
+        "turret": 11,
+        "infantry": 22,
+        "drone": 13,
+        "mortar": 4,
+        "aaturret": 2,
+        "tank": 46,
+        "plane": 3
+      },
+      "stalledEpisodes": 0,
+      "maxSimultaneousStalls": 0,
+      "strategies": [
+        "turtle",
+        "turtle"
+      ],
+      "controlledAiSeed": 24817,
+      "economy": {
+        "player": {
+          "resourcesGathered": 10194,
+          "unitsProduced": 66,
+          "unitsLost": 34,
+          "enemiesKilled": 62,
+          "buildingsBuilt": 13,
+          "buildingsLost": 0
+        },
+        "enemy": {
+          "resourcesGathered": 9721,
+          "unitsProduced": 68,
+          "unitsLost": 62,
+          "enemiesKilled": 34,
+          "buildingsBuilt": 14,
+          "buildingsLost": 5
+        }
+      },
+      "hqHP": {
+        "player": 1000,
+        "enemy": 0
+      },
+      "cpuStepMs": {
+        "median": 0.03840000000036525,
+        "p95": 0.26090000000021973,
+        "max": 4.615700000000288
+      }
+    },
+    {
+      "seed": 24817,
+      "map": "plains",
+      "nations": [
+        "france",
+        "britain"
+      ],
+      "difficulty": "normal",
+      "firstCombat": 33.7,
+      "firstHQDamage": 526.4,
+      "construction": {
+        "player": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 20.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 41.9
+          },
+          {
+            "type": "warfactory",
+            "time": 74.9
+          },
+          {
+            "type": "turret",
+            "time": 86.9
+          },
+          {
+            "type": "aaturret",
+            "time": 101.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 122.9
+          },
+          {
+            "type": "airfield",
+            "time": 137.9
+          },
+          {
+            "type": "techlab",
+            "time": 155.9
+          },
+          {
+            "type": "barracks",
+            "time": 524.9
+          }
+        ],
+        "enemy": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 20.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 41.9
+          },
+          {
+            "type": "warfactory",
+            "time": 74.9
+          },
+          {
+            "type": "turret",
+            "time": 86.9
+          },
+          {
+            "type": "aaturret",
+            "time": 101.9
+          },
+          {
+            "type": "airfield",
+            "time": 122.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 140.9
+          },
+          {
+            "type": "techlab",
+            "time": 155.9
+          }
+        ]
+      },
+      "waves": {
+        "player": 8,
+        "enemy": 14
+      },
+      "duration": 538.8,
+      "winner": "enemy",
+      "peakArmy": {
+        "player": 43,
+        "enemy": 42
+      },
+      "armySize": 4,
+      "blockedOrders": 4,
+      "damageByType": {
+        "turret": 1816.7999999999997,
+        "drone": 4135.658250000002,
+        "mortar": 1344.4464999999998,
+        "infantry": 12168.675599999991,
+        "scoutcar": 38.400000000000006,
+        "tank": 12644.57981500001,
+        "apc": 88.223,
+        "aaturret": 420
+      },
+      "killsByType": {
+        "turret": 31,
+        "drone": 42,
+        "infantry": 129,
+        "tank": 140,
+        "mortar": 13,
+        "aaturret": 5,
+        "apc": 1
+      },
+      "stalledEpisodes": 0,
+      "maxSimultaneousStalls": 0,
+      "strategies": [
+        "turtle",
+        "turtle"
+      ],
+      "controlledAiSeed": 24817,
+      "economy": {
+        "player": {
+          "resourcesGathered": 18198,
+          "unitsProduced": 210,
+          "unitsLost": 200,
+          "enemiesKilled": 157,
+          "buildingsBuilt": 13,
+          "buildingsLost": 4
+        },
+        "enemy": {
+          "resourcesGathered": 18839,
+          "unitsProduced": 192,
+          "unitsLost": 157,
+          "enemiesKilled": 200,
+          "buildingsBuilt": 12,
+          "buildingsLost": 0
+        }
+      },
+      "hqHP": {
+        "player": 0,
+        "enemy": 1000
+      },
+      "cpuStepMs": {
+        "median": 0.15340000000014697,
+        "p95": 0.6152000000001863,
+        "max": 9.597399999999652
+      }
+    },
+    {
+      "seed": 24817,
+      "map": "plains",
+      "nations": [
+        "britain",
+        "germany"
+      ],
+      "difficulty": "normal",
+      "firstCombat": 30.2,
+      "firstHQDamage": 215,
+      "construction": {
+        "player": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 20.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 41.9
+          },
+          {
+            "type": "warfactory",
+            "time": 77.9
+          },
+          {
+            "type": "turret",
+            "time": 86.9
+          },
+          {
+            "type": "aaturret",
+            "time": 101.9
+          },
+          {
+            "type": "airfield",
+            "time": 122.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 140.9
+          },
+          {
+            "type": "techlab",
+            "time": 155.9
+          }
+        ],
+        "enemy": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 23.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 47.9
+          },
+          {
+            "type": "warfactory",
+            "time": 86.9
+          },
+          {
+            "type": "turret",
+            "time": 98.9
+          },
+          {
+            "type": "aaturret",
+            "time": 113.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 134.9
+          },
+          {
+            "type": "airfield",
+            "time": 152.9
+          },
+          {
+            "type": "techlab",
+            "time": 173.9
+          },
+          {
+            "type": "aaturret",
+            "time": 203.9
+          },
+          {
+            "type": "barracks",
+            "time": 224.9
+          }
+        ]
+      },
+      "waves": {
+        "player": 2,
+        "enemy": 0
+      },
+      "duration": 246.2,
+      "winner": "player",
+      "peakArmy": {
+        "player": 30,
+        "enemy": 12
+      },
+      "armySize": 4,
+      "blockedOrders": 2,
+      "damageByType": {
+        "turret": 531.24,
+        "drone": 1206.5999999999976,
+        "infantry": 776.4319999999996,
+        "scoutcar": 19.6,
+        "mortar": 248.8,
+        "tank": 1772.8200000000006
+      },
+      "killsByType": {
+        "turret": 6,
+        "drone": 8,
+        "infantry": 6,
+        "tank": 9,
+        "mortar": 2
+      },
+      "stalledEpisodes": 0,
+      "maxSimultaneousStalls": 0,
+      "strategies": [
+        "turtle",
+        "turtle"
+      ],
+      "controlledAiSeed": 24817,
+      "economy": {
+        "player": {
+          "resourcesGathered": 7743,
+          "unitsProduced": 39,
+          "unitsLost": 9,
+          "enemiesKilled": 18,
+          "buildingsBuilt": 12,
+          "buildingsLost": 0
+        },
+        "enemy": {
+          "resourcesGathered": 6975,
+          "unitsProduced": 22,
+          "unitsLost": 18,
+          "enemiesKilled": 9,
+          "buildingsBuilt": 14,
+          "buildingsLost": 4
+        }
+      },
+      "hqHP": {
+        "player": 1000,
+        "enemy": 0
+      },
+      "cpuStepMs": {
+        "median": 0.022299999999631837,
+        "p95": 0.13110000000051514,
+        "max": 5.815200000000004
+      }
+    },
+    {
+      "seed": 24817,
+      "map": "plains",
+      "nations": [
+        "germany",
+        "britain"
+      ],
+      "difficulty": "normal",
+      "firstCombat": 33.7,
+      "firstHQDamage": 262,
+      "construction": {
+        "player": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 23.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 47.9
+          },
+          {
+            "type": "warfactory",
+            "time": 86.9
+          },
+          {
+            "type": "turret",
+            "time": 98.9
+          },
+          {
+            "type": "aaturret",
+            "time": 113.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 134.9
+          },
+          {
+            "type": "airfield",
+            "time": 152.9
+          },
+          {
+            "type": "techlab",
+            "time": 173.9
+          },
+          {
+            "type": "aaturret",
+            "time": 224.9
+          },
+          {
+            "type": "barracks",
+            "time": 266.9
+          }
+        ],
+        "enemy": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 20.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 41.9
+          },
+          {
+            "type": "warfactory",
+            "time": 74.9
+          },
+          {
+            "type": "turret",
+            "time": 86.9
+          },
+          {
+            "type": "aaturret",
+            "time": 101.9
+          },
+          {
+            "type": "airfield",
+            "time": 122.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 140.9
+          },
+          {
+            "type": "techlab",
+            "time": 155.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 254.9
+          }
+        ]
+      },
+      "waves": {
+        "player": 1,
+        "enemy": 6
+      },
+      "duration": 312.6,
+      "winner": "enemy",
+      "peakArmy": {
+        "player": 13,
+        "enemy": 42
+      },
+      "armySize": 4,
+      "blockedOrders": 23,
+      "damageByType": {
+        "turret": 1330.275,
+        "scoutcar": 22.718000000000004,
+        "infantry": 3074.6967999999956,
+        "apc": 107.32999999999998,
+        "drone": 1165.701,
+        "mortar": 333.82000000000005,
+        "aaturret": 180,
+        "tank": 1494.43875
+      },
+      "killsByType": {
+        "turret": 15,
+        "infantry": 32,
+        "drone": 12,
+        "mortar": 2,
+        "apc": 1,
+        "aaturret": 1,
+        "tank": 16
+      },
+      "stalledEpisodes": 0,
+      "maxSimultaneousStalls": 0,
+      "strategies": [
+        "turtle",
+        "turtle"
+      ],
+      "controlledAiSeed": 24817,
+      "economy": {
+        "player": {
+          "resourcesGathered": 8861,
+          "unitsProduced": 47,
+          "unitsLost": 39,
+          "enemiesKilled": 37,
+          "buildingsBuilt": 14,
+          "buildingsLost": 3
+        },
+        "enemy": {
+          "resourcesGathered": 10449,
+          "unitsProduced": 75,
+          "unitsLost": 37,
+          "enemiesKilled": 39,
+          "buildingsBuilt": 13,
+          "buildingsLost": 0
+        }
+      },
+      "hqHP": {
+        "player": 0,
+        "enemy": 1000
+      },
+      "cpuStepMs": {
+        "median": 0.033100000000558794,
+        "p95": 0.20930000000043947,
+        "max": 3.3643999999994776
+      }
+    },
+    {
+      "seed": 24817,
+      "map": "plains",
+      "nations": [
+        "britain",
+        "japan"
+      ],
+      "difficulty": "normal",
+      "firstCombat": 30.2,
+      "firstHQDamage": 280.5,
+      "construction": {
+        "player": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 20.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 41.9
+          },
+          {
+            "type": "warfactory",
+            "time": 77.9
+          },
+          {
+            "type": "turret",
+            "time": 86.9
+          },
+          {
+            "type": "aaturret",
+            "time": 101.9
+          },
+          {
+            "type": "airfield",
+            "time": 122.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 140.9
+          },
+          {
+            "type": "techlab",
+            "time": 155.9
+          },
+          {
+            "type": "aaturret",
+            "time": 296.9
+          }
+        ],
+        "enemy": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 23.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 47.9
+          },
+          {
+            "type": "warfactory",
+            "time": 86.9
+          },
+          {
+            "type": "turret",
+            "time": 98.9
+          },
+          {
+            "type": "aaturret",
+            "time": 113.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 134.9
+          },
+          {
+            "type": "airfield",
+            "time": 152.9
+          },
+          {
+            "type": "techlab",
+            "time": 173.9
+          },
+          {
+            "type": "barracks",
+            "time": 227.9
+          }
+        ]
+      },
+      "waves": {
+        "player": 4,
+        "enemy": 1
+      },
+      "duration": 298.7,
+      "winner": "player",
+      "peakArmy": {
+        "player": 35,
+        "enemy": 11
+      },
+      "armySize": 4,
+      "blockedOrders": 11,
+      "damageByType": {
+        "turret": 748.7249999999999,
+        "drone": 1441.7841,
+        "mortar": 187.21800000000002,
+        "infantry": 2329.802399999997,
+        "tank": 4844.888999999999,
+        "scoutcar": 22.7,
+        "apc": 21.58,
+        "aaturret": 178.8
+      },
+      "killsByType": {
+        "turret": 9,
+        "drone": 14,
+        "tank": 37,
+        "mortar": 2,
+        "infantry": 10,
+        "apc": 2,
+        "aaturret": 2
+      },
+      "stalledEpisodes": 0,
+      "maxSimultaneousStalls": 0,
+      "strategies": [
+        "turtle",
+        "turtle"
+      ],
+      "controlledAiSeed": 24817,
+      "economy": {
+        "player": {
+          "resourcesGathered": 9730,
+          "unitsProduced": 65,
+          "unitsLost": 31,
+          "enemiesKilled": 38,
+          "buildingsBuilt": 13,
+          "buildingsLost": 0
+        },
+        "enemy": {
+          "resourcesGathered": 8826,
+          "unitsProduced": 41,
+          "unitsLost": 38,
+          "enemiesKilled": 31,
+          "buildingsBuilt": 13,
+          "buildingsLost": 7
+        }
+      },
+      "hqHP": {
+        "player": 1000,
+        "enemy": 0
+      },
+      "cpuStepMs": {
+        "median": 0.028900000000248838,
+        "p95": 0.15750000000025466,
+        "max": 6.071700000000419
+      }
+    },
+    {
+      "seed": 24817,
+      "map": "plains",
+      "nations": [
+        "japan",
+        "britain"
+      ],
+      "difficulty": "normal",
+      "firstCombat": 33.7,
+      "firstHQDamage": 415.2,
+      "construction": {
+        "player": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 23.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 47.9
+          },
+          {
+            "type": "warfactory",
+            "time": 86.9
+          },
+          {
+            "type": "turret",
+            "time": 98.9
+          },
+          {
+            "type": "aaturret",
+            "time": 113.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 134.9
+          },
+          {
+            "type": "airfield",
+            "time": 152.9
+          },
+          {
+            "type": "techlab",
+            "time": 173.9
+          },
+          {
+            "type": "barracks",
+            "time": 386.9
+          }
+        ],
+        "enemy": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 20.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 41.9
+          },
+          {
+            "type": "warfactory",
+            "time": 74.9
+          },
+          {
+            "type": "turret",
+            "time": 86.9
+          },
+          {
+            "type": "aaturret",
+            "time": 101.9
+          },
+          {
+            "type": "airfield",
+            "time": 122.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 140.9
+          },
+          {
+            "type": "techlab",
+            "time": 155.9
+          },
+          {
+            "type": "aaturret",
+            "time": 431.9
+          }
+        ]
+      },
+      "waves": {
+        "player": 5,
+        "enemy": 13
+      },
+      "duration": 493.4,
+      "winner": "enemy",
+      "peakArmy": {
+        "player": 26,
+        "enemy": 41
+      },
+      "armySize": 4,
+      "blockedOrders": 30,
+      "damageByType": {
+        "turret": 1836.9000000000015,
+        "infantry": 9025.679200000095,
+        "drone": 3777.765420000008,
+        "scoutcar": 42.53625000000001,
+        "apc": 409.0550000000003,
+        "mortar": 1136.1520000000003,
+        "tank": 9280.099535,
+        "aaturret": 120
+      },
+      "killsByType": {
+        "turret": 20,
+        "infantry": 80,
+        "drone": 38,
+        "mortar": 12,
+        "tank": 99,
+        "apc": 2,
+        "aaturret": 2
+      },
+      "stalledEpisodes": 0,
+      "maxSimultaneousStalls": 0,
+      "strategies": [
+        "turtle",
+        "turtle"
+      ],
+      "controlledAiSeed": 24817,
+      "economy": {
+        "player": {
+          "resourcesGathered": 14458,
+          "unitsProduced": 119,
+          "unitsLost": 111,
+          "enemiesKilled": 132,
+          "buildingsBuilt": 13,
+          "buildingsLost": 10
+        },
+        "enemy": {
+          "resourcesGathered": 17019,
+          "unitsProduced": 165,
+          "unitsLost": 132,
+          "enemiesKilled": 111,
+          "buildingsBuilt": 13,
+          "buildingsLost": 0
+        }
+      },
+      "hqHP": {
+        "player": 0,
+        "enemy": 1000
+      },
+      "cpuStepMs": {
+        "median": 0.1066000000000713,
+        "p95": 0.3829999999998108,
+        "max": 4.854999999999563
+      }
+    },
+    {
+      "seed": 24817,
+      "map": "plains",
+      "nations": [
+        "britain",
+        "austria"
+      ],
+      "difficulty": "normal",
+      "firstCombat": 30.2,
+      "firstHQDamage": 357.4,
+      "construction": {
+        "player": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 20.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 41.9
+          },
+          {
+            "type": "warfactory",
+            "time": 77.9
+          },
+          {
+            "type": "turret",
+            "time": 86.9
+          },
+          {
+            "type": "aaturret",
+            "time": 101.9
+          },
+          {
+            "type": "airfield",
+            "time": 122.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 140.9
+          },
+          {
+            "type": "techlab",
+            "time": 155.9
+          },
+          {
+            "type": "barracks",
+            "time": 212.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 341.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 365.9
+          }
+        ],
+        "enemy": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 14.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 32.9
+          },
+          {
+            "type": "warfactory",
+            "time": 65.9
+          },
+          {
+            "type": "turret",
+            "time": 77.9
+          },
+          {
+            "type": "aaturret",
+            "time": 89.9
+          },
+          {
+            "type": "airfield",
+            "time": 110.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 128.9
+          },
+          {
+            "type": "techlab",
+            "time": 143.9
+          },
+          {
+            "type": "barracks",
+            "time": 329.9
+          }
+        ]
+      },
+      "waves": {
+        "player": 3,
+        "enemy": 8
+      },
+      "duration": 375.6,
+      "winner": "player",
+      "peakArmy": {
+        "player": 32,
+        "enemy": 35
+      },
+      "armySize": 4,
+      "blockedOrders": 27,
+      "damageByType": {
+        "turret": 1510,
+        "infantry": 5873.129380000047,
+        "scoutcar": 12.209,
+        "drone": 1443,
+        "mortar": 397,
+        "tank": 10512.48270625001,
+        "apc": 56.504999999999995,
+        "aaturret": 60
+      },
+      "killsByType": {
+        "turret": 21,
+        "infantry": 51,
+        "drone": 10,
+        "tank": 116,
+        "mortar": 1,
+        "apc": 1
+      },
+      "stalledEpisodes": 0,
+      "maxSimultaneousStalls": 0,
+      "strategies": [
+        "turtle",
+        "turtle"
+      ],
+      "controlledAiSeed": 24817,
+      "economy": {
+        "player": {
+          "resourcesGathered": 13049,
+          "unitsProduced": 83,
+          "unitsLost": 52,
+          "enemiesKilled": 141,
+          "buildingsBuilt": 15,
+          "buildingsLost": 1
+        },
+        "enemy": {
+          "resourcesGathered": 12225,
+          "unitsProduced": 143,
+          "unitsLost": 141,
+          "enemiesKilled": 52,
+          "buildingsBuilt": 13,
+          "buildingsLost": 6
+        }
+      },
+      "hqHP": {
+        "player": 1000,
+        "enemy": 0
+      },
+      "cpuStepMs": {
+        "median": 0.07710000000042783,
+        "p95": 0.3143999999992957,
+        "max": 4.183500000000095
+      }
+    },
+    {
+      "seed": 24817,
+      "map": "plains",
+      "nations": [
+        "austria",
+        "britain"
+      ],
+      "difficulty": "normal",
+      "firstCombat": 32.3,
+      "firstHQDamage": 377.8,
+      "construction": {
+        "player": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 14.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 32.9
+          },
+          {
+            "type": "warfactory",
+            "time": 65.9
+          },
+          {
+            "type": "turret",
+            "time": 77.9
+          },
+          {
+            "type": "aaturret",
+            "time": 89.9
+          },
+          {
+            "type": "airfield",
+            "time": 110.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 128.9
+          },
+          {
+            "type": "techlab",
+            "time": 143.9
+          },
+          {
+            "type": "aaturret",
+            "time": 371.9
+          },
+          {
+            "type": "aaturret",
+            "time": 380.9
+          }
+        ],
+        "enemy": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 20.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 41.9
+          },
+          {
+            "type": "warfactory",
+            "time": 74.9
+          },
+          {
+            "type": "turret",
+            "time": 86.9
+          },
+          {
+            "type": "aaturret",
+            "time": 101.9
+          },
+          {
+            "type": "airfield",
+            "time": 122.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 140.9
+          },
+          {
+            "type": "techlab",
+            "time": 155.9
+          },
+          {
+            "type": "aaturret",
+            "time": 221.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 266.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 278.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 293.9
+          }
+        ]
+      },
+      "waves": {
+        "player": 10,
+        "enemy": 1
+      },
+      "duration": 386.6,
+      "winner": "enemy",
+      "peakArmy": {
+        "player": 34,
+        "enemy": 29
+      },
+      "armySize": 4,
+      "blockedOrders": 9,
+      "damageByType": {
+        "turret": 2583.5500000000015,
+        "infantry": 6600.180620000043,
+        "drone": 2772.1704000000004,
+        "tank": 7315.055019999993,
+        "scoutcar": 22.5325,
+        "mortar": 348.42,
+        "apc": 38.58,
+        "aaturret": 117.6,
+        "plane": 755.5500000000002
+      },
+      "killsByType": {
+        "turret": 30,
+        "infantry": 82,
+        "drone": 27,
+        "tank": 73,
+        "mortar": 7,
+        "apc": 1,
+        "aaturret": 1,
+        "plane": 3
+      },
+      "stalledEpisodes": 0,
+      "maxSimultaneousStalls": 0,
+      "strategies": [
+        "turtle",
+        "turtle"
+      ],
+      "controlledAiSeed": 24817,
+      "economy": {
+        "player": {
+          "resourcesGathered": 12468,
+          "unitsProduced": 148,
+          "unitsLost": 148,
+          "enemiesKilled": 69,
+          "buildingsBuilt": 14,
+          "buildingsLost": 7
+        },
+        "enemy": {
+          "resourcesGathered": 15686,
+          "unitsProduced": 98,
+          "unitsLost": 69,
+          "enemiesKilled": 148,
+          "buildingsBuilt": 16,
+          "buildingsLost": 0
+        }
+      },
+      "hqHP": {
+        "player": 0,
+        "enemy": 1000
+      },
+      "cpuStepMs": {
+        "median": 0.07359999999971478,
+        "p95": 0.29980000000068685,
+        "max": 8.054200000000492
+      }
+    },
+    {
+      "seed": 24817,
+      "map": "plains",
+      "nations": [
+        "france",
+        "germany"
+      ],
+      "difficulty": "normal",
+      "firstCombat": 33.7,
+      "firstHQDamage": 320.1,
+      "construction": {
+        "player": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 20.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 41.9
+          },
+          {
+            "type": "warfactory",
+            "time": 74.9
+          },
+          {
+            "type": "turret",
+            "time": 86.9
+          },
+          {
+            "type": "aaturret",
+            "time": 101.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 122.9
+          },
+          {
+            "type": "airfield",
+            "time": 137.9
+          },
+          {
+            "type": "techlab",
+            "time": 155.9
+          },
+          {
+            "type": "barracks",
+            "time": 296.9
+          }
+        ],
+        "enemy": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 23.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 47.9
+          },
+          {
+            "type": "warfactory",
+            "time": 86.9
+          },
+          {
+            "type": "turret",
+            "time": 98.9
+          },
+          {
+            "type": "aaturret",
+            "time": 113.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 134.9
+          },
+          {
+            "type": "airfield",
+            "time": 152.9
+          },
+          {
+            "type": "techlab",
+            "time": 173.9
+          },
+          {
+            "type": "aaturret",
+            "time": 296.9
+          }
+        ]
+      },
+      "waves": {
+        "player": 4,
+        "enemy": 3
+      },
+      "duration": 336.8,
+      "winner": "enemy",
+      "peakArmy": {
+        "player": 25,
+        "enemy": 30
+      },
+      "armySize": 4,
+      "blockedOrders": 1,
+      "damageByType": {
+        "turret": 766.5500000000002,
+        "drone": 1801.0500000000009,
+        "scoutcar": 28.800000000000004,
+        "infantry": 1529.8448000000003,
+        "mortar": 1390.1799999999994,
+        "tank": 7271.635750749997,
+        "apc": 23.870000000000005,
+        "aaturret": 120
+      },
+      "killsByType": {
+        "turret": 7,
+        "drone": 16,
+        "infantry": 18,
+        "mortar": 11,
+        "tank": 64,
+        "aaturret": 1
+      },
+      "stalledEpisodes": 0,
+      "maxSimultaneousStalls": 0,
+      "strategies": [
+        "turtle",
+        "turtle"
+      ],
+      "controlledAiSeed": 24817,
+      "economy": {
+        "player": {
+          "resourcesGathered": 10433,
+          "unitsProduced": 86,
+          "unitsLost": 75,
+          "enemiesKilled": 36,
+          "buildingsBuilt": 13,
+          "buildingsLost": 6
+        },
+        "enemy": {
+          "resourcesGathered": 10601,
+          "unitsProduced": 65,
+          "unitsLost": 36,
+          "enemiesKilled": 75,
+          "buildingsBuilt": 13,
+          "buildingsLost": 0
+        }
+      },
+      "hqHP": {
+        "player": 0,
+        "enemy": 1000
+      },
+      "cpuStepMs": {
+        "median": 0.04399999999986903,
+        "p95": 0.22230000000126893,
+        "max": 5.352499999999054
+      }
+    },
+    {
+      "seed": 24817,
+      "map": "plains",
+      "nations": [
+        "germany",
+        "france"
+      ],
+      "difficulty": "normal",
+      "firstCombat": 33.7,
+      "firstHQDamage": 497.5,
+      "construction": {
+        "player": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 23.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 47.9
+          },
+          {
+            "type": "warfactory",
+            "time": 86.9
+          },
+          {
+            "type": "turret",
+            "time": 98.9
+          },
+          {
+            "type": "aaturret",
+            "time": 113.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 134.9
+          },
+          {
+            "type": "airfield",
+            "time": 152.9
+          },
+          {
+            "type": "techlab",
+            "time": 173.9
+          },
+          {
+            "type": "aaturret",
+            "time": 194.9
+          },
+          {
+            "type": "barracks",
+            "time": 272.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 470.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 488.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 494.9
+          }
+        ],
+        "enemy": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 20.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 41.9
+          },
+          {
+            "type": "warfactory",
+            "time": 74.9
+          },
+          {
+            "type": "turret",
+            "time": 86.9
+          },
+          {
+            "type": "aaturret",
+            "time": 101.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 122.9
+          },
+          {
+            "type": "airfield",
+            "time": 137.9
+          },
+          {
+            "type": "techlab",
+            "time": 155.9
+          },
+          {
+            "type": "barracks",
+            "time": 470.9
+          }
+        ]
+      },
+      "waves": {
+        "player": 3,
+        "enemy": 14
+      },
+      "duration": 509.4,
+      "winner": "player",
+      "peakArmy": {
+        "player": 31,
+        "enemy": 40
+      },
+      "armySize": 4,
+      "blockedOrders": 40,
+      "damageByType": {
+        "turret": 1487.6875,
+        "infantry": 6833.353160000039,
+        "drone": 5320.592999999995,
+        "mortar": 858.80305,
+        "scoutcar": 78.8523,
+        "apc": 62.19874999999999,
+        "tank": 13239.272900000005,
+        "aaturret": 58.8
+      },
+      "killsByType": {
+        "turret": 16,
+        "infantry": 62,
+        "drone": 55,
+        "scoutcar": 1,
+        "mortar": 6,
+        "tank": 135,
+        "aaturret": 1
+      },
+      "stalledEpisodes": 0,
+      "maxSimultaneousStalls": 0,
+      "strategies": [
+        "turtle",
+        "turtle"
+      ],
+      "controlledAiSeed": 24817,
+      "economy": {
+        "player": {
+          "resourcesGathered": 17338,
+          "unitsProduced": 111,
+          "unitsLost": 80,
+          "enemiesKilled": 185,
+          "buildingsBuilt": 17,
+          "buildingsLost": 2
+        },
+        "enemy": {
+          "resourcesGathered": 16864,
+          "unitsProduced": 187,
+          "unitsLost": 185,
+          "enemiesKilled": 80,
+          "buildingsBuilt": 13,
+          "buildingsLost": 9
+        }
+      },
+      "hqHP": {
+        "player": 1000,
+        "enemy": 0
+      },
+      "cpuStepMs": {
+        "median": 0.09020000000055006,
+        "p95": 0.3283999999985099,
+        "max": 4.07970000000023
+      }
+    },
+    {
+      "seed": 24817,
+      "map": "plains",
+      "nations": [
+        "france",
+        "japan"
+      ],
+      "difficulty": "normal",
+      "firstCombat": 33.7,
+      "firstHQDamage": 303.8,
+      "construction": {
+        "player": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 20.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 41.9
+          },
+          {
+            "type": "warfactory",
+            "time": 74.9
+          },
+          {
+            "type": "turret",
+            "time": 86.9
+          },
+          {
+            "type": "aaturret",
+            "time": 101.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 122.9
+          },
+          {
+            "type": "airfield",
+            "time": 137.9
+          },
+          {
+            "type": "techlab",
+            "time": 155.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 284.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 344.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 353.9
+          },
+          {
+            "type": "aaturret",
+            "time": 359.9
+          }
+        ],
+        "enemy": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 23.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 47.9
+          },
+          {
+            "type": "warfactory",
+            "time": 86.9
+          },
+          {
+            "type": "turret",
+            "time": 98.9
+          },
+          {
+            "type": "aaturret",
+            "time": 113.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 134.9
+          },
+          {
+            "type": "airfield",
+            "time": 152.9
+          },
+          {
+            "type": "techlab",
+            "time": 173.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 263.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 281.9
+          },
+          {
+            "type": "barracks",
+            "time": 287.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 302.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 311.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 323.9
+          },
+          {
+            "type": "barracks",
+            "time": 335.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 356.9
+          }
+        ]
+      },
+      "waves": {
+        "player": 8,
+        "enemy": 1
+      },
+      "duration": 367,
+      "winner": "player",
+      "peakArmy": {
+        "player": 50,
+        "enemy": 20
+      },
+      "armySize": 4,
+      "blockedOrders": 4,
+      "damageByType": {
+        "turret": 2334.2250000000004,
+        "infantry": 7407.764400000151,
+        "drone": 3006.858000000002,
+        "mortar": 1548.0799999999986,
+        "scoutcar": 28.800000000000004,
+        "apc": 69.91199999999998,
+        "aaturret": 58.8,
+        "tank": 2545.5132500000004
+      },
+      "killsByType": {
+        "turret": 32,
+        "drone": 27,
+        "infantry": 50,
+        "mortar": 7,
+        "aaturret": 1,
+        "tank": 18,
+        "apc": 1
+      },
+      "stalledEpisodes": 0,
+      "maxSimultaneousStalls": 0,
+      "strategies": [
+        "turtle",
+        "turtle"
+      ],
+      "controlledAiSeed": 24817,
+      "economy": {
+        "player": {
+          "resourcesGathered": 13343,
+          "unitsProduced": 111,
+          "unitsLost": 65,
+          "enemiesKilled": 55,
+          "buildingsBuilt": 16,
+          "buildingsLost": 0
+        },
+        "enemy": {
+          "resourcesGathered": 12174,
+          "unitsProduced": 61,
+          "unitsLost": 55,
+          "enemiesKilled": 65,
+          "buildingsBuilt": 20,
+          "buildingsLost": 16
+        }
+      },
+      "hqHP": {
+        "player": 1000,
+        "enemy": 0
+      },
+      "cpuStepMs": {
+        "median": 0.06120000000009895,
+        "p95": 0.25,
+        "max": 5.031599999998434
+      }
+    },
+    {
+      "seed": 24817,
+      "map": "plains",
+      "nations": [
+        "japan",
+        "france"
+      ],
+      "difficulty": "normal",
+      "firstCombat": 33.7,
+      "firstHQDamage": 325.3,
+      "construction": {
+        "player": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 23.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 47.9
+          },
+          {
+            "type": "warfactory",
+            "time": 86.9
+          },
+          {
+            "type": "turret",
+            "time": 98.9
+          },
+          {
+            "type": "aaturret",
+            "time": 113.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 134.9
+          },
+          {
+            "type": "airfield",
+            "time": 152.9
+          },
+          {
+            "type": "techlab",
+            "time": 173.9
+          },
+          {
+            "type": "aaturret",
+            "time": 236.9
+          },
+          {
+            "type": "barracks",
+            "time": 323.9
+          }
+        ],
+        "enemy": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 20.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 41.9
+          },
+          {
+            "type": "warfactory",
+            "time": 74.9
+          },
+          {
+            "type": "turret",
+            "time": 86.9
+          },
+          {
+            "type": "aaturret",
+            "time": 101.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 122.9
+          },
+          {
+            "type": "airfield",
+            "time": 137.9
+          },
+          {
+            "type": "techlab",
+            "time": 158.9
+          }
+        ]
+      },
+      "waves": {
+        "player": 2,
+        "enemy": 5
+      },
+      "duration": 342.9,
+      "winner": "enemy",
+      "peakArmy": {
+        "player": 19,
+        "enemy": 46
+      },
+      "armySize": 4,
+      "blockedOrders": 18,
+      "damageByType": {
+        "turret": 1098.15,
+        "infantry": 5123.000960000018,
+        "drone": 1470.3491999999997,
+        "mortar": 790.5149999999998,
+        "tank": 3626.7157500000003,
+        "apc": 46.430499999999995
+      },
+      "killsByType": {
+        "turret": 11,
+        "infantry": 41,
+        "drone": 14,
+        "tank": 41,
+        "mortar": 4
+      },
+      "stalledEpisodes": 0,
+      "maxSimultaneousStalls": 0,
+      "strategies": [
+        "turtle",
+        "turtle"
+      ],
+      "controlledAiSeed": 24817,
+      "economy": {
+        "player": {
+          "resourcesGathered": 10130,
+          "unitsProduced": 64,
+          "unitsLost": 58,
+          "enemiesKilled": 48,
+          "buildingsBuilt": 14,
+          "buildingsLost": 5
+        },
+        "enemy": {
+          "resourcesGathered": 11266,
+          "unitsProduced": 93,
+          "unitsLost": 48,
+          "enemiesKilled": 58,
+          "buildingsBuilt": 12,
+          "buildingsLost": 0
+        }
+      },
+      "hqHP": {
+        "player": 0,
+        "enemy": 1000
+      },
+      "cpuStepMs": {
+        "median": 0.047200000000884756,
+        "p95": 0.24470000000110304,
+        "max": 4.364299999999275
+      }
+    },
+    {
+      "seed": 24817,
+      "map": "plains",
+      "nations": [
+        "france",
+        "austria"
+      ],
+      "difficulty": "normal",
+      "firstCombat": 33.7,
+      "firstHQDamage": 232,
+      "construction": {
+        "player": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 20.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 41.9
+          },
+          {
+            "type": "warfactory",
+            "time": 74.9
+          },
+          {
+            "type": "turret",
+            "time": 86.9
+          },
+          {
+            "type": "aaturret",
+            "time": 101.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 122.9
+          },
+          {
+            "type": "airfield",
+            "time": 137.9
+          },
+          {
+            "type": "techlab",
+            "time": 155.9
+          },
+          {
+            "type": "barracks",
+            "time": 233.9
+          }
+        ],
+        "enemy": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 14.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 32.9
+          },
+          {
+            "type": "warfactory",
+            "time": 65.9
+          },
+          {
+            "type": "turret",
+            "time": 77.9
+          },
+          {
+            "type": "aaturret",
+            "time": 89.9
+          },
+          {
+            "type": "airfield",
+            "time": 110.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 128.9
+          },
+          {
+            "type": "techlab",
+            "time": 143.9
+          },
+          {
+            "type": "aaturret",
+            "time": 416.9
+          }
+        ]
+      },
+      "waves": {
+        "player": 0,
+        "enemy": 28
+      },
+      "duration": 600,
+      "winner": "timeout",
+      "peakArmy": {
+        "player": 17,
+        "enemy": 49
+      },
+      "armySize": 4,
+      "blockedOrders": 41,
+      "damageByType": {
+        "turret": 4108.7875,
+        "infantry": 13715.336879999784,
+        "mortar": 306.21,
+        "scoutcar": 41.15400000000001,
+        "drone": 4189.546349999995,
+        "tank": 14824.749099999999,
+        "apc": 159.76999999999995,
+        "aaturret": 117.6
+      },
+      "killsByType": {
+        "turret": 48,
+        "infantry": 124,
+        "mortar": 4,
+        "drone": 43,
+        "tank": 203,
+        "apc": 1
+      },
+      "stalledEpisodes": 0,
+      "maxSimultaneousStalls": 0,
+      "strategies": [
+        "turtle",
+        "turtle"
+      ],
+      "controlledAiSeed": 24817,
+      "economy": {
+        "player": {
+          "resourcesGathered": 16012,
+          "unitsProduced": 167,
+          "unitsLost": 154,
+          "enemiesKilled": 265,
+          "buildingsBuilt": 13,
+          "buildingsLost": 4
+        },
+        "enemy": {
+          "resourcesGathered": 20755,
+          "unitsProduced": 295,
+          "unitsLost": 265,
+          "enemiesKilled": 154,
+          "buildingsBuilt": 13,
+          "buildingsLost": 0
+        }
+      },
+      "hqHP": {
+        "player": 231.30000000000308,
+        "enemy": 1000
+      },
+      "cpuStepMs": {
+        "median": 0.10459999999875436,
+        "p95": 0.3753000000015163,
+        "max": 4.224400000000969
+      }
+    },
+    {
+      "seed": 24817,
+      "map": "plains",
+      "nations": [
+        "austria",
+        "france"
+      ],
+      "difficulty": "normal",
+      "firstCombat": 32.3,
+      "firstHQDamage": 321,
+      "construction": {
+        "player": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 14.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 32.9
+          },
+          {
+            "type": "warfactory",
+            "time": 65.9
+          },
+          {
+            "type": "turret",
+            "time": 77.9
+          },
+          {
+            "type": "aaturret",
+            "time": 89.9
+          },
+          {
+            "type": "airfield",
+            "time": 110.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 128.9
+          },
+          {
+            "type": "techlab",
+            "time": 143.9
+          },
+          {
+            "type": "barracks",
+            "time": 317.9
+          }
+        ],
+        "enemy": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 20.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 41.9
+          },
+          {
+            "type": "warfactory",
+            "time": 74.9
+          },
+          {
+            "type": "turret",
+            "time": 86.9
+          },
+          {
+            "type": "aaturret",
+            "time": 101.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 122.9
+          },
+          {
+            "type": "airfield",
+            "time": 137.9
+          },
+          {
+            "type": "techlab",
+            "time": 155.9
+          }
+        ]
+      },
+      "waves": {
+        "player": 8,
+        "enemy": 5
+      },
+      "duration": 328.8,
+      "winner": "enemy",
+      "peakArmy": {
+        "player": 35,
+        "enemy": 38
+      },
+      "armySize": 4,
+      "blockedOrders": 5,
+      "damageByType": {
+        "turret": 1930.7500000000005,
+        "infantry": 4938.03112000003,
+        "scoutcar": 8,
+        "drone": 956.2499999999999,
+        "tank": 7934.473259999995,
+        "mortar": 153.8,
+        "apc": 54,
+        "aaturret": 60
+      },
+      "killsByType": {
+        "turret": 27,
+        "infantry": 51,
+        "drone": 7,
+        "tank": 83,
+        "mortar": 1,
+        "aaturret": 1
+      },
+      "stalledEpisodes": 0,
+      "maxSimultaneousStalls": 0,
+      "strategies": [
+        "turtle",
+        "turtle"
+      ],
+      "controlledAiSeed": 24817,
+      "economy": {
+        "player": {
+          "resourcesGathered": 10448,
+          "unitsProduced": 117,
+          "unitsLost": 115,
+          "enemiesKilled": 50,
+          "buildingsBuilt": 13,
+          "buildingsLost": 5
+        },
+        "enemy": {
+          "resourcesGathered": 11083,
+          "unitsProduced": 85,
+          "unitsLost": 50,
+          "enemiesKilled": 115,
+          "buildingsBuilt": 12,
+          "buildingsLost": 0
+        }
+      },
+      "hqHP": {
+        "player": 0,
+        "enemy": 1000
+      },
+      "cpuStepMs": {
+        "median": 0.06459999999970023,
+        "p95": 0.36189999999987776,
+        "max": 7.037599999999657
+      }
+    },
+    {
+      "seed": 24817,
+      "map": "plains",
+      "nations": [
+        "germany",
+        "japan"
+      ],
+      "difficulty": "normal",
+      "firstCombat": 33.7,
+      "firstHQDamage": 341.8,
+      "construction": {
+        "player": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 23.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 47.9
+          },
+          {
+            "type": "warfactory",
+            "time": 86.9
+          },
+          {
+            "type": "turret",
+            "time": 98.9
+          },
+          {
+            "type": "aaturret",
+            "time": 113.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 134.9
+          },
+          {
+            "type": "airfield",
+            "time": 152.9
+          },
+          {
+            "type": "techlab",
+            "time": 173.9
+          },
+          {
+            "type": "aaturret",
+            "time": 329.9
+          },
+          {
+            "type": "barracks",
+            "time": 335.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 365.9
+          }
+        ],
+        "enemy": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 23.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 47.9
+          },
+          {
+            "type": "warfactory",
+            "time": 86.9
+          },
+          {
+            "type": "turret",
+            "time": 98.9
+          },
+          {
+            "type": "aaturret",
+            "time": 113.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 134.9
+          },
+          {
+            "type": "airfield",
+            "time": 152.9
+          },
+          {
+            "type": "techlab",
+            "time": 173.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 347.9
+          }
+        ]
+      },
+      "waves": {
+        "player": 3,
+        "enemy": 9
+      },
+      "duration": 376.8,
+      "winner": "enemy",
+      "peakArmy": {
+        "player": 25,
+        "enemy": 36
+      },
+      "armySize": 4,
+      "blockedOrders": 40,
+      "damageByType": {
+        "turret": 1471.3624999999997,
+        "drone": 6024.448200000016,
+        "mortar": 502.23999999999995,
+        "infantry": 3247.2555999999977,
+        "scoutcar": 98.81275000000002,
+        "apc": 38.876000000000005,
+        "aaturret": 120,
+        "tank": 2286.0071018749995
+      },
+      "killsByType": {
+        "turret": 17,
+        "drone": 47,
+        "mortar": 7,
+        "infantry": 36,
+        "scoutcar": 1,
+        "aaturret": 1,
+        "tank": 23,
+        "apc": 1
+      },
+      "stalledEpisodes": 0,
+      "maxSimultaneousStalls": 0,
+      "strategies": [
+        "turtle",
+        "turtle"
+      ],
+      "controlledAiSeed": 24817,
+      "economy": {
+        "player": {
+          "resourcesGathered": 11155,
+          "unitsProduced": 70,
+          "unitsLost": 68,
+          "enemiesKilled": 58,
+          "buildingsBuilt": 15,
+          "buildingsLost": 7
+        },
+        "enemy": {
+          "resourcesGathered": 12000,
+          "unitsProduced": 88,
+          "unitsLost": 58,
+          "enemiesKilled": 68,
+          "buildingsBuilt": 13,
+          "buildingsLost": 0
+        }
+      },
+      "hqHP": {
+        "player": 0,
+        "enemy": 1000
+      },
+      "cpuStepMs": {
+        "median": 0.049699999999575084,
+        "p95": 0.24729999999908614,
+        "max": 6.103399999999965
+      }
+    },
+    {
+      "seed": 24817,
+      "map": "plains",
+      "nations": [
+        "japan",
+        "germany"
+      ],
+      "difficulty": "normal",
+      "firstCombat": 33.7,
+      "firstHQDamage": 296.7,
+      "construction": {
+        "player": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 23.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 47.9
+          },
+          {
+            "type": "warfactory",
+            "time": 86.9
+          },
+          {
+            "type": "turret",
+            "time": 98.9
+          },
+          {
+            "type": "aaturret",
+            "time": 113.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 134.9
+          },
+          {
+            "type": "airfield",
+            "time": 152.9
+          },
+          {
+            "type": "techlab",
+            "time": 173.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 287.9
+          }
+        ],
+        "enemy": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 23.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 47.9
+          },
+          {
+            "type": "warfactory",
+            "time": 86.9
+          },
+          {
+            "type": "turret",
+            "time": 98.9
+          },
+          {
+            "type": "aaturret",
+            "time": 113.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 134.9
+          },
+          {
+            "type": "airfield",
+            "time": 152.9
+          },
+          {
+            "type": "techlab",
+            "time": 173.9
+          },
+          {
+            "type": "aaturret",
+            "time": 257.9
+          },
+          {
+            "type": "barracks",
+            "time": 278.9
+          }
+        ]
+      },
+      "waves": {
+        "player": 5,
+        "enemy": 0
+      },
+      "duration": 310.8,
+      "winner": "player",
+      "peakArmy": {
+        "player": 28,
+        "enemy": 12
+      },
+      "armySize": 4,
+      "blockedOrders": 2,
+      "damageByType": {
+        "turret": 824.3999999999999,
+        "drone": 3588.962159999993,
+        "infantry": 1577.5309600000055,
+        "aaturret": 295.2,
+        "scoutcar": 15.4,
+        "tank": 3251.114037500002,
+        "mortar": 70.68,
+        "apc": 31.6
+      },
+      "killsByType": {
+        "turret": 10,
+        "drone": 29,
+        "aaturret": 4,
+        "infantry": 16,
+        "tank": 15
+      },
+      "stalledEpisodes": 0,
+      "maxSimultaneousStalls": 0,
+      "strategies": [
+        "turtle",
+        "turtle"
+      ],
+      "controlledAiSeed": 24817,
+      "economy": {
+        "player": {
+          "resourcesGathered": 9765,
+          "unitsProduced": 51,
+          "unitsLost": 23,
+          "enemiesKilled": 43,
+          "buildingsBuilt": 13,
+          "buildingsLost": 0
+        },
+        "enemy": {
+          "resourcesGathered": 9037,
+          "unitsProduced": 43,
+          "unitsLost": 43,
+          "enemiesKilled": 23,
+          "buildingsBuilt": 14,
+          "buildingsLost": 8
+        }
+      },
+      "hqHP": {
+        "player": 1000,
+        "enemy": 0
+      },
+      "cpuStepMs": {
+        "median": 0.02510000000074797,
+        "p95": 0.14359999999942374,
+        "max": 4.243100000001505
+      }
+    },
+    {
+      "seed": 24817,
+      "map": "plains",
+      "nations": [
+        "germany",
+        "austria"
+      ],
+      "difficulty": "normal",
+      "firstCombat": 33.7,
+      "firstHQDamage": 187.2,
+      "construction": {
+        "player": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 23.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 47.9
+          },
+          {
+            "type": "warfactory",
+            "time": 86.9
+          },
+          {
+            "type": "turret",
+            "time": 98.9
+          },
+          {
+            "type": "aaturret",
+            "time": 113.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 134.9
+          },
+          {
+            "type": "airfield",
+            "time": 152.9
+          },
+          {
+            "type": "techlab",
+            "time": 173.9
+          },
+          {
+            "type": "barracks",
+            "time": 185.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 272.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 296.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 326.9
+          }
+        ],
+        "enemy": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 14.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 32.9
+          },
+          {
+            "type": "warfactory",
+            "time": 65.9
+          },
+          {
+            "type": "turret",
+            "time": 77.9
+          },
+          {
+            "type": "aaturret",
+            "time": 89.9
+          },
+          {
+            "type": "airfield",
+            "time": 110.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 128.9
+          },
+          {
+            "type": "techlab",
+            "time": 143.9
+          },
+          {
+            "type": "aaturret",
+            "time": 218.9
+          },
+          {
+            "type": "barracks",
+            "time": 299.9
+          }
+        ]
+      },
+      "waves": {
+        "player": 2,
+        "enemy": 5
+      },
+      "duration": 335.7,
+      "winner": "player",
+      "peakArmy": {
+        "player": 27,
+        "enemy": 37
+      },
+      "armySize": 4,
+      "blockedOrders": 15,
+      "damageByType": {
+        "turret": 1067.875,
+        "infantry": 6074.914880000075,
+        "scoutcar": 8,
+        "drone": 250.2,
+        "tank": 10437.548715124996,
+        "mortar": 1279.7299999999996
+      },
+      "killsByType": {
+        "turret": 12,
+        "infantry": 31,
+        "drone": 3,
+        "tank": 97,
+        "mortar": 6
+      },
+      "stalledEpisodes": 0,
+      "maxSimultaneousStalls": 0,
+      "strategies": [
+        "turtle",
+        "turtle"
+      ],
+      "controlledAiSeed": 24817,
+      "economy": {
+        "player": {
+          "resourcesGathered": 9701,
+          "unitsProduced": 49,
+          "unitsLost": 23,
+          "enemiesKilled": 113,
+          "buildingsBuilt": 16,
+          "buildingsLost": 5
+        },
+        "enemy": {
+          "resourcesGathered": 10825,
+          "unitsProduced": 116,
+          "unitsLost": 113,
+          "enemiesKilled": 23,
+          "buildingsBuilt": 14,
+          "buildingsLost": 8
+        }
+      },
+      "hqHP": {
+        "player": 445.60000000000286,
+        "enemy": 0
+      },
+      "cpuStepMs": {
+        "median": 0.05249999999978172,
+        "p95": 0.22009999999863794,
+        "max": 4.170900000000984
+      }
+    },
+    {
+      "seed": 24817,
+      "map": "plains",
+      "nations": [
+        "austria",
+        "germany"
+      ],
+      "difficulty": "normal",
+      "firstCombat": 32.3,
+      "firstHQDamage": 211.2,
+      "construction": {
+        "player": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 14.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 32.9
+          },
+          {
+            "type": "warfactory",
+            "time": 65.9
+          },
+          {
+            "type": "turret",
+            "time": 77.9
+          },
+          {
+            "type": "aaturret",
+            "time": 89.9
+          },
+          {
+            "type": "airfield",
+            "time": 110.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 128.9
+          },
+          {
+            "type": "techlab",
+            "time": 143.9
+          },
+          {
+            "type": "barracks",
+            "time": 365.9
+          }
+        ],
+        "enemy": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 23.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 47.9
+          },
+          {
+            "type": "warfactory",
+            "time": 86.9
+          },
+          {
+            "type": "turret",
+            "time": 98.9
+          },
+          {
+            "type": "aaturret",
+            "time": 113.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 134.9
+          },
+          {
+            "type": "airfield",
+            "time": 152.9
+          },
+          {
+            "type": "techlab",
+            "time": 173.9
+          },
+          {
+            "type": "barracks",
+            "time": 212.9
+          }
+        ]
+      },
+      "waves": {
+        "player": 12,
+        "enemy": 1
+      },
+      "duration": 385.6,
+      "winner": "enemy",
+      "peakArmy": {
+        "player": 45,
+        "enemy": 18
+      },
+      "armySize": 4,
+      "blockedOrders": 5,
+      "damageByType": {
+        "turret": 1964.5525000000014,
+        "infantry": 7790.750540000162,
+        "scoutcar": 12,
+        "drone": 335.82,
+        "tank": 13520.726953125026,
+        "apc": 19.025000000000002
+      },
+      "killsByType": {
+        "turret": 17,
+        "infantry": 55,
+        "drone": 1,
+        "tank": 129
+      },
+      "stalledEpisodes": 0,
+      "maxSimultaneousStalls": 0,
+      "strategies": [
+        "turtle",
+        "turtle"
+      ],
+      "controlledAiSeed": 24817,
+      "economy": {
+        "player": {
+          "resourcesGathered": 12521,
+          "unitsProduced": 153,
+          "unitsLost": 148,
+          "enemiesKilled": 43,
+          "buildingsBuilt": 13,
+          "buildingsLost": 5
+        },
+        "enemy": {
+          "resourcesGathered": 11236,
+          "unitsProduced": 61,
+          "unitsLost": 43,
+          "enemiesKilled": 148,
+          "buildingsBuilt": 13,
+          "buildingsLost": 6
+        }
+      },
+      "hqHP": {
+        "player": 0,
+        "enemy": 83.02000000000263
+      },
+      "cpuStepMs": {
+        "median": 0.06700000000091677,
+        "p95": 0.25059999999939464,
+        "max": 5.997300000000905
+      }
+    },
+    {
+      "seed": 24817,
+      "map": "plains",
+      "nations": [
+        "japan",
+        "austria"
+      ],
+      "difficulty": "normal",
+      "firstCombat": 33.7,
+      "firstHQDamage": 211.5,
+      "construction": {
+        "player": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 23.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 47.9
+          },
+          {
+            "type": "warfactory",
+            "time": 86.9
+          },
+          {
+            "type": "turret",
+            "time": 98.9
+          },
+          {
+            "type": "aaturret",
+            "time": 113.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 134.9
+          },
+          {
+            "type": "airfield",
+            "time": 152.9
+          },
+          {
+            "type": "techlab",
+            "time": 173.9
+          },
+          {
+            "type": "barracks",
+            "time": 212.9
+          },
+          {
+            "type": "aaturret",
+            "time": 227.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 251.9
+          }
+        ],
+        "enemy": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 14.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 32.9
+          },
+          {
+            "type": "warfactory",
+            "time": 65.9
+          },
+          {
+            "type": "turret",
+            "time": 77.9
+          },
+          {
+            "type": "aaturret",
+            "time": 89.9
+          },
+          {
+            "type": "airfield",
+            "time": 110.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 128.9
+          },
+          {
+            "type": "techlab",
+            "time": 143.9
+          },
+          {
+            "type": "aaturret",
+            "time": 284.9
+          },
+          {
+            "type": "barracks",
+            "time": 341.9
+          }
+        ]
+      },
+      "waves": {
+        "player": 5,
+        "enemy": 8
+      },
+      "duration": 384.9,
+      "winner": "player",
+      "peakArmy": {
+        "player": 32,
+        "enemy": 38
+      },
+      "armySize": 4,
+      "blockedOrders": 23,
+      "damageByType": {
+        "turret": 2325.125,
+        "infantry": 6177.651160000026,
+        "drone": 2508.4493999999986,
+        "tank": 8267.493289999999,
+        "mortar": 994.584,
+        "apc": 75.431,
+        "aaturret": 120
+      },
+      "killsByType": {
+        "turret": 30,
+        "infantry": 45,
+        "drone": 24,
+        "tank": 85,
+        "aaturret": 1,
+        "mortar": 1
+      },
+      "stalledEpisodes": 0,
+      "maxSimultaneousStalls": 0,
+      "strategies": [
+        "turtle",
+        "turtle"
+      ],
+      "controlledAiSeed": 24817,
+      "economy": {
+        "player": {
+          "resourcesGathered": 12330,
+          "unitsProduced": 81,
+          "unitsLost": 49,
+          "enemiesKilled": 130,
+          "buildingsBuilt": 15,
+          "buildingsLost": 2
+        },
+        "enemy": {
+          "resourcesGathered": 12542,
+          "unitsProduced": 134,
+          "unitsLost": 130,
+          "enemiesKilled": 49,
+          "buildingsBuilt": 14,
+          "buildingsLost": 5
+        }
+      },
+      "hqHP": {
+        "player": 734.9000000000033,
+        "enemy": 0
+      },
+      "cpuStepMs": {
+        "median": 0.0738999999994121,
+        "p95": 0.2605999999996129,
+        "max": 4.346499999999651
+      }
+    },
+    {
+      "seed": 24817,
+      "map": "plains",
+      "nations": [
+        "austria",
+        "japan"
+      ],
+      "difficulty": "normal",
+      "firstCombat": 32.3,
+      "firstHQDamage": 184.1,
+      "construction": {
+        "player": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 14.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 32.9
+          },
+          {
+            "type": "warfactory",
+            "time": 65.9
+          },
+          {
+            "type": "turret",
+            "time": 77.9
+          },
+          {
+            "type": "aaturret",
+            "time": 89.9
+          },
+          {
+            "type": "airfield",
+            "time": 110.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 128.9
+          },
+          {
+            "type": "techlab",
+            "time": 143.9
+          },
+          {
+            "type": "aaturret",
+            "time": 317.9
+          }
+        ],
+        "enemy": [
+          {
+            "type": "headquarters",
+            "time": 0
+          },
+          {
+            "type": "barracks",
+            "time": 0
+          },
+          {
+            "type": "turret",
+            "time": 2.9
+          },
+          {
+            "type": "munitionscache",
+            "time": 2.9
+          },
+          {
+            "type": "turret",
+            "time": 23.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 47.9
+          },
+          {
+            "type": "warfactory",
+            "time": 86.9
+          },
+          {
+            "type": "turret",
+            "time": 98.9
+          },
+          {
+            "type": "aaturret",
+            "time": 113.9
+          },
+          {
+            "type": "supplyexchange",
+            "time": 134.9
+          },
+          {
+            "type": "airfield",
+            "time": 152.9
+          },
+          {
+            "type": "techlab",
+            "time": 173.9
+          },
+          {
+            "type": "barracks",
+            "time": 239.9
+          },
+          {
+            "type": "barracks",
+            "time": 290.9
+          },
+          {
+            "type": "barracks",
+            "time": 299.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 320.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 335.9
+          },
+          {
+            "type": "resourcedepot",
+            "time": 350.9
+          }
+        ]
+      },
+      "waves": {
+        "player": 12,
+        "enemy": 0
+      },
+      "duration": 359,
+      "winner": "player",
+      "peakArmy": {
+        "player": 39,
+        "enemy": 10
+      },
+      "armySize": 4,
+      "blockedOrders": 6,
+      "damageByType": {
+        "turret": 1338.75,
+        "infantry": 8346.365400000059,
+        "scoutcar": 15.5,
+        "drone": 4186.72092000001,
+        "aaturret": 180,
+        "tank": 888.6149999999999,
+        "mortar": 61.4
+      },
+      "killsByType": {
+        "turret": 17,
+        "infantry": 65,
+        "scoutcar": 1,
+        "drone": 69,
+        "tank": 3,
+        "aaturret": 1,
+        "mortar": 2
+      },
+      "stalledEpisodes": 0,
+      "maxSimultaneousStalls": 0,
+      "strategies": [
+        "turtle",
+        "turtle"
+      ],
+      "controlledAiSeed": 24817,
+      "economy": {
+        "player": {
+          "resourcesGathered": 11937,
+          "unitsProduced": 128,
+          "unitsLost": 94,
+          "enemiesKilled": 57,
+          "buildingsBuilt": 13,
+          "buildingsLost": 0
+        },
+        "enemy": {
+          "resourcesGathered": 11436,
+          "unitsProduced": 59,
+          "unitsLost": 57,
+          "enemiesKilled": 94,
+          "buildingsBuilt": 18,
+          "buildingsLost": 7
+        }
+      },
+      "hqHP": {
+        "player": 1000,
+        "enemy": 0
+      },
+      "cpuStepMs": {
+        "median": 0.0650999999998021,
+        "p95": 0.2543000000005122,
+        "max": 5.763099999998303
+      }
+    }
+  ],
+  "stress": []
+}

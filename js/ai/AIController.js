@@ -1,9 +1,10 @@
+import {nextBaseBuildSite} from './BaseBuildPlanner.js';
 import {baseDefense,canEngage} from './CombatDecisions.js';
 import {buildingReserve} from './AIBudget.js';
 import {AttackWaves,readyForWave} from './AttackWaves.js';
 import * as THREE from 'three';
 import { issueUnitMove } from '../systems/MovementOrders.js';
-import { UNIT_STATS, BUILDING_STATS, GAME_CONFIG, AI_DIFFICULTY, DAMAGE_MODIFIERS, RESEARCH_UPGRADES, BUILDING_UPGRADES, BUILDING_LIMITS, TECH_BRANCHES } from '../core/Constants.js';
+import { UNIT_STATS, BUILDING_STATS, GAME_CONFIG, AI_DIFFICULTY, DAMAGE_MODIFIERS, RESEARCH_UPGRADES, BUILDING_UPGRADES, TECH_BRANCHES } from '../core/Constants.js';
 
 // Multiple build order strategies
 const BUILD_ORDERS = {
@@ -582,63 +583,11 @@ export class AIController {
   }
 
   tryBuildBuilding(type) {
-    const stats = BUILDING_STATS[type];
-    if (!stats) return false;
-
-    // GD-079: Respect building limits
-    const limit = BUILDING_LIMITS[type];
-    if (limit !== undefined) {
-      const existingCount = this.game.getBuildings(this.team).filter(b => b.type === type).length;
-      if (existingCount >= limit) return false;
-    }
-
-    if (!this.game.resourceSystem.canAfford(this.team, stats.cost)) {
-      return false;
-    }
-
-    const hq = this.game.getHQ(this.team);
-    if (!hq) return false;
-
-    const hqPos = hq.getPosition();
-
-    const slot = this.nextBuildSlot;
-    const row = Math.floor(slot / 3);
-    const col = slot % 3;
-    const spacing = 18;
-
-    const buildPos = new THREE.Vector3(
-      hqPos.x + (col - 1) * spacing,
-      0,
-      hqPos.z + (row + 1) * spacing
-    );
-
-    const worldSize = GAME_CONFIG.mapSize * GAME_CONFIG.worldScale;
-    buildPos.x = Math.max(15, Math.min(worldSize - 15, buildPos.x));
-    buildPos.z = Math.max(15, Math.min(worldSize - 15, buildPos.z));
-
-    if (this.game.terrain && !this.game.terrain.isWalkable(buildPos.x, buildPos.z)) {
-      const offsets = [
-        { x: spacing, z: 0 }, { x: -spacing, z: 0 },
-        { x: 0, z: spacing }, { x: 0, z: -spacing },
-        { x: spacing, z: spacing }, { x: -spacing, z: -spacing }
-      ];
-      let found = false;
-      for (const off of offsets) {
-        const altPos = new THREE.Vector3(buildPos.x + off.x, 0, buildPos.z + off.z);
-        altPos.x = Math.max(15, Math.min(worldSize - 15, altPos.x));
-        altPos.z = Math.max(15, Math.min(worldSize - 15, altPos.z));
-        if (this.game.terrain.isWalkable(altPos.x, altPos.z)) {
-          buildPos.copy(altPos);
-          found = true;
-          break;
-        }
-      }
-      if (!found) return false;
-    }
-
-    const result = this.game.productionSystem.requestBuilding(type, this.team, buildPos);
+    const site = nextBaseBuildSite(this, type);
+    if (!site) return false;
+    const result = this.game.productionSystem.requestBuilding(type, this.team, site.position);
     if (result) {
-      this.nextBuildSlot++;
+      this.nextBuildSlot = site.nextSlot;
       return true;
     }
     return false;
