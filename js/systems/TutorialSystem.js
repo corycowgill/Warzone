@@ -125,6 +125,7 @@ export class TutorialSystem {
 
   start() {
     this.dispose();
+    this._exiting = false;
     this.active = true;
     this.currentStep = 0;
     this._createOverlay();
@@ -384,6 +385,9 @@ export class TutorialSystem {
   _showCompletionScreen() {
     const banner = document.createElement('div');
     banner.id = 'tutorial-complete-screen';
+    banner.setAttribute('role', 'dialog');
+    banner.setAttribute('aria-modal', 'true');
+    banner.setAttribute('aria-labelledby', 'tutorial-complete-title');
     Object.assign(banner.style, {
       position: 'fixed',
       top: '0',
@@ -409,7 +413,8 @@ export class TutorialSystem {
       marginBottom: '12px',
       letterSpacing: '4px'
     });
-    title.textContent = 'TUTORIAL COMPLETE';
+    title.id = 'tutorial-complete-title';
+    title.textContent = 'COMMAND TRAINING COMPLETE';
     banner.appendChild(title);
 
     const subtitle = document.createElement('div');
@@ -421,7 +426,7 @@ export class TutorialSystem {
       lineHeight: '1.6',
       maxWidth: '400px'
     });
-    subtitle.textContent = 'Well done, Commander. You have learned the fundamentals of warfare. You are ready for real combat.';
+    subtitle.textContent = 'Put your training into practice against an Easy opponent. Build your army, protect your base and destroy the enemy headquarters to win.';
     banner.appendChild(subtitle);
 
     const btnContainer = document.createElement('div');
@@ -459,33 +464,36 @@ export class TutorialSystem {
       return btn;
     };
 
-    const skirmishBtn = makeButton('CONTINUE TO SKIRMISH', () => {
-      this.dispose();
-      // Restart game as a normal skirmish
-      if (this.game && this.game.restart) {
-        this.game.restart();
-      }
-    });
+    const skirmishBtn = makeButton('PLAY FIRST SKIRMISH', () => this._exitTutorial(true));
     btnContainer.appendChild(skirmishBtn);
 
-    const menuBtn = makeButton('RETURN TO MENU', () => {
-      this.dispose();
-      // Return to the main menu
-      if (this.game && this.game.returnToMenu) {
-        this.game.returnToMenu();
-      } else {
-        // Fallback: reload the page
-        window.location.reload();
-      }
-    });
+    const menuBtn = makeButton('RETURN TO MENU', () => this._exitTutorial(false));
     btnContainer.appendChild(menuBtn);
 
     banner.appendChild(btnContainer);
     document.body.appendChild(banner);
     this._completeBanner = banner;
+    skirmishBtn.focus();
   }
 
   // ── Helpers ─────────────────────────────────────────────────
+
+  _exitTutorial(playSkirmish) {
+    if (this._exiting) return;
+    this._exiting = true;
+    const config = {
+      mode: '1P', gameMode: 'hq_destruction', difficulty: 'easy', mapTemplate: 'plains',
+      playerNation: this.game.teams.player.nation || 'america',
+      enemyNation: this.game.teams.enemy.nation || 'germany'
+    };
+    this.dispose();
+    // restart tears down tutorial systems and returns to the menu before a fresh match.
+    this.game.restart();
+    if (playSkirmish) {
+      this.game.uiManager.hideAll();
+      return this.game.startGame(config);
+    }
+  }
 
   _spawnTutorialEnemies() {
     // Spawn a few weak enemy infantry near the player's units

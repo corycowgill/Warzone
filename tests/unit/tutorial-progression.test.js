@@ -60,3 +60,23 @@ it('restarting removes the previous step listener', () => {
  expect(bus.listeners['selection:changed']).toHaveLength(1);
  tutorial.dispose();
 });
+
+it('starts a fresh easy skirmish after teardown and ignores duplicate exit clicks', () => {
+ const {tutorial} = fixture(); const order=[];
+ tutorial.game.teams.enemy={nation:'germany'}; tutorial.game.teams.player.nation='france';
+ tutorial.game.restart=vi.fn(()=>order.push('restart'));
+ tutorial.game.uiManager={hideAll:vi.fn(()=>order.push('hide'))};
+ tutorial.game.startGame=vi.fn(config=>{order.push('start'); return config;});
+ const result=tutorial._exitTutorial(true);
+ expect(order).toEqual(['restart','hide','start']);
+ expect(result).toMatchObject({mode:'1P',gameMode:'hq_destruction',difficulty:'easy',mapTemplate:'plains',playerNation:'france',enemyNation:'germany'});
+ expect(tutorial.active).toBe(false); expect(tutorial._listeners).toHaveLength(0);
+ tutorial._exitTutorial(true); expect(tutorial.game.startGame).toHaveBeenCalledTimes(1);
+});
+it('returns to the menu through normal teardown without starting another match', () => {
+ const {tutorial} = fixture(); tutorial.game.teams.enemy={};
+ tutorial.game.restart=vi.fn(); tutorial.game.startGame=vi.fn();
+ tutorial._exitTutorial(false);
+ expect(tutorial.game.restart).toHaveBeenCalledTimes(1);
+ expect(tutorial.game.startGame).not.toHaveBeenCalled();
+});
