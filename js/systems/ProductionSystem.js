@@ -1,5 +1,6 @@
+import {buildingEligibility} from './BuildingRules.js';
 import * as THREE from 'three';
-import { UNIT_STATS, BUILDING_STATS, TECH_TREE, NATIONS, GAME_CONFIG, CONSTRUCTION_CONFIG, BUILDING_LIMITS } from '../core/Constants.js';
+import { UNIT_STATS, BUILDING_STATS, TECH_TREE, NATIONS, GAME_CONFIG, CONSTRUCTION_CONFIG } from '../core/Constants.js';
 import { LockstepManager } from '../networking/LockstepManager.js';
 
 export class ProductionSystem {
@@ -307,78 +308,13 @@ export class ProductionSystem {
     const stats = BUILDING_STATS[type];
     if (!stats) return false;
 
-    // Spec 003: Austria Imperial Engineering - buildings cost 10% less
-    let cost = stats.cost;
-    const nationKey = this.game.teams[team]?.nation;
-    if (nationKey) {
-      const nationData = NATIONS[nationKey];
-      if (nationData && nationData.bonuses && nationData.bonuses.buildingCostReduction) {
-        cost = Math.round(cost * nationData.bonuses.buildingCostReduction);
-      }
-    }
-
-    // Check if team can afford
-    if (!this.game.resourceSystem.canAfford(team, cost)) {
-      this.game.eventBus.emit('production:error', {
-        message: `Not enough SP (need ${cost})`,
-        reason: 'cost'
-      });
-      if (this.game.soundManager) this.game.soundManager.play('error');
+    const eligibility = buildingEligibility(this.game, type, team, position);
+    if (!eligibility.allowed) {
+      this.game.eventBus.emit('production:error', {message: eligibility.message, reason: eligibility.reason});
+      this.game.soundManager?.play('error');
       return false;
     }
-
-    // Check tech tree: does the team have required buildings?
-    if (stats.requires && stats.requires.length > 0) {
-      const teamBuildings = this.game.getBuildings(team);
-      for (const req of stats.requires) {
-        const hasReq = teamBuildings.some(b => b.type === req && b.alive);
-        if (!hasReq) {
-          const reqName = req.charAt(0).toUpperCase() + req.slice(1);
-          this.game.eventBus.emit('production:error', {
-            message: `Requires ${reqName} first`
-          });
-          if (this.game.soundManager) this.game.soundManager.play('error');
-          return false;
-        }
-      }
-    }
-
-    // GD-079: Check building limits
-    const limit = BUILDING_LIMITS[type];
-    if (limit !== undefined) {
-      const existingCount = this.game.getBuildings(team).filter(b => b.type === type).length;
-      if (existingCount >= limit) {
-        this.game.eventBus.emit('production:error', {
-          message: `Building limit reached (${existingCount}/${limit})`
-        });
-        if (this.game.soundManager) this.game.soundManager.play('error');
-        return false;
-      }
-    }
-
-    // Check terrain walkability at build location
-    if (this.game.terrain && !this.game.terrain.isWalkable(position.x, position.z)) {
-      this.game.eventBus.emit('production:error', {
-        message: 'Cannot build here - terrain not suitable'
-      });
-      if (this.game.soundManager) this.game.soundManager.play('error');
-      return false;
-    }
-
-    // Check for overlapping buildings
-    const allBuildings = this.game.entities.filter(e => e.isBuilding && e.alive);
-    const buildSize = (stats.size || 2) * 5;
-    for (const existing of allBuildings) {
-      const dist = existing.getPosition().distanceTo(position);
-      const existingSize = (BUILDING_STATS[existing.type]?.size || 2) * 5;
-      if (dist < (buildSize + existingSize) / 2) {
-        this.game.eventBus.emit('production:error', {
-          message: 'Too close to another building'
-        });
-        if (this.game.soundManager) this.game.soundManager.play('error');
-        return false;
-      }
-    }
+    const cost = eligibility.cost;
 
     // Spend resources
     this.game.resourceSystem.spend(team, cost);
@@ -409,63 +345,12 @@ export class ProductionSystem {
    * Returns true if the building CAN be placed; does not spend resources or create it.
    */
   canRequestBuilding(type, team, position) {
-    const stats = BUILDING_STATS[type];
-    if (!stats) return false;
-
-    let cost = stats.cost;
-    const nationKey = this.game.teams[team]?.nation;
-    if (nationKey) {
-      const nationData = NATIONS[nationKey];
-      if (nationData?.bonuses?.buildingCostReduction) {
-        cost = Math.round(cost * nationData.bonuses.buildingCostReduction);
-      }
+    const eligibility = buildingEligibility(this.game, type, team, position);
+    if (!eligibility.allowed) {
+      this.game.eventBus.emit('production:error', {message: eligibility.message, reason: eligibility.reason});
+      this.game.soundManager?.play('error');
     }
-
-    if (!this.game.resourceSystem.canAfford(team, cost)) {
-      this.game.eventBus.emit('production:error', { message: `Not enough SP (need ${cost})`, reason: 'cost' });
-      if (this.game.soundManager) this.game.soundManager.play('error');
-      return false;
-    }
-
-    if (stats.requires && stats.requires.length > 0) {
-      const teamBuildings = this.game.getBuildings(team);
-      for (const req of stats.requires) {
-        if (!teamBuildings.some(b => b.type === req && b.alive)) {
-          this.game.eventBus.emit('production:error', { message: `Requires ${req.charAt(0).toUpperCase() + req.slice(1)} first` });
-          if (this.game.soundManager) this.game.soundManager.play('error');
-          return false;
-        }
-      }
-    }
-
-    const limit = BUILDING_LIMITS[type];
-    if (limit !== undefined) {
-      if (this.game.getBuildings(team).filter(b => b.type === type).length >= limit) {
-        this.game.eventBus.emit('production:error', { message: 'Building limit reached' });
-        if (this.game.soundManager) this.game.soundManager.play('error');
-        return false;
-      }
-    }
-
-    if (this.game.terrain && !this.game.terrain.isWalkable(position.x, position.z)) {
-      this.game.eventBus.emit('production:error', { message: 'Cannot build here' });
-      if (this.game.soundManager) this.game.soundManager.play('error');
-      return false;
-    }
-
-    const allBuildings = this.game.entities.filter(e => e.isBuilding && e.alive);
-    const buildSize = (stats.size || 2) * 5;
-    for (const existing of allBuildings) {
-      const dist = existing.getPosition().distanceTo(position);
-      const existingSize = (BUILDING_STATS[existing.type]?.size || 2) * 5;
-      if (dist < (buildSize + existingSize) / 2) {
-        this.game.eventBus.emit('production:error', { message: 'Too close to another building' });
-        if (this.game.soundManager) this.game.soundManager.play('error');
-        return false;
-      }
-    }
-
-    return true;
+    return eligibility.allowed;
   }
 
   // Check if a team has the required buildings for a unit type

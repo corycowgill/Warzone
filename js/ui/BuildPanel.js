@@ -1,5 +1,6 @@
+import {buildingEligibility} from '../systems/BuildingRules.js';
 import * as THREE from 'three';
-import { BUILDING_STATS, BUILDING_LIMITS, GAME_CONFIG } from '../core/Constants.js';
+import { BUILDING_STATS } from '../core/Constants.js';
 import { LockstepManager } from '../networking/LockstepManager.js';
 
 export class BuildPanel {
@@ -94,7 +95,7 @@ export class BuildPanel {
       }
       btn.innerHTML = `
         <strong>${this.hud.formatName(type)}</strong>
-        <span style="color:#d6b36d;float:right;">${stats.cost} SP</span>
+        <span class="build-cost" style="color:#d6b36d;float:right;">${stats.cost} SP</span>
         <br><small style="color:#999;">${descStr}</small>
         ${reqStr}
         <span class="build-availability"></span>
@@ -138,34 +139,20 @@ export class BuildPanel {
   updateBuildMenuAvailability() {
     if (!this.buildOptions) return;
     const activeTeam = this.game.isMultiplayer ? this.game.getLocalTeam() : (this.game.mode === '2P' ? this.game.activeTeam : 'player');
-    const teamBuildings = this.game.getBuildings(activeTeam);
-
     const btns = this.buildOptions.querySelectorAll('[data-build-type]');
     btns.forEach(btn => {
       const type = btn.dataset.buildType;
       const stats = BUILDING_STATS[type];
       if (!stats) return;
 
-      const requires = stats.requires || [];
-      const hasReqs = requires.every(req => teamBuildings.some(b => b.type === req && b.alive));
-      const canAfford = this.game.resourceSystem ? this.game.resourceSystem.canAfford(activeTeam, stats.cost) : false;
-
-      // GD-079: Check building limits
-      const limit = BUILDING_LIMITS[type];
-      let atLimit = false;
-      let limitStr = '';
-      if (limit !== undefined) {
-        const count = teamBuildings.filter(b => b.type === type).length;
-        atLimit = count >= limit;
-        limitStr = ` (${count}/${limit})`;
-      }
-
-      const enabled = hasReqs && canAfford && !atLimit;
+      const eligibility = buildingEligibility(this.game, type, activeTeam);
+      const enabled = eligibility.allowed;
       btn.disabled = !enabled;
       btn.style.opacity = enabled ? '1' : '0.75';
       btn.style.cursor = enabled ? 'pointer' : 'not-allowed';
-      // Update tooltip with limit info
-      const reason = !hasReqs ? `Requires ${requires.filter(req => !teamBuildings.some(b => b.type === req && b.alive)).map(req => this.hud.formatName(req)).join(', ')}` : atLimit ? `Limit reached${limitStr}` : !canAfford ? `Need ${stats.cost} SP` : 'Ready to place';
+      const price = btn.querySelector('.build-cost');
+      if (price) price.textContent = `${eligibility.cost} SP`;
+      const reason = eligibility.message;
       btn.title = reason;
       const label = btn.querySelector('.build-availability');
       if (label) label.textContent = reason;
@@ -243,6 +230,7 @@ export class BuildPanel {
     this.buildPlacementMode = false;
     this.buildPlacementType = null;
     document.body.style.cursor = 'default';
+    this._lastPlacementPosition = null;
     this.removeGhostMesh();
   }
 
@@ -420,12 +408,15 @@ export class BuildPanel {
 
   updateGhostPosition(worldPos) {
     if (!this.ghostMesh || !worldPos) return;
+    this._lastPlacementPosition = worldPos;
 
     this.ghostMesh.position.set(worldPos.x, worldPos.y || 0, worldPos.z);
 
     // Check placement validity
-    const valid = this.checkPlacementValid(worldPos);
-    this._setPlacementStatus(valid ? 'Open ground — click to place.' : 'Blocked — use clear, buildable ground away from other structures.');
+    const team = this.game.isMultiplayer ? this.game.getLocalTeam() : this.game.mode === '2P' ? this.game.activeTeam : 'player';
+    const eligibility = buildingEligibility(this.game, this.buildPlacementType, team, worldPos);
+    const valid = eligibility.allowed;
+    this._setPlacementStatus(`${eligibility.message} · ${eligibility.cost} SP`);
     if (valid !== this.ghostValid) {
       this.ghostValid = valid;
       const color = valid ? 0x00ff44 : 0xff3333;
@@ -437,27 +428,8 @@ export class BuildPanel {
   }
 
   checkPlacementValid(worldPos) {
-    if (!this.buildPlacementType) return false;
-    const stats = BUILDING_STATS[this.buildPlacementType];
-    if (!stats) return false;
-
-    // Check terrain walkability (water check)
-    if (this.game.terrain && !this.game.terrain.isWalkable(worldPos.x, worldPos.z)) {
-      return false;
-    }
-
-    // Check overlap with existing buildings
-    const allBuildings = this.game.entities.filter(e => e.isBuilding && e.alive);
-    const buildSize = (stats.size || 2) * 5;
-    for (const existing of allBuildings) {
-      const dist = existing.getPosition().distanceTo(worldPos);
-      const existingSize = (BUILDING_STATS[existing.type]?.size || 2) * 5;
-      if (dist < (buildSize + existingSize) / 2) {
-        return false;
-      }
-    }
-
-    return true;
+    const team = this.game.isMultiplayer ? this.game.getLocalTeam() : this.game.mode === '2P' ? this.game.activeTeam : 'player';
+    return buildingEligibility(this.game, this.buildPlacementType, team, worldPos).allowed;
   }
 
   // ============================

@@ -331,8 +331,9 @@ export class HUD {
     this.orderFeedback?.update();
     this.updateResourceDisplay();
     this.productionPanel.updateProductionPanel();
-    if (this.buildPanel.buildMenuOpen && (!this._buildRefreshAt || performance.now() >= this._buildRefreshAt)) {
-      this.buildPanel.updateBuildMenuAvailability();
+    if ((this.buildPanel.buildMenuOpen || this.buildPanel.buildPlacementMode) && (!this._buildRefreshAt || performance.now() >= this._buildRefreshAt)) {
+      if (this.buildPanel.buildMenuOpen) this.buildPanel.updateBuildMenuAvailability();
+      else if (this.buildPanel._lastPlacementPosition) this.buildPanel.updateGhostPosition(this.buildPanel._lastPlacementPosition);
       this._buildRefreshAt = performance.now() + 400;
     }
     this.buildPanel.updateRallyPointVisuals();
