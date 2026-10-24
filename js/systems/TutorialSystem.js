@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GAME_CONFIG } from '../core/Constants.js';
+import { PRODUCTION_HOTKEYS } from '../ui/ProductionShortcuts.js';
 
 /**
  * TutorialSystem — Interactive step-based tutorial that teaches RTS basics.
@@ -16,7 +16,7 @@ export class TutorialSystem {
     this._stepTimer = 0;     // time spent on current step (for re-hint)
     this._hintRepeatInterval = 15; // seconds before repeating hint
     this._pulseTime = 0;     // for animating indicators
-    this._advanceTimeout = null;
+    this._advanceRemaining = null;
     this._completeBanner = null;
 
     this.steps = [
@@ -25,28 +25,28 @@ export class TutorialSystem {
         hint: 'Left-click on one of your soldiers to select them.',
         event: 'selection:changed',
         condition: (data) => {
-          return data.entities && data.entities.some(e => e.type === 'infantry' && e.team === 'player');
+          return data.entities && data.entities.some(e => e.alive && e.isUnit && e.type === 'infantry' && e.team === 'player');
         }
       },
       {
         title: 'Move Your Troops',
         hint: 'Right-click on the ground to move your selected units.',
         event: 'command:move',
-        condition: () => true
+        condition: (data) => data.units?.some(u => u.alive && u.isUnit && u.team === 'player')
       },
       {
         title: 'Select Multiple Units',
         hint: 'Click and drag to draw a selection box around multiple units.',
         event: 'selection:changed',
         condition: (data) => {
-          return data.entities && data.entities.filter(e => e.team === 'player').length >= 2;
+          return data.entities && data.entities.filter(e => e.alive && e.isUnit && e.team === 'player').length >= 2;
         }
       },
       {
         title: 'Attack-Move',
         hint: 'Press A, then left-click on the ground to attack-move. Your units will engage enemies along the way.',
         event: 'command:attackmove',
-        condition: () => true
+        condition: (data) => data.units?.some(u => u.alive && u.isUnit && u.team === 'player')
       },
       {
         title: 'Build a Barracks',
@@ -64,8 +64,8 @@ export class TutorialSystem {
       },
       {
         title: 'Produce Infantry',
-        hint: 'Select your Barracks, then click the Infantry button (or press 1) to train a soldier.',
-        event: 'production:started',
+        hint: `Wait for your Barracks to finish, select it, then click Infantry or press ${PRODUCTION_HOTKEYS.infantry}. Wait for the soldier to deploy.`,
+        event: 'production:complete',
         condition: (data) => {
           return data.unitType === 'infantry' && data.building && data.building.team === 'player';
         }
@@ -86,8 +86,8 @@ export class TutorialSystem {
       },
       {
         title: 'Produce a Tank',
-        hint: 'Select your War Factory and produce a Tank.',
-        event: 'production:started',
+        hint: `Wait for your War Factory to finish, select it, then click Tank or press ${PRODUCTION_HOTKEYS.tank}. Wait for the tank to deploy.`,
+        event: 'production:complete',
         condition: (data) => {
           return data.unitType === 'tank' && data.building && data.building.team === 'player';
         }
@@ -105,10 +105,10 @@ export class TutorialSystem {
       },
       {
         title: 'Use an Ability',
-        hint: 'Select an infantry unit and press G to use their Grenade ability on an enemy.',
+        hint: 'Select an infantry unit, press G, then click an enemy to throw a Grenade. Wait for the ability to recharge if needed.',
         event: 'ability:used',
         condition: (data) => {
-          return data.unit && data.unit.team === 'player';
+          return data.unit?.team === 'player' && data.unit.type === 'infantry' && data.ability === 'grenade';
         }
       },
       {
@@ -124,6 +124,7 @@ export class TutorialSystem {
   // ── Public API ──────────────────────────────────────────────
 
   start() {
+    this.dispose();
     this.active = true;
     this.currentStep = 0;
     this._createOverlay();
@@ -132,6 +133,14 @@ export class TutorialSystem {
 
   update(delta) {
     if (!this.active) return;
+    if (this._advanceRemaining !== null) {
+      this._advanceRemaining -= delta;
+      if (this._advanceRemaining <= 0) {
+        this._advanceRemaining = null;
+        this._setupStep(this.currentStep + 1);
+      }
+      return;
+    }
 
     // Animate pulse indicator
     this._pulseTime += delta;
@@ -153,10 +162,9 @@ export class TutorialSystem {
   dispose() {
     this.active = false;
     this._cleanupListeners();
-    if (this._advanceTimeout) {
-      clearTimeout(this._advanceTimeout);
-      this._advanceTimeout = null;
-    }
+    this._advanceRemaining = null;
+    if (this._hintTimeout) clearTimeout(this._hintTimeout);
+    this._hintTimeout = null;
     if (this._overlay && this._overlay.parentNode) {
       this._overlay.parentNode.removeChild(this._overlay);
       this._overlay = null;
@@ -294,7 +302,9 @@ export class TutorialSystem {
   _flashHint() {
     if (!this._hintEl) return;
     this._hintEl.style.color = '#00ff41';
-    setTimeout(() => {
+    if (this._hintTimeout) clearTimeout(this._hintTimeout);
+    this._hintTimeout = setTimeout(() => {
+      this._hintTimeout = null;
       if (this._hintEl) this._hintEl.style.color = '#a0b0a0';
     }, 2000);
   }
@@ -325,7 +335,7 @@ export class TutorialSystem {
     // Register EventBus listener for completion condition
     if (step.event) {
       const callback = (data) => {
-        if (step.condition(data)) {
+        if (this.active && this.currentStep === index && step.condition(data)) {
           this._completeStep();
         }
       };
@@ -335,6 +345,7 @@ export class TutorialSystem {
   }
 
   _completeStep() {
+    if (!this.active || this._advanceRemaining !== null) return;
     this._cleanupListeners();
 
     // Show brief completion feedback
@@ -346,18 +357,13 @@ export class TutorialSystem {
       this._hintEl.textContent = '';
     }
 
-    const nextIndex = this.currentStep + 1;
-
-    // Short delay before next step
-    this._advanceTimeout = setTimeout(() => {
-      this._advanceTimeout = null;
-      if (nextIndex < this.steps.length) {
-        this._setupStep(nextIndex);
-      }
-    }, 1000);
+    // Advance with simulation time so pausing also pauses tutorial progression.
+    this._advanceRemaining = 1;
   }
 
   _finishTutorial() {
+    this.active = false;
+    this._cleanupListeners();
     // Save completion to localStorage
     try {
       localStorage.setItem('warzone_tutorial_complete', 'true');
