@@ -278,7 +278,7 @@ export class HUD {
 
       // Production hotkeys when a production building is selected
       if (this.game.state === 'PLAYING' && !this.buildPanel.buildPlacementMode) {
-        this.productionPanel.handleProductionHotkey(e);
+        if (this.productionPanel.handleProductionHotkey(e)) return;
       }
 
       // R key to open research panel for selected building (only when no units selected to avoid conflict with Retreat)

@@ -1581,3 +1581,4 @@ body.spectate-mode .construction-launcher { display:none; }
 .production-queue-label { display:flex; flex-wrap:wrap; justify-content:space-between; gap:6px; color:var(--brass); font-size:11px; margin:8px 0; }
 .production-queue-label small { color:var(--muted); font-size:10px; }
 #prod-queue-icons { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:14px; }
+.production-key { display:inline-block; padding:1px 4px; margin-left:5px; border:1px solid #cfaa6755; color:var(--brass); font:10px monospace; vertical-align:middle; }

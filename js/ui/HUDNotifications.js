@@ -1,3 +1,4 @@
+import {PRODUCTION_HOTKEYS} from './ProductionShortcuts.js';
 import {NotificationFeed} from './NotificationFeed.js';
 import * as THREE from 'three';
 import { BUILDING_STATS, UNIT_STATS, TECH_TREE, TECH_BRANCHES, VETERANCY, UNIT_COUNTERS, NATION_ABILITIES, RESEARCH_UPGRADES, GAME_CONFIG } from '../core/Constants.js';
@@ -58,12 +59,17 @@ export class HUDNotifications {
       pointer-events: none;
       display: none;
     `;
+    const productionRows = Object.entries(PRODUCTION_HOTKEYS).reduce((rows, [type, key], index) => {
+      if (index % 2 === 0) rows.push([]);
+      rows.at(-1).push(`${key}: ${this.hud.formatName(type)}`);
+      return rows;
+    }, []).map(row => `<div>${row.join(' | ')}</div>`).join('');
     this.helpEl.innerHTML = `
       <div style="color:#00ff44;font-weight:bold;margin-bottom:4px;">Controls</div>
       <div>Arrows/W/S: Pan camera</div>
       <div>Q/E or middle-drag: Rotate camera</div><div>Home or N / Reset: North-up view</div><div>Shift + middle-drag: Pan camera</div>
       <div>Scroll: Zoom</div>
-      <div>Middle drag: Pan</div>
+      <div>Training: select a production building; use the displayed unit key</div><div>Shift + training key: Queue up to 5</div><div>V: Engineer · G: SPG/Artillery · Y: Bomber</div>
       <div style="margin-top:4px;color:#ffcc00;">Commands</div>
       <div>A: Attack move</div>
       <div>S: Stop</div>
@@ -81,11 +87,7 @@ export class HUDNotifications {
       <div>R: Research panel</div>
       <div>Esc: Cancel</div>
       <div style="margin-top:4px;color:#ff8844;">Production</div>
-      <div>I: Infantry | K: Tank</div>
-      <div>J: Drone | L: Plane</div>
-      <div>N: Battleship | U: Sub</div>
-      <div>M: Mortar | O: Scout Car</div>
-      <div>H: Heavy Tank | Y: Bomber</div>
+      ${productionRows}
       <div style="margin-top:4px;color:#00ccff;">Control Groups</div>
       <div>Ctrl+0-9: Save group</div>
       <div>0-9: Recall group</div>

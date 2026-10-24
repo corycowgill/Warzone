@@ -1,3 +1,4 @@
+import {PRODUCTION_HOTKEYS} from './ProductionShortcuts.js';
 import {productionPrice} from '../systems/ProductionPricing.js';
 import { commandIcon, unitIcon } from './UIIcons.js';
 import { UNIT_STATS } from '../core/Constants.js';
@@ -144,10 +145,7 @@ export class CommandCard {
 
     // Production buttons for production buildings
     if (building.produces && building.produces.length > 0) {
-      const hotkeys = { infantry: 'I', tank: 'K', drone: 'J', plane: 'L', battleship: 'N',
-        carrier: 'C', submarine: 'U', mortar: 'M', scoutcar: 'O', aahalftrack: 'X',
-        apc: 'A', heavytank: 'H', spg: 'Y', bomber: 'B', patrolboat: 'P',
-        engineer: 'E', commander: 'Z' };
+      const hotkeys = PRODUCTION_HOTKEYS;
       for (const unitType of building.produces) {
         const stats = UNIT_STATS[unitType];
         if (!stats) continue;

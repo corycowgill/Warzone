@@ -1,3 +1,4 @@
+import {PRODUCTION_HOTKEYS,productionShortcut} from './ProductionShortcuts.js';
 import {productionPrice} from '../systems/ProductionPricing.js';
 import {localTeam} from '../systems/InputPolicy.js';
 import { unitIcon } from './UIIcons.js';
@@ -92,7 +93,7 @@ export class ProductionPanel {
 
       btn.innerHTML = `
         <span class="production-emblem" aria-hidden="true">${unitIcon(unitType)}</span><div class="production-copy">
-          <strong>${displayName}</strong>
+          <strong>${displayName} <kbd class="production-key">${PRODUCTION_HOTKEYS[unitType] || ''}</kbd></strong>
           ${factionDesc}
           ${reqHtml}
         </div>
@@ -101,7 +102,7 @@ export class ProductionPanel {
           <div style="color:#888;font-size:10px;">${stats.buildTime}s</div>
         </div>
       `;
-      btn.title = `${displayName} (${effectiveCost} SP) — Shift+click to queue 5`;
+      btn.title = `${displayName} (${effectiveCost} SP) — ${PRODUCTION_HOTKEYS[unitType] || ''} to train; Shift+click or Shift+key queues up to 5`;
 
       const queue = count => {
         if (!building.alive || building.team !== localTeam(this.game)) return;
@@ -257,25 +258,12 @@ export class ProductionPanel {
 
   // Production hotkeys: when a production building is selected
   handleProductionHotkey(e) {
-    const key = e.key.toLowerCase();
-    const hotkeys = { 'i': 'infantry', 'k': 'tank', 'j': 'drone', 'l': 'plane',
-                      'n': 'battleship', 'u': 'submarine', 'm': 'mortar',
-                      'o': 'scoutcar', 'h': 'heavytank', 'y': 'bomber' };
-    const unitType = hotkeys[key];
-    if (!unitType) return;
-
-    const selected = this.game.selectionManager?.getSelected() || [];
-    const building = selected.find(ent =>
-      ent.isBuilding && ent.alive && ent.produces && ent.produces.includes(unitType) && ent.team === localTeam(this.game)
-    );
-    if (!building) return;
-
+    if (this.hud.buildPanel.buildMenuOpen || this.hud.buildPanel.buildPlacementMode) return false;
+    const order = productionShortcut(this.game, e);
+    if (!order) return false;
     e.preventDefault();
-    if (this.game.productionSystem) {
-      // Cycle 15: Shift+hotkey queues 5 units
-      const count = e.shiftKey ? 5 : 1;
-      this.game.productionSystem.requestProductionBatch(building, unitType, count);
-    }
+    this.game.productionSystem?.requestProductionBatch(order.building, order.type, order.count);
+    return true;
   }
 
   // Research panel

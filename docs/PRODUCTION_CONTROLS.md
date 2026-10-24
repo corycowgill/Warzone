@@ -19,3 +19,11 @@ Training buttons now remain mounted while their building, faction pricing, affor
 Removed the duplicate unthrottled construction-availability refresh from ProductionPanel; HUD retains its existing periodic refresh. Queue SP summaries use stored payments when available, rather than undiscounted list prices.
 
 Three additional regression tests verify 100 unchanged training refreshes without new elements, focused queue-button identity through progress updates, and focus/visibility after cancellation. The full suite passes 191 tests plus controls and interface checks. A fresh browser visual review remains unavailable.
+
+## Consistent production shortcuts
+
+Production keys are now defined once for the command card, training buttons, keyboard dispatcher and F1 help. G trains SPG/artillery, Y trains bombers and V trains engineers. Previously artillery was labeled Y while the keyboard handler used Y for bombers, and several labeled production shortcuts were absent from the handler.
+
+All 17 trainable unit types have unique shortcuts. B stays construction; Q/E stays camera rotation; W/S remains camera pan; T remains the tech tree and R remains research/retreat according to selection. Production requires an owned, completed production building and no owned units in the selection. Mixed selections preserve unit-command behavior. Training is blocked while construction menus or placement mode are active, and typing, composition, repeats and Ctrl/Alt/Meta combinations are ignored. Shift requests up to five through the existing affordability/queue-capacity rules.
+
+Four additional regression tests cover mapping consistency, reserved keys, local multiplayer/hot-seat ownership, mixed selections, typing/modifier protection and construction-mode dispatch. Full validation: 195 tests, controls and interface checks. No new visual browser review is claimed.
