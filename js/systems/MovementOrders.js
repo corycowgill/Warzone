@@ -2,7 +2,13 @@
 export function issueUnitMove(unit, destination, game, {attackMove = false, formationSpeed = null, recovery = false} = {}) {
   if (!unit.alive || unit._siegeMode || unit.isGarrisoned || unit.speed <= 0 || unit.empDisabledTimer > 0) return;
   if(!recovery)unit._routeRecoveryAttempts=0;
+  const patrol = recovery && unit._isPatrolling ? {points: unit._patrolPoints, index: unit._patrolIndex} : null;
   unit.moveTo(destination);
+  if (patrol) {
+    unit._isPatrolling = true;
+    unit._patrolPoints = patrol.points;
+    unit._patrolIndex = patrol.index;
+  }
   unit.formationSpeed = formationSpeed;
   unit._attackMove = attackMove;
   unit._attackMoveDestination = attackMove ? destination.clone() : null;
@@ -27,6 +33,8 @@ export function issueUnitMove(unit, destination, game, {attackMove = false, form
       const queued = unit.waypoints;
       unit.followPath([...path, ...queued]);
     } else {
+      unit._isPatrolling = false;
+      unit._patrolPoints = [];
       unit.isRetreating=false;unit.retreatTarget=null;
       unit.waypoints = [];
       unit._attackMove = false;
@@ -47,4 +55,15 @@ export function issueUnitMove(unit, destination, game, {attackMove = false, form
   } catch {
     apply(null);
   }
+}
+
+// Preserve a patrol assignment while each leg uses the authoritative routed move transaction.
+export function issuePatrolLeg(unit, points, index, game) {
+  if (!unit.alive || unit._siegeMode || unit.isGarrisoned || unit.speed <= 0 || unit.empDisabledTimer > 0) return;
+  issueUnitMove(unit, points[index], game, {attackMove: true});
+  // A synchronous failed route has already canceled the movement transaction.
+  if (!unit._attackMove) return;
+  unit._patrolPoints = points;
+  unit._patrolIndex = index;
+  unit._isPatrolling = true;
 }

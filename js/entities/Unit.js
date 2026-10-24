@@ -2,7 +2,7 @@ import {resumeRestoredMovement} from '../systems/SavedMovement.js';
 import {steerStep,canTraverse,separationVector} from '../systems/NavigationSteering.js';
 import * as THREE from 'three';
 import { Entity } from './Entity.js';
-import { issueUnitMove } from '../systems/MovementOrders.js';
+import { issueUnitMove, issuePatrolLeg } from '../systems/MovementOrders.js';
 import { UNIT_STATS, GAME_CONFIG, NATIONS, UNIT_ABILITIES, VETERANCY, FORMATION_CONFIG } from '../core/Constants.js';
 
 export class Unit extends Entity {
@@ -567,19 +567,10 @@ export class Unit extends Entity {
 
   startPatrol(points) {
     if (!points || points.length < 2) return;
-    this._queuedMoveOrders = [];
-    this._orderRevision++;
-    this._restoredMoveGoal = null;
-    this._pathPending = false;
-    this._holdPosition = false;
-    this._attackMoveDestination = null;
-    this.waypoints = [];
-    this._patrolPoints = points.map(p => p.clone());
-    this._patrolIndex = 0;
-    this._isPatrolling = true;
-    this._attackMove = true;
-    this.moveTarget = this._patrolPoints[0].clone();
-    this.isMoving = true;
+    const patrolPoints = points.map(p => new THREE.Vector3(p.x, p.y || 0, p.z));
+    // UI, lockstep and replay patrols all start at the current position.
+    const index = this.getPosition().distanceToSquared(patrolPoints[0]) <= 1 ? 1 : 0;
+    issuePatrolLeg(this, patrolPoints, index, this.game);
   }
 
   update(deltaTime) {
@@ -685,8 +676,16 @@ export class Unit extends Entity {
       this.isStationary = false;
     }
 
+    // Resume patrol after combat without abandoning its endpoints.
+    if (this._isPatrolling && !this.attackTarget && !this.moveTarget && !this._pathPending) {
+      const points = this._patrolPoints;
+      let index = this._patrolIndex;
+      if (this.getPosition().distanceToSquared(points[index]) <= 1) index = (index + 1) % points.length;
+      issuePatrolLeg(this, points, index, this.game);
+    }
+
     // Resume the destination after an attack-move engagement has cleared.
-    if (this._attackMoveDestination && !this.attackTarget && !this.moveTarget && !this._pathPending) {
+    if (!this._isPatrolling && this._attackMoveDestination && !this.attackTarget && !this.moveTarget && !this._pathPending) {
       const goal = this._attackMoveDestination;
       if (Math.hypot(goal.x - this.mesh.position.x, goal.z - this.mesh.position.z) > 1) {
         const queued = this._queuedMoveOrders;
@@ -861,10 +860,8 @@ export class Unit extends Entity {
 
           // Patrol: cycle to next patrol point
           if (this._isPatrolling && this._patrolPoints.length >= 2) {
-            this._patrolIndex = (this._patrolIndex + 1) % this._patrolPoints.length;
-            this.moveTarget = this._patrolPoints[this._patrolIndex].clone();
-            this.isMoving = true;
-            this._attackMove = true; // patrol engages enemies
+            issuePatrolLeg(this, this._patrolPoints,
+              (this._patrolIndex + 1) % this._patrolPoints.length, this.game);
           }
         }
       }
