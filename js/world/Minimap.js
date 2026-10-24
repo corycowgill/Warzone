@@ -1,3 +1,4 @@
+import {visibleMinimapContact,canShowCombatPing,pushMinimapPing} from './MinimapPolicy.js';
 import {localTeam} from '../systems/InputPolicy.js';
 import {LockstepManager} from '../networking/LockstepManager.js';
 import * as THREE from 'three';
@@ -57,13 +58,14 @@ export class Minimap {
     this.listen(this.canvas,'mousemove', (e) => {
       if (this._drawingActive && this._currentDrawing) {
         const { x, z } = this.minimapToWorld(e);
-        this._currentDrawing.push({ x, z });
+        const previous=this._currentDrawing.at(-1);
+        if(this._currentDrawing.length<256&&Math.hypot(x-previous.x,z-previous.z)>=1)this._currentDrawing.push({x,z});
         return;
       }
       if (e.buttons === 1) this.handleClick(e);
     });
     // End drawing on mouseup
-    this.listen(this.canvas,'mouseup', (e) => {
+    const finishDrawing = () => {
       if (this._drawingActive && this._currentDrawing && this._currentDrawing.length > 1) {
         if (!this._tacticalDrawings) this._tacticalDrawings = [];
         this._tacticalDrawings.push({
@@ -78,7 +80,10 @@ export class Minimap {
       }
       this._drawingActive = false;
       this._currentDrawing = null;
-    });
+    };
+    this.listen(this.canvas,'mouseup', finishDrawing);
+    this.listen(window,'mouseup', finishDrawing);
+    this.listen(window,'blur', () => {this._drawingActive=false;this._currentDrawing=null;});
     // Prevent browser context menu on minimap
     this.listen(this.canvas,'contextmenu', (e) => e.preventDefault());
   }
@@ -86,13 +91,13 @@ export class Minimap {
   setupCombatPings() {
     // Listen for combat to create minimap pings
     this._onCombatKill = (data) => {
-      if (data.defender) {
+      if (data.defender && canShowCombatPing(this.game, data.defender)) {
         const pos = data.defender.getPosition();
-        this._pings.push({
+        pushMinimapPing(this._pings, {
           x: pos.x,
           z: pos.z,
           time: 2.0, // seconds to display
-          color: data.defender.team === 'player' ? '#ff4444' : '#44ff44'
+          color: data.defender.team === localTeam(this.game) ? '#db8378' : '#83b7d2'
         });
       }
     };
@@ -131,28 +136,30 @@ export class Minimap {
     const selected = this.game.selectionManager
       ? this.game.selectionManager.getSelected()
       : [];
-    const units = selected.filter(ent => ent.isUnit && ent.alive&&ent.team===localTeam(this.game));
-    if (units.length === 0) return;
-
-    const { x, z } = this.minimapToWorld(e);
-    const worldPos = new THREE.Vector3(x, 0, z);
-
-    if (this.game.commandSystem) {
-      if(this.game.isMultiplayer&&this.game.lockstepManager?.enabled){
-        this.game.lockstepManager.queueCommand(LockstepManager.moveCommand(units.map(u=>u.id),worldPos));
-      }else this.game.commandSystem.moveUnits(units, worldPos);
-      if (this.game.soundManager) {
-        this.game.soundManager.play('move', { unitType: units[0].type });
-      }
+    const owned = selected.filter(entity => entity.alive && entity.team === localTeam(this.game));
+    const units = owned.filter(entity => entity.isUnit),buildings=owned.filter(entity=>entity.isBuilding&&entity.setRallyPoint);
+    if (!units.length && !buildings.length) return;
+    const {x,z}=this.minimapToWorld(e),worldPos=new THREE.Vector3(x,0,z);
+    const network=this.game.isMultiplayer&&this.game.lockstepManager?.enabled,commands=this.game.commandSystem;
+    if(units.length&&commands){
+      const ids=units.map(unit=>unit.id);
+      if(commands.attackMoveMode){
+        if(network)this.game.lockstepManager.queueCommand(LockstepManager.attackMoveCommand(ids,worldPos));
+        else commands.attackMoveUnits(units,worldPos);
+      }else if(e.shiftKey){
+        if(network)this.game.lockstepManager.queueCommand({type:'WAYPOINT',entityIds:ids,target:{x,y:0,z}});
+        else commands.queueWaypoint(units,worldPos);
+      }else if(network)this.game.lockstepManager.queueCommand(LockstepManager.moveCommand(ids,worldPos));
+      else commands.moveUnits(units,worldPos);
+      commands.attackMoveMode=false;commands.moveMode=false;
+      if(globalThis.document?.body)document.body.style.cursor='default';
+      if(network)this.game.soundManager?.play('move',{unitType:units[0].type});
     }
-
-    // Cycle 15: Flash ping at move target on minimap
-    this._pings.push({
-      x: x,
-      z: z,
-      time: 1.5,
-      color: '#00ff44'
-    });
+    for(const building of buildings){
+      if(network)this.game.lockstepManager.queueCommand(LockstepManager.setRallyCommand(building.id,worldPos));
+      else building.setRallyPoint(worldPos.clone());
+    }
+    pushMinimapPing(this._pings,{x,z,time:1.5,color:buildings.length&&!units.length?'#cfaa67':'#83b7d2'});
   }
 
   renderTerrain() {
@@ -295,79 +302,24 @@ export class Minimap {
     if (this.game.entities) {
       const entities = this.game.entities;
 
-      // First pass: draw last-seen ghost positions for non-visible enemies
-      for (let i = 0; i < entities.length; i++) {
-        const entity = entities[i];
-        if (!entity.alive) continue;
-        if (entity.team === 'player') continue;
-        if (!entity._lastSeenPosition) continue;
-
-        // Skip if entity is currently visible (will be drawn in full below)
-        const pos = entity.getPosition();
-        if (fog) {
-          const gx = Math.floor(pos.x / GAME_CONFIG.worldScale);
-          const gz = Math.floor(pos.z / GAME_CONFIG.worldScale);
-          const state = fog.getStateAtGrid(gx, gz);
-          const combatRevealed = entity._combatRevealTimer && entity._combatRevealTimer > 0;
-          if (state === 2 || combatRevealed) continue; // currently visible, skip ghost
-          if (entity.isBuilding && state === 1) continue; // building shown normally
+      const ownTeam=localTeam(this.game);let rallyMarkers=0;
+      for(const entity of entities){
+        const visibility=visibleMinimapContact(this.game,entity);
+        if(visibility==='hidden')continue;
+        const remembered=visibility==='remembered',pos=remembered?entity._lastSeenPosition:entity.getPosition(),mp=this.worldToMinimap(pos.x,pos.z);
+        ctx.globalAlpha=remembered ? .3 : 1;
+        ctx.fillStyle=entity.team===ownTeam?'#83b7d2':entity.team==='neutral'?'#c2c5b7':'#db8378';
+        if(entity.isBuilding){const size=Math.max(3,entity.size||3);ctx.fillRect(mp.x-size/2,mp.y-size/2,size,size);}
+        else if(entity.isUnit){ctx.beginPath();ctx.arc(mp.x,mp.y,1.5,0,Math.PI*2);ctx.fill();}
+        if(!remembered&&entity.team===ownTeam&&(entity.selected||entity.isRetreating)){
+          ctx.strokeStyle=entity.selected?'#fff1cc':'#cfaa67';ctx.lineWidth=1;ctx.beginPath();ctx.arc(mp.x,mp.y,3,0,Math.PI*2);ctx.stroke();
         }
-
-        // Draw faded last-known position
-        const lp = this.worldToMinimap(entity._lastSeenPosition.x, entity._lastSeenPosition.z);
-        ctx.globalAlpha = 0.3;
-        ctx.fillStyle = '#ff4444';
-        if (entity.isBuilding) {
-          const bSize = Math.max(3, entity.size || 3);
-          ctx.fillRect(lp.x - bSize / 2, lp.y - bSize / 2, bSize, bSize);
-        } else {
-          ctx.fillRect(lp.x - 1, lp.y - 1, 2, 2);
+        if(!remembered&&entity.team===ownTeam&&entity.selected&&entity.isBuilding&&entity.rallyPoint&&rallyMarkers++<8){
+          const rally=this.worldToMinimap(entity.rallyPoint.x,entity.rallyPoint.z);
+          ctx.strokeStyle='#cfaa67';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(mp.x,mp.y);ctx.lineTo(rally.x,rally.y);ctx.stroke();
+          ctx.beginPath();ctx.arc(rally.x,rally.y,3,0,Math.PI*2);ctx.stroke();
         }
-        ctx.globalAlpha = 1.0;
-      }
-
-      // Second pass: draw all currently visible entities
-      for (let i = 0; i < entities.length; i++) {
-        const entity = entities[i];
-        if (!entity.alive) continue;
-
-        const pos = entity.getPosition();
-
-        // Respect fog of war for enemy entities on minimap
-        if (fog && entity.team !== 'player') {
-          const gx = Math.floor(pos.x / GAME_CONFIG.worldScale);
-          const gz = Math.floor(pos.z / GAME_CONFIG.worldScale);
-          const state = fog.getStateAtGrid(gx, gz);
-          const combatRevealed = entity._combatRevealTimer && entity._combatRevealTimer > 0;
-          if (state < 2 && !combatRevealed) {
-            // Not visible: only show enemy buildings in explored territory
-            if (!(entity.isBuilding && state === 1)) {
-              continue;
-            }
-          }
-        }
-
-        const mp = this.worldToMinimap(pos.x, pos.z);
-
-        // Team color
-        if (entity.team === 'player') {
-          ctx.fillStyle = '#4488ff';
-        } else if (entity.team === 'enemy') {
-          ctx.fillStyle = '#ff4444';
-        } else {
-          ctx.fillStyle = '#cccccc';
-        }
-
-        if (entity.isBuilding) {
-          // Buildings as squares
-          const bSize = Math.max(3, entity.size || 3);
-          ctx.fillRect(mp.x - bSize / 2, mp.y - bSize / 2, bSize, bSize);
-        } else if (entity.isUnit) {
-          // Units as small dots
-          ctx.beginPath();
-          ctx.arc(mp.x, mp.y, 1.5, 0, Math.PI * 2);
-          ctx.fill();
-        }
+        ctx.globalAlpha=1;
       }
     }
 
