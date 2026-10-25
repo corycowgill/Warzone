@@ -2,7 +2,7 @@ import {resumeRestoredMovement} from '../systems/SavedMovement.js';
 import {steerStep,canTraverse,separationVector} from '../systems/NavigationSteering.js';
 import * as THREE from 'three';
 import { Entity } from './Entity.js';
-import { issueUnitMove, issuePatrolLeg } from '../systems/MovementOrders.js';
+import { issueUnitMove, issuePatrolLeg, canStartQueuedMove } from '../systems/MovementOrders.js';
 import { UNIT_STATS, GAME_CONFIG, NATIONS, UNIT_ABILITIES, VETERANCY, FORMATION_CONFIG } from '../core/Constants.js';
 
 export class Unit extends Entity {
@@ -697,7 +697,7 @@ export class Unit extends Entity {
       }
     }
 
-    if (!this.attackTarget && !this.moveTarget && !this._pathPending && this._queuedMoveOrders.length) {
+    if (canStartQueuedMove(this) && this._queuedMoveOrders.length) {
       const [goal, ...remaining] = this._queuedMoveOrders;
       issueUnitMove(this, goal, this.game);
       this._queuedMoveOrders = remaining;

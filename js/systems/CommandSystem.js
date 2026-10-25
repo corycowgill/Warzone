@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { UNIT_PICK_LAYER } from '../rendering/UnitModelBatcher.js';
 import { UNIT_STATS, UNIT_ABILITIES, FORMATION_CONFIG } from '../core/Constants.js';
 import { LockstepManager } from '../networking/LockstepManager.js';
-import { issueUnitMove } from './MovementOrders.js';
+import { issueUnitMove, queueUnitWaypoint } from './MovementOrders.js';
 
 export class CommandSystem {
   constructor(game) {
@@ -735,17 +735,10 @@ export class CommandSystem {
   }
 
   queueWaypoint(units, position) {
-    for (const unit of units) {
-      // Add to existing waypoints without clearing current movement
-      const goal = new THREE.Vector3(position.x, position.y || 0, position.z);
-      if (!unit._pathPending && !unit.isMoving && !unit.moveTarget) {
-        issueUnitMove(unit, goal, this.game);
-      } else {
-        unit._queuedMoveOrders ??= [];
-        unit._queuedMoveOrders.push(goal);
-      }
-    }
-    this.game.eventBus.emit('command:waypoint', { units, position });
+    const accepted = units.filter(unit => queueUnitWaypoint(unit,
+      new THREE.Vector3(position.x, position.y || 0, position.z), this.game));
+    if (!accepted.length) return;
+    this.game.eventBus.emit('command:waypoint', { units: accepted, position });
     this.game.effectsManager?.createMoveMarker(position, 'move');
     if (this.game.soundManager) {
       this.game.soundManager.play('move', { unitType: units[0]?.type });

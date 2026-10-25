@@ -67,3 +67,20 @@ export function issuePatrolLeg(unit, points, index, game) {
   unit._patrolIndex = index;
   unit._isPatrolling = true;
 }
+
+export const MAX_QUEUED_MOVES = 64;
+export function canStartQueuedMove(unit) {
+  return unit.alive && !unit.isGarrisoned && unit.speed > 0 && !unit._siegeMode &&
+    !(unit.empDisabledTimer > 0) && !unit.attackTarget && !unit.moveTarget && !unit._pathPending;
+}
+export function queueUnitWaypoint(unit, destination, game) {
+  if (!unit.alive || unit.isGarrisoned || unit.speed <= 0) return false;
+  unit._queuedMoveOrders ??= [];
+  if (canStartQueuedMove(unit) && !unit._queuedMoveOrders.length) {
+    issueUnitMove(unit, destination, game);
+  } else {
+    if (unit._queuedMoveOrders.length >= MAX_QUEUED_MOVES) return false;
+    unit._queuedMoveOrders.push(destination.clone());
+  }
+  return true;
+}
