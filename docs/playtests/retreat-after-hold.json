@@ -1,0 +1,359 @@
+{
+  "scenario": "retreat",
+  "seed": 6819,
+  "initial": {
+    "player": [
+      "tank",
+      "tank",
+      "tank"
+    ],
+    "enemy": [
+      "tank",
+      "tank",
+      "infantry",
+      "infantry"
+    ]
+  },
+  "units": {
+    "player": [
+      {
+        "type": "tank",
+        "alive": false,
+        "health": 0,
+        "position": {
+          "x": 76,
+          "z": 112
+        },
+        "retreating": false,
+        "holding": true,
+        "pathPending": false
+      },
+      {
+        "type": "tank",
+        "alive": false,
+        "health": 0,
+        "position": {
+          "x": 76,
+          "z": 116
+        },
+        "retreating": false,
+        "holding": true,
+        "pathPending": false
+      },
+      {
+        "type": "tank",
+        "alive": false,
+        "health": 0,
+        "position": {
+          "x": 76,
+          "z": 124
+        },
+        "retreating": false,
+        "holding": true,
+        "pathPending": false
+      }
+    ],
+    "enemy": [
+      {
+        "type": "tank",
+        "alive": true,
+        "health": 101.29999999999998,
+        "position": {
+          "x": 73,
+          "z": 109
+        },
+        "retreating": false,
+        "holding": false,
+        "pathPending": false
+      },
+      {
+        "type": "tank",
+        "alive": true,
+        "health": 134.2,
+        "position": {
+          "x": 79.49793571742045,
+          "z": 107.54997079948004
+        },
+        "retreating": false,
+        "holding": false,
+        "pathPending": false
+      },
+      {
+        "type": "infantry",
+        "alive": false,
+        "health": 0,
+        "position": {
+          "x": 116,
+          "z": 120
+        },
+        "retreating": false,
+        "holding": false,
+        "pathPending": false
+      },
+      {
+        "type": "infantry",
+        "alive": false,
+        "health": 0,
+        "position": {
+          "x": 112,
+          "z": 128
+        },
+        "retreating": false,
+        "holding": false,
+        "pathPending": false
+      }
+    ]
+  },
+  "remaining": {
+    "player": [],
+    "enemy": [
+      {
+        "type": "tank",
+        "health": 101.29999999999998,
+        "maxHealth": 200
+      },
+      {
+        "type": "tank",
+        "health": 134.2,
+        "maxHealth": 200
+      }
+    ]
+  },
+  "build": "combat-trials-v1",
+  "outcome": "defeat",
+  "elapsed": 10.46666666666664,
+  "playerSurvivors": 0,
+  "enemySurvivors": 2,
+  "recovered": 0,
+  "events": [
+    {
+      "event": "command:retreat",
+      "time": 0.3
+    },
+    {
+      "event": "combat:attack",
+      "time": 3.5,
+      "unitType": "tank",
+      "team": "enemy",
+      "defenderType": "tank",
+      "defenderTeam": "player",
+      "damage": 32.9
+    },
+    {
+      "event": "combat:attack",
+      "time": 3.63,
+      "unitType": "tank",
+      "team": "player",
+      "defenderType": "tank",
+      "defenderTeam": "enemy",
+      "damage": 32.9
+    },
+    {
+      "event": "combat:attack",
+      "time": 3.93,
+      "unitType": "tank",
+      "team": "enemy",
+      "defenderType": "tank",
+      "defenderTeam": "player",
+      "damage": 32.9
+    },
+    {
+      "event": "combat:attack",
+      "time": 4.03,
+      "unitType": "tank",
+      "team": "player",
+      "defenderType": "infantry",
+      "defenderTeam": "enemy",
+      "damage": 70
+    },
+    {
+      "event": "combat:kill",
+      "time": 4.03,
+      "unitType": "tank",
+      "team": "player",
+      "defenderType": "infantry",
+      "defenderTeam": "enemy"
+    },
+    {
+      "event": "combat:attack",
+      "time": 4.1,
+      "unitType": "tank",
+      "team": "player",
+      "defenderType": "infantry",
+      "defenderTeam": "enemy",
+      "damage": 70
+    },
+    {
+      "event": "combat:kill",
+      "time": 4.1,
+      "unitType": "tank",
+      "team": "player",
+      "defenderType": "infantry",
+      "defenderTeam": "enemy"
+    },
+    {
+      "event": "combat:attack",
+      "time": 4.77,
+      "unitType": "tank",
+      "team": "enemy",
+      "defenderType": "tank",
+      "defenderTeam": "player",
+      "damage": 32.9
+    },
+    {
+      "event": "combat:kill",
+      "time": 4.77,
+      "unitType": "tank",
+      "team": "enemy",
+      "defenderType": "tank",
+      "defenderTeam": "player"
+    },
+    {
+      "event": "combat:attack",
+      "time": 5.2,
+      "unitType": "tank",
+      "team": "enemy",
+      "defenderType": "tank",
+      "defenderTeam": "player",
+      "damage": 32.9
+    },
+    {
+      "event": "combat:attack",
+      "time": 5.3,
+      "unitType": "tank",
+      "team": "player",
+      "defenderType": "tank",
+      "defenderTeam": "enemy",
+      "damage": 32.9
+    },
+    {
+      "event": "combat:attack",
+      "time": 6.03,
+      "unitType": "tank",
+      "team": "enemy",
+      "defenderType": "tank",
+      "defenderTeam": "player",
+      "damage": 32.9
+    },
+    {
+      "event": "combat:attack",
+      "time": 6.47,
+      "unitType": "tank",
+      "team": "enemy",
+      "defenderType": "tank",
+      "defenderTeam": "player",
+      "damage": 32.9
+    },
+    {
+      "event": "combat:kill",
+      "time": 6.47,
+      "unitType": "tank",
+      "team": "enemy",
+      "defenderType": "tank",
+      "defenderTeam": "player"
+    },
+    {
+      "event": "combat:attack",
+      "time": 6.83,
+      "unitType": "tank",
+      "team": "player",
+      "defenderType": "tank",
+      "defenderTeam": "enemy",
+      "damage": 32.9
+    },
+    {
+      "event": "combat:attack",
+      "time": 7.73,
+      "unitType": "tank",
+      "team": "enemy",
+      "defenderType": "tank",
+      "defenderTeam": "player",
+      "damage": 32.9
+    },
+    {
+      "event": "combat:attack",
+      "time": 8.1,
+      "unitType": "tank",
+      "team": "player",
+      "defenderType": "tank",
+      "defenderTeam": "enemy",
+      "damage": 32.9
+    },
+    {
+      "event": "combat:attack",
+      "time": 9,
+      "unitType": "tank",
+      "team": "enemy",
+      "defenderType": "tank",
+      "defenderTeam": "player",
+      "damage": 32.9
+    },
+    {
+      "event": "combat:attack",
+      "time": 9.37,
+      "unitType": "tank",
+      "team": "player",
+      "defenderType": "tank",
+      "defenderTeam": "enemy",
+      "damage": 32.9
+    },
+    {
+      "event": "combat:attack",
+      "time": 10.27,
+      "unitType": "tank",
+      "team": "enemy",
+      "defenderType": "tank",
+      "defenderTeam": "player",
+      "damage": 32.9
+    },
+    {
+      "event": "combat:kill",
+      "time": 10.27,
+      "unitType": "tank",
+      "team": "enemy",
+      "defenderType": "tank",
+      "defenderTeam": "player"
+    }
+  ],
+  "metrics": {
+    "frames": 240,
+    "fps": 56.87742913988149,
+    "frameMs": 17.581666666766008,
+    "p95Ms": 18.299999952316284,
+    "maxMs": 18.799999952316284,
+    "simulationMs": 0.12333333243926366,
+    "visualMs": 0.3279166708389918,
+    "renderMs": 2.905833331247171,
+    "draws": 355,
+    "triangles": 587964
+  },
+  "graphics": {
+    "quality": "high",
+    "shadows": true,
+    "shadowQuality": "medium",
+    "antialiasing": true,
+    "bloom": true,
+    "vignette": true,
+    "particles": "high",
+    "waterQuality": "high",
+    "adaptiveResolution": true,
+    "resolution": 1,
+    "vsync": true,
+    "showFPS": false,
+    "maxEntities": 200,
+    "dayNightCycle": true,
+    "weatherEffects": true,
+    "unitAnimations": true,
+    "terrainDetail": "high"
+  },
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+  "buffer": {
+    "width": 1265,
+    "height": 504
+  },
+  "visibility": "visible",
+  "hiddenDuringRun": false,
+  "limitations": "Human-controlled fixed armies; AI strategy and production disabled. Frame metrics are host-dependent and do not measure GPU completion.",
+  "clarity": "unanswered",
+  "notes": ""
+}

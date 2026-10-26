@@ -1,0 +1,171 @@
+{
+  "scenario": "retreat",
+  "seed": 6819,
+  "build": "combat-trials-v1",
+  "outcome": "defeat",
+  "elapsed": 10.46666666666664,
+  "playerSurvivors": 0,
+  "enemySurvivors": 2,
+  "recovered": 0,
+  "events": [
+    {
+      "event": "command:retreat",
+      "time": 0.3
+    },
+    {
+      "event": "combat:attack",
+      "time": 3.5,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 3.63,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 3.97,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 4.03,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:kill",
+      "time": 4.03,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 4.57,
+      "unitType": "infantry"
+    },
+    {
+      "event": "combat:attack",
+      "time": 4.77,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:kill",
+      "time": 4.77,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 5.23,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 5.27,
+      "unitType": "infantry"
+    },
+    {
+      "event": "combat:attack",
+      "time": 5.3,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:kill",
+      "time": 5.3,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 5.8,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 6.03,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 6.5,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:kill",
+      "time": 6.5,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 6.83,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 7.77,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 8.1,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 9.03,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 9.37,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 10.3,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:kill",
+      "time": 10.3,
+      "unitType": "tank"
+    }
+  ],
+  "metrics": {
+    "frames": 240,
+    "fps": 56.92059576922425,
+    "frameMs": 17.56833333323399,
+    "p95Ms": 19.100000023841858,
+    "maxMs": 21.899999976158142,
+    "simulationMs": 0.10166666060686111,
+    "visualMs": 0.26916667222976687,
+    "renderMs": 3.7775000030795733,
+    "draws": 483,
+    "triangles": 589875
+  },
+  "graphics": {
+    "quality": "high",
+    "shadows": true,
+    "shadowQuality": "medium",
+    "antialiasing": true,
+    "bloom": true,
+    "vignette": true,
+    "particles": "high",
+    "waterQuality": "high",
+    "adaptiveResolution": true,
+    "resolution": 1,
+    "vsync": true,
+    "showFPS": false,
+    "maxEntities": 200,
+    "dayNightCycle": true,
+    "weatherEffects": true,
+    "unitAnimations": true,
+    "terrainDetail": "high"
+  },
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+  "buffer": {
+    "width": 1265,
+    "height": 504
+  },
+  "visibility": "visible",
+  "limitations": "Human-controlled fixed armies; AI strategy and production disabled. Frame metrics are host-dependent and do not measure GPU completion.",
+  "clarity": "unanswered",
+  "notes": ""
+}

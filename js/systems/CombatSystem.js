@@ -912,8 +912,8 @@ export class CombatSystem {
       // GD-074: Cannot auto-acquire stealthed submarines
       if (enemy.type === 'submarine' && enemy.isStealthed && enemy.isStealthed()) continue;
 
-      // If this unit belongs to the player team, check fog visibility
-      if (fog && unit.team === 'player') {
+      // Apply visibility to the team that owns the local fog, including multiplayer slot 1.
+      if (fog && unit.team === (fog.team || 'player')) {
         const ePos = enemy.getPosition();
         if (!fog.isVisible(ePos.x, ePos.z)) continue;
       }

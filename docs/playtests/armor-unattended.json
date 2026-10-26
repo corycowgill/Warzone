@@ -1,0 +1,297 @@
+{
+  "scenario": "armor",
+  "seed": 6819,
+  "build": "combat-trials-v1",
+  "outcome": "defeat",
+  "elapsed": 9.499999999999977,
+  "playerSurvivors": 0,
+  "enemySurvivors": 4,
+  "recovered": 0,
+  "events": [
+    {
+      "event": "combat:attack",
+      "time": 1.77,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 1.77,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:kill",
+      "time": 1.77,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 1.83,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 1.83,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 1.83,
+      "unitType": "mortar"
+    },
+    {
+      "event": "combat:attack",
+      "time": 3.03,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 3.03,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 3.03,
+      "unitType": "infantry"
+    },
+    {
+      "event": "combat:attack",
+      "time": 3.1,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 3.1,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 3.17,
+      "unitType": "infantry"
+    },
+    {
+      "event": "combat:attack",
+      "time": 3.73,
+      "unitType": "infantry"
+    },
+    {
+      "event": "combat:attack",
+      "time": 3.83,
+      "unitType": "mortar"
+    },
+    {
+      "event": "combat:attack",
+      "time": 3.87,
+      "unitType": "infantry"
+    },
+    {
+      "event": "combat:attack",
+      "time": 4.3,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 4.3,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 4.37,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 4.37,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 4.43,
+      "unitType": "infantry"
+    },
+    {
+      "event": "combat:attack",
+      "time": 4.57,
+      "unitType": "infantry"
+    },
+    {
+      "event": "combat:attack",
+      "time": 5.13,
+      "unitType": "infantry"
+    },
+    {
+      "event": "combat:attack",
+      "time": 5.27,
+      "unitType": "infantry"
+    },
+    {
+      "event": "combat:attack",
+      "time": 5.57,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 5.57,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 5.63,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 5.63,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 5.83,
+      "unitType": "infantry"
+    },
+    {
+      "event": "combat:attack",
+      "time": 5.83,
+      "unitType": "mortar"
+    },
+    {
+      "event": "combat:attack",
+      "time": 5.97,
+      "unitType": "infantry"
+    },
+    {
+      "event": "combat:attack",
+      "time": 6.53,
+      "unitType": "infantry"
+    },
+    {
+      "event": "combat:attack",
+      "time": 6.67,
+      "unitType": "infantry"
+    },
+    {
+      "event": "combat:attack",
+      "time": 6.83,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 6.83,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:kill",
+      "time": 6.83,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 6.9,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 7.23,
+      "unitType": "infantry"
+    },
+    {
+      "event": "combat:attack",
+      "time": 7.37,
+      "unitType": "infantry"
+    },
+    {
+      "event": "combat:attack",
+      "time": 7.83,
+      "unitType": "mortar"
+    },
+    {
+      "event": "combat:attack",
+      "time": 7.93,
+      "unitType": "infantry"
+    },
+    {
+      "event": "combat:kill",
+      "time": 7.93,
+      "unitType": "infantry"
+    },
+    {
+      "event": "combat:attack",
+      "time": 8.03,
+      "unitType": "infantry"
+    },
+    {
+      "event": "combat:attack",
+      "time": 8.07,
+      "unitType": "infantry"
+    },
+    {
+      "event": "combat:attack",
+      "time": 8.17,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:kill",
+      "time": 8.17,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 8.47,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:kill",
+      "time": 8.47,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 9.43,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:kill",
+      "time": 9.43,
+      "unitType": "tank"
+    }
+  ],
+  "metrics": {
+    "frames": 240,
+    "fps": 56.94085268959111,
+    "frameMs": 17.562083333233993,
+    "p95Ms": 19.100000023841858,
+    "maxMs": 21.899999976158142,
+    "simulationMs": 0.19999999950329464,
+    "visualMs": 0.4629166707396507,
+    "renderMs": 3.492916665474574,
+    "draws": 473,
+    "triangles": 597949
+  },
+  "graphics": {
+    "quality": "high",
+    "shadows": true,
+    "shadowQuality": "medium",
+    "antialiasing": true,
+    "bloom": true,
+    "vignette": true,
+    "particles": "high",
+    "waterQuality": "high",
+    "adaptiveResolution": true,
+    "resolution": 1,
+    "vsync": true,
+    "showFPS": false,
+    "maxEntities": 200,
+    "dayNightCycle": true,
+    "weatherEffects": true,
+    "unitAnimations": true,
+    "terrainDetail": "high"
+  },
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+  "buffer": {
+    "width": 1265,
+    "height": 504
+  },
+  "visibility": "visible",
+  "limitations": "Human-controlled fixed armies; AI strategy and production disabled. Frame metrics are host-dependent and do not measure GPU completion.",
+  "clarity": "unanswered",
+  "notes": ""
+}

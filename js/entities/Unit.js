@@ -630,7 +630,8 @@ export class Unit extends Entity {
       const dist = Math.sqrt(dx * dx + dz * dz);
 
       if (dist <= 5) {
-        // Reached friendly building - end retreat
+        // Hold the recovery position instead of immediately chasing back into battle.
+        this._holdPosition = true;
         this.isRetreating = false;
         this.retreatTarget = null;
         this.waypoints=[];

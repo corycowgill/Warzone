@@ -1,0 +1,237 @@
+{
+  "scenario": "air",
+  "seed": 6819,
+  "build": "combat-trials-v1",
+  "outcome": "in-progress",
+  "elapsed": 11.49999999999997,
+  "playerSurvivors": 3,
+  "enemySurvivors": 1,
+  "recovered": 0,
+  "events": [
+    {
+      "event": "combat:attack",
+      "time": 0.53,
+      "unitType": "plane"
+    },
+    {
+      "event": "combat:attack",
+      "time": 0.57,
+      "unitType": "plane"
+    },
+    {
+      "event": "combat:attack",
+      "time": 0.63,
+      "unitType": "aahalftrack"
+    },
+    {
+      "event": "combat:attack",
+      "time": 0.63,
+      "unitType": "aahalftrack"
+    },
+    {
+      "event": "combat:attack",
+      "time": 0.9,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:kill",
+      "time": 0.9,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 1.5,
+      "unitType": "aahalftrack"
+    },
+    {
+      "event": "combat:attack",
+      "time": 1.5,
+      "unitType": "aahalftrack"
+    },
+    {
+      "event": "combat:attack",
+      "time": 2.17,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:kill",
+      "time": 2.17,
+      "unitType": "tank"
+    },
+    {
+      "event": "combat:attack",
+      "time": 2.37,
+      "unitType": "aahalftrack"
+    },
+    {
+      "event": "combat:attack",
+      "time": 2.37,
+      "unitType": "aahalftrack"
+    },
+    {
+      "event": "combat:attack",
+      "time": 2.53,
+      "unitType": "plane"
+    },
+    {
+      "event": "combat:kill",
+      "time": 2.53,
+      "unitType": "plane"
+    },
+    {
+      "event": "combat:attack",
+      "time": 2.6,
+      "unitType": "plane"
+    },
+    {
+      "event": "combat:attack",
+      "time": 3.23,
+      "unitType": "aahalftrack"
+    },
+    {
+      "event": "combat:kill",
+      "time": 3.23,
+      "unitType": "aahalftrack"
+    },
+    {
+      "event": "combat:attack",
+      "time": 3.27,
+      "unitType": "aahalftrack"
+    },
+    {
+      "event": "combat:attack",
+      "time": 3.33,
+      "unitType": "infantry"
+    },
+    {
+      "event": "combat:attack",
+      "time": 4.03,
+      "unitType": "infantry"
+    },
+    {
+      "event": "combat:attack",
+      "time": 4.1,
+      "unitType": "aahalftrack"
+    },
+    {
+      "event": "combat:attack",
+      "time": 4.13,
+      "unitType": "aahalftrack"
+    },
+    {
+      "event": "combat:attack",
+      "time": 4.53,
+      "unitType": "plane"
+    },
+    {
+      "event": "combat:attack",
+      "time": 4.73,
+      "unitType": "infantry"
+    },
+    {
+      "event": "combat:attack",
+      "time": 4.97,
+      "unitType": "aahalftrack"
+    },
+    {
+      "event": "combat:attack",
+      "time": 5,
+      "unitType": "aahalftrack"
+    },
+    {
+      "event": "combat:kill",
+      "time": 5,
+      "unitType": "aahalftrack"
+    },
+    {
+      "event": "combat:attack",
+      "time": 5.43,
+      "unitType": "infantry"
+    },
+    {
+      "event": "combat:attack",
+      "time": 6.13,
+      "unitType": "infantry"
+    },
+    {
+      "event": "combat:attack",
+      "time": 6.83,
+      "unitType": "infantry"
+    },
+    {
+      "event": "combat:attack",
+      "time": 7.53,
+      "unitType": "infantry"
+    },
+    {
+      "event": "combat:attack",
+      "time": 8.23,
+      "unitType": "infantry"
+    },
+    {
+      "event": "combat:attack",
+      "time": 8.93,
+      "unitType": "infantry"
+    },
+    {
+      "event": "combat:attack",
+      "time": 9.63,
+      "unitType": "infantry"
+    },
+    {
+      "event": "combat:attack",
+      "time": 10.33,
+      "unitType": "infantry"
+    },
+    {
+      "event": "combat:attack",
+      "time": 11.03,
+      "unitType": "infantry"
+    },
+    {
+      "event": "combat:kill",
+      "time": 11.03,
+      "unitType": "infantry"
+    }
+  ],
+  "metrics": {
+    "frames": 240,
+    "fps": 56.957068608891014,
+    "frameMs": 17.557083333532017,
+    "p95Ms": 18.300000071525574,
+    "maxMs": 18.700000047683716,
+    "simulationMs": 0.12166666835546494,
+    "visualMs": 0.4470833301544189,
+    "renderMs": 3.698750000198682,
+    "draws": 360,
+    "triangles": 531431
+  },
+  "graphics": {
+    "quality": "high",
+    "shadows": true,
+    "shadowQuality": "medium",
+    "antialiasing": true,
+    "bloom": true,
+    "vignette": true,
+    "particles": "high",
+    "waterQuality": "high",
+    "adaptiveResolution": true,
+    "resolution": 1,
+    "vsync": true,
+    "showFPS": false,
+    "maxEntities": 200,
+    "dayNightCycle": true,
+    "weatherEffects": true,
+    "unitAnimations": true,
+    "terrainDetail": "high"
+  },
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+  "buffer": {
+    "width": 1265,
+    "height": 504
+  },
+  "visibility": "visible",
+  "limitations": "Human-controlled fixed armies; AI strategy and production disabled. Frame metrics are host-dependent and do not measure GPU completion.",
+  "clarity": "unanswered",
+  "notes": ""
+}
