@@ -1,4 +1,4 @@
-import {abilityMode,selectedAbilityGroup} from '../systems/AbilityOrders.js';
+import {abilityMode,selectedAbilityGroup,abilityUnavailableReason,abilityTargetFailure,reportAbilityFailure} from '../systems/AbilityOrders.js';
 import {localTeam} from '../systems/InputPolicy.js';
 import {buildingEligibility} from '../systems/BuildingRules.js';
 import * as THREE from 'three';
@@ -330,13 +330,21 @@ export class BuildPanel {
             this.game.eventBus.emit('notification',{message:'Click a visible enemy for this ability.',color:'#e1bd7b'});
             return;
           }
+          const failure=unit=>abilityUnavailableReason(unit,this.game)||abilityTargetFailure(unit,worldPos,target);
+          if(selected.every(unit=>failure(unit))){reportAbilityFailure(this.game,selected[0],failure(selected[0]));return;}
           if(isMP)this.game.lockstepManager.queueCommand(LockstepManager.abilityCommand(selected.map(u=>u.id),0,worldPos,target?.id));
-          else for(const unit of selected)if(unit.canUseAbility())this.game.combatSystem.executeAbility(unit,worldPos,target);
+          else {
+            let succeeded=false;
+            for(const unit of selected)if(this.game.combatSystem.executeAbility(unit,worldPos,target))succeeded=true;
+            if(!succeeded)return;
+          }
         }
       }
     }
 
-    // Always reset state even if worldPos was null
+    if(!worldPos&&!this.game.commandSystem._commanderAbilityUnit)return;
+
+    // Successful casts leave targeting mode.
     this.game.commandSystem._abilityUnits = null;
     this.game.commandSystem.abilityTargetMode = false;
     this.game.commandSystem._commanderAbilityUnit = null;

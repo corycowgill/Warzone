@@ -1,4 +1,4 @@
-import {abilityMode,selectedAbilityGroup} from './AbilityOrders.js';
+import {abilityMode,selectedAbilityGroup,abilityUnavailableReason,reportAbilityFailure} from './AbilityOrders.js';
 import {retreatDestination} from './CombatDecisions.js';
 import {planFormation} from './FormationPlanner.js';
 import {isEditing,screenToNDC} from './InputPolicy.js';
@@ -569,6 +569,10 @@ export class CommandSystem {
       case 'g': {
         const abilityUnits = selectedAbilityGroup(this.game);
         if (abilityUnits.length) {
+          if(abilityUnits.every(unit=>abilityUnavailableReason(unit,this.game))){
+            reportAbilityFailure(this.game,abilityUnits[0],abilityUnavailableReason(abilityUnits[0],this.game));
+            break;
+          }
           this.moveMode=false;this.attackMoveMode=false;this.patrolMode=false;
           this.abilityTargetMode=false;this._commanderAbilityUnit=null;this._commanderAbilityIndex=undefined;
           const ability=abilityUnits[0].ability;

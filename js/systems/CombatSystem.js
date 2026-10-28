@@ -1,4 +1,4 @@
-import {abilityMode} from './AbilityOrders.js';
+import {abilityUnavailableReason,abilityTargetFailure,reportAbilityFailure} from './AbilityOrders.js';
 import {automaticTargetScore} from './CombatDecisions.js';
 import {difficultyDamage} from '../core/MatchRules.js';
 import * as THREE from 'three';
@@ -519,16 +519,10 @@ export class CombatSystem {
   // --- Ability Execution ---
 
   executeAbility(unit, targetPos, targetEntity) {
-    if (unit.alive===false || unit.isGarrisoned || !unit.ability || !unit.canUseAbility()) return false;
-    const abilityDef = UNIT_ABILITIES[unit.type];
-    if (!abilityDef) return false;
-
-    // Reject invalid targets before charging MU.
-    const mode=abilityMode(unit.ability);
-    const target=mode==='entity'?targetEntity?.getPosition?.():targetPos;
-    if(mode==='entity'&&(!targetEntity?.alive||targetEntity.team===unit.team||targetEntity.team==='neutral'))return false;
-    if(mode!=='self'&&(!target||![target.x,target.z].every(Number.isFinite)))return false;
-    if(mode!=='self'&&abilityDef.range&&unit.getPosition().distanceTo(target)>abilityDef.range*3)return false;
+    const abilityDef=UNIT_ABILITIES[unit.type];
+    if(!abilityDef)return false;
+    const failure=abilityUnavailableReason(unit,this.game)||abilityTargetFailure(unit,targetPos,targetEntity);
+    if(failure){reportAbilityFailure(this.game,unit,failure);return false;}
 
     // Check MU cost
     if (abilityDef.muCost && abilityDef.muCost > 0) {

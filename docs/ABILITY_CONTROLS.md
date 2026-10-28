@@ -9,3 +9,11 @@ Multiplayer commands carry an optional target entity ID. Confirmed regular casts
 Combat rejects missing, friendly, neutral and out-of-range entity targets, and missing/out-of-range point targets, before charging MU. Engineer mine payment is delegated to Engineer.plantMine, fixing a duplicate charge (50 MU in CombatSystem plus another 50 in Engineer). The advertised mine cost remains 50 MU.
 
 Validation: 270 tests pass, including 12 new ability-order cases. Controls, gameplay and interface checks pass. Browser hands-on casting and live multi-peer synchronization remain unverified; replay playback was not audited in this change. Mixed-group targeting deliberately affects one ability family per G command.
+
+## Failed-cast recovery
+
+Ability readiness and target validation now share reason helpers between input and authoritative combat execution. Out-of-range, invalid-target, cooldown, EMP, garrison and insufficient-MU failures have explicit local feedback. Failure messages are limited to one per second and scoped to the local owner, including multiplayer slot 1.
+
+Pressing G on an entirely unavailable group does not enter targeting. Regular targeted casts stay armed if no unit can cast, including a click outside the battlefield; a valid retry executes without pressing G again. Successful casts exit targeting. Commander targeting retains its separate existing behavior. Multiplayer input validates current local conditions before sending; authoritative execution still revalidates when the command runs, so a later state change can still reject a queued cast.
+
+Validation: 274 tests pass. Four new cases cover range failure/retry, unavailable groups, missing battlefield positions and rate-limited owner-specific feedback. Gameplay, controls and interface checks pass. Browser inventory exposed no connected browser surface in this session, so no new hands-on browser result is claimed.

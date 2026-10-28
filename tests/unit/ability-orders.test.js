@@ -3,15 +3,16 @@ import {Scene} from 'three';
 import {it,expect,vi,afterEach} from 'vitest';
 import {Vector3} from 'three';
 import {UNIT_ABILITIES} from '../../js/core/Constants.js';
+import {reportAbilityFailure} from '../../js/systems/AbilityOrders.js';
 import {CommandSystem} from '../../js/systems/CommandSystem.js';
 import {BuildPanel} from '../../js/ui/BuildPanel.js';
 import {CombatSystem} from '../../js/systems/CombatSystem.js';
 import {LockstepManager} from '../../js/networking/LockstepManager.js';
 const unit=(id,type='tank',team='player')=>({id,type,team,alive:true,isUnit:true,ability:UNIT_ABILITIES[type],canUseAbility:()=>true,getPosition:()=>new Vector3()});
-afterEach(()=>vi.unstubAllGlobals());
+afterEach(()=>{vi.unstubAllGlobals();vi.restoreAllMocks();});
 function setup(units){
  vi.stubGlobal('document',{body:{style:{}}});
- const game={state:'PLAYING',mode:'1P',entities:units,selectionManager:{getSelected:()=>units},eventBus:{emit:vi.fn()},combatSystem:{executeAbility:vi.fn()}};
+ const game={state:'PLAYING',mode:'1P',entities:units,selectionManager:{getSelected:()=>units},eventBus:{emit:vi.fn()},combatSystem:{executeAbility:vi.fn(()=>true)}};
  game.commandSystem=new CommandSystem(game);return game;
 }
 it.each(['tank','spg','patrolboat','engineer'])('activates %s without requiring a target click',type=>{
@@ -25,7 +26,7 @@ it('pins the intended owned group and does not cast another ability after select
  game.commandSystem.handleKeyPress({key:'g'});
  expect(game.commandSystem._abilityUnits).toEqual([drone]);
  game.selectionManager.getSelected=()=>[infantry];
- const target={id:9,alive:true,team:'enemy'};game.commandSystem.pickAbilityTarget=()=>target;
+ const target={id:9,alive:true,team:'enemy',getPosition:()=>new Vector3(4,0,4)};game.commandSystem.pickAbilityTarget=()=>target;
  const point=new Vector3(4,0,4);game.inputManager={getWorldPosition:()=>point};
  Object.assign(Object.create(BuildPanel.prototype),{game}).handleAbilityClick({clientX:1,clientY:1});
  expect(game.combatSystem.executeAbility).toHaveBeenCalledWith(drone,point,target);
@@ -86,4 +87,37 @@ it('does not pick fog-hidden, friendly or stealthed ability targets',()=>{
  game.fogOfWar.isVisible=()=>true;expect(command.pickAbilityTarget({clientX:50,clientY:50},'player')).toBe(target);
  target.isStealthed=()=>true;expect(command.pickAbilityTarget({clientX:50,clientY:50},'player')).toBe(null);
  target.isStealthed=()=>false;target.team='player';expect(command.pickAbilityTarget({clientX:50,clientY:50},'player')).toBe(null);
+});
+
+it('keeps a rejected point cast armed, explains range, and accepts a valid retry',()=>{
+ const game=setup([unit(1,'infantry')]);game.teams={player:{mu:100}};
+ game.commandSystem.handleKeyPress({key:'g'});
+ let point=new Vector3(1000,0,1000);game.inputManager={getWorldPosition:()=>point};
+ const panel=Object.assign(Object.create(BuildPanel.prototype),{game});panel.handleAbilityClick({});
+ expect(game.commandSystem.abilityTargetMode).toBe(true);expect(game.combatSystem.executeAbility).not.toHaveBeenCalled();
+ expect(game.eventBus.emit.mock.calls.some(([,data])=>data.message?.includes('out of range'))).toBe(true);
+ point=new Vector3(4,0,4);panel.handleAbilityClick({});
+ expect(game.combatSystem.executeAbility).toHaveBeenCalledTimes(1);expect(game.commandSystem.abilityTargetMode).toBe(false);
+});
+it('does not arm a wholly unavailable cooldown or unaffordable ability group',()=>{
+ const soldier=unit(1,'infantry'),game=setup([soldier]);soldier.abilityCooldown=3;
+ game.commandSystem.handleKeyPress({key:'g'});expect(game.commandSystem.abilityTargetMode).toBe(false);
+ expect(game.eventBus.emit.mock.calls.at(-1)[1].message).toContain('recharging');
+ soldier.abilityCooldown=0;game.teams={player:{mu:0}};game._abilityFailureAt=null;
+ game.commandSystem.handleKeyPress({key:'g'});expect(game.commandSystem.abilityTargetMode).toBe(false);
+ expect(game.eventBus.emit.mock.calls.at(-1)[1].message).toContain('need 10');
+});
+it('does not discard targeted ability mode when a click has no battlefield position',()=>{
+ const game=setup([unit(1,'infantry')]);game.commandSystem.handleKeyPress({key:'g'});
+ game.inputManager={getWorldPosition:()=>null};
+ Object.assign(Object.create(BuildPanel.prototype),{game}).handleAbilityClick({});
+ expect(game.commandSystem.abilityTargetMode).toBe(true);expect(game.combatSystem.executeAbility).not.toHaveBeenCalled();
+});
+it('bounds group-failure notifications and reports only for the local multiplayer owner',()=>{
+ vi.spyOn(Date,'now').mockReturnValue(5000);
+ const game={isMultiplayer:true,getLocalTeam:()=> 'enemy',eventBus:{emit:vi.fn()}};
+ reportAbilityFailure(game,unit(1),'hidden opponent failure');expect(game.eventBus.emit).not.toHaveBeenCalled();
+ const owner=unit(2,'tank','enemy');for(let i=0;i<100;i++)reportAbilityFailure(game,owner,'Target out of range.');
+ expect(game.eventBus.emit).toHaveBeenCalledTimes(1);
+ Date.now.mockReturnValue(6001);reportAbilityFailure(game,owner,'Ability recharging.');expect(game.eventBus.emit).toHaveBeenCalledTimes(2);
 });
