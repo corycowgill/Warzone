@@ -1,3 +1,5 @@
+import {abilityMode,selectedAbilityGroup} from '../systems/AbilityOrders.js';
+import {localTeam} from '../systems/InputPolicy.js';
 import {buildingEligibility} from '../systems/BuildingRules.js';
 import * as THREE from 'three';
 import { BUILDING_STATS } from '../core/Constants.js';
@@ -319,25 +321,23 @@ export class BuildPanel {
         cmdSystem._commanderAbilityUnit = null;
         cmdSystem._commanderAbilityIndex = undefined;
       } else {
-        // Regular unit ability targeting
-        const selected = this.game.selectionManager.getSelected().filter(e => e.isUnit && e.ability);
-        if (selected.length > 0) {
-          if (isMP) {
-            this.game.lockstepManager.queueCommand(
-              LockstepManager.abilityCommand(selected.map(u => u.id), 0, worldPos)
-            );
-          } else {
-            for (const unit of selected) {
-              if (unit.canUseAbility()) {
-                this.game.combatSystem.executeAbility(unit, worldPos, null);
-              }
-            }
+        const team=localTeam(this.game);
+        const selected=(cmdSystem._abilityUnits||selectedAbilityGroup(this.game)).filter(u=>u.alive&&u.team===team&&!u.isGarrisoned);
+        if(selected.length){
+          const needsEntity=abilityMode(selected[0].ability)==='entity';
+          const target=needsEntity?cmdSystem.pickAbilityTarget(event,team):null;
+          if(needsEntity&&!target){
+            this.game.eventBus.emit('notification',{message:'Click a visible enemy for this ability.',color:'#e1bd7b'});
+            return;
           }
+          if(isMP)this.game.lockstepManager.queueCommand(LockstepManager.abilityCommand(selected.map(u=>u.id),0,worldPos,target?.id));
+          else for(const unit of selected)if(unit.canUseAbility())this.game.combatSystem.executeAbility(unit,worldPos,target);
         }
       }
     }
 
     // Always reset state even if worldPos was null
+    this.game.commandSystem._abilityUnits = null;
     this.game.commandSystem.abilityTargetMode = false;
     this.game.commandSystem._commanderAbilityUnit = null;
     this.game.commandSystem._commanderAbilityIndex = undefined;

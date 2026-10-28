@@ -18,6 +18,6 @@ export function abilityFeedback(units,game){
  const name=ability.id==='siege_mode'&&group.every(u=>u._siegeMode)?'Exit Siege':ability.name;
  const mixed=eligible.length!==group.length;
  const description=[ability.description||ability.name,status,cost?`${cost} MU per unit`:'No MU cost',
-  mixed?'Mixed abilities selected. Select one unit type to use its ability.':''].filter(Boolean).join(' · ');
- return {name,status,description,disabled:!count&&!mixed};
+  mixed?`Mixed abilities selected. G activates ${ability.name} units only.`:''].filter(Boolean).join(' · ');
+ return {name,status,description,disabled:!count};
 }

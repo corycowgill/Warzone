@@ -7,3 +7,7 @@ A compact status line reports ready units, remaining cooldown, EMP disablement, 
 This is a feedback pass. It preserves the existing G input path, ability targeting, payment and multiplayer execution behavior. Mixed-group targeting and entity-targeted ability execution need their own audit; this change does not claim to fix those paths. The new readiness helper is shared only by command-card presentation.
 
 Validation: 258 tests pass, including six feedback/rendering cases. Controls, gameplay and interface checks pass. Fresh browser visual testing was not performed.
+
+## Control-path follow-up
+
+The subsequent ability controls pass replaces the earlier mixed-selection warning with a defined rule: G casts the first eligible selected ability family only. Its readiness controls button availability. See ABILITY_CONTROLS.md for self activation, entity targeting, multiplayer group execution and payment fixes. Current validation: 270 tests.

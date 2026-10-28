@@ -1,3 +1,4 @@
+import {abilityMode,selectedAbilityGroup} from './AbilityOrders.js';
 import {retreatDestination} from './CombatDecisions.js';
 import {planFormation} from './FormationPlanner.js';
 import {isEditing,screenToNDC} from './InputPolicy.js';
@@ -260,6 +261,20 @@ export class CommandSystem {
         }
       }
     }
+  }
+
+  pickAbilityTarget(event,team) {
+    const ndc=screenToNDC(this.game.sceneManager.renderer.domElement,event.clientX,event.clientY);
+    this.raycaster.setFromCamera(new THREE.Vector2(ndc.x,ndc.y),this.game.sceneManager.camera);
+    const meshes=[],owners=new Map();
+    for(const entity of this.game.entities){
+      if(!entity.alive||entity.team===team||entity.team==='neutral'||!entity.mesh||entity.mesh.visible===false||entity.isGarrisoned||entity.isStealthed?.())continue;
+      const fog=this.game.fogOfWar,pos=entity.getPosition();
+      if(fog?.team===team&&!fog.isVisible(pos.x,pos.z)&&!(entity._combatRevealTimer>0))continue;
+      entity.mesh.traverse(child=>{if(child.isMesh){meshes.push(child);owners.set(child,entity);}});
+    }
+    const hit=this.raycaster.intersectObjects(meshes,false)[0];
+    return hit?owners.get(hit.object):null;
   }
 
   getFormationOffsets(count, type) {
@@ -552,29 +567,20 @@ export class CommandSystem {
       }
 
       case 'g': {
-        // Activate ability for selected units
-        const abilityUnits = selected.filter(e => e.isUnit && e.ability);
-        if (abilityUnits.length > 0) {
+        const abilityUnits = selectedAbilityGroup(this.game);
+        if (abilityUnits.length) {
           this.moveMode=false;this.attackMoveMode=false;this.patrolMode=false;
-          const firstAbility = abilityUnits[0].ability;
-          if (firstAbility.type === 'toggle') {
-            // Toggle abilities (like siege_mode) execute immediately
-            if (this._isMP) {
-              this._queueLockstep(LockstepManager.abilityCommand(
-                abilityUnits.map(u => u.id), 0, null
-              ));
-            } else {
-              for (const unit of abilityUnits) {
-                if (unit.canUseAbility()) {
-                  this.game.combatSystem.executeAbility(unit);
-                }
-              }
-            }
+          this.abilityTargetMode=false;this._commanderAbilityUnit=null;this._commanderAbilityIndex=undefined;
+          const ability=abilityUnits[0].ability;
+          if (abilityMode(ability)==='self') {
+            this._abilityUnits=null;
+            document.body.style.cursor='default';
+            if (this._isMP) this._queueLockstep(LockstepManager.abilityCommand(abilityUnits.map(u=>u.id),0,null));
+            else for (const unit of abilityUnits) if(unit.canUseAbility())this.game.combatSystem.executeAbility(unit);
           } else {
-            // Targeted abilities enter targeting mode (click handler will queue)
-            this.abilityTargetMode = true;
-            document.body.style.cursor = 'crosshair';
-            this.game.eventBus.emit('notification', { message: `Click to use ${firstAbility.name}`, color: '#ffcc00' });
+            this._abilityUnits=abilityUnits;
+            this.abilityTargetMode=true;document.body.style.cursor='crosshair';
+            this.game.eventBus.emit('notification',{message:`${ability.name}: click ${abilityMode(ability)==='entity'?'an enemy':'a location'}`,color:'#ffcc00'});
           }
         }
         event.preventDefault?.();

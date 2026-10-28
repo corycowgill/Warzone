@@ -20,9 +20,9 @@ it('accounts for current MU and per-unit costs in group readiness',()=>{
  expect(abilityFeedback(units,game(30)).status).toBe('2/3 ready');
  expect(abilityFeedback(units,game(0))).toMatchObject({status:'Need 10 MU',disabled:true});
 });
-it('warns about mixed abilities and does not disable other eligible types by the first type cost',()=>{
+it('warns about mixed abilities and reflects readiness of the actual G ability group',()=>{
  const feedback=abilityFeedback([unit('engineer'),unit('patrolboat')],game(0));
- expect(feedback.disabled).toBe(false);expect(feedback.description).toContain('Mixed abilities');
+ expect(feedback.disabled).toBe(true);expect(feedback.description).toContain('Mixed abilities');
 });
 it('ignores dead units and supports free abilities and garrison restrictions',()=>{
  expect(abilityFeedback([unit('infantry',{alive:false})],game())).toBe(null);

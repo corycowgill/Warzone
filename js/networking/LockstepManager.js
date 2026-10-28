@@ -1,3 +1,4 @@
+import {Vector3} from 'three';
 import {retreatDestination} from '../systems/CombatDecisions.js';
 /**
  * LockstepManager - Deterministic lockstep synchronization for multiplayer RTS
@@ -220,11 +221,11 @@ export class LockstepManager {
   /**
    * Create an ABILITY command.
    */
-  static abilityCommand(entityIds, abilityIndex, targetPosition) {
+  static abilityCommand(entityIds, abilityIndex, targetPosition, targetEntityId) {
     return {
       type: CommandType.ABILITY,
       entityIds,
-      data: { abilityIndex },
+      data: { abilityIndex, ...(targetEntityId != null ? {targetEntityId} : {}) },
       target: targetPosition ? { x: targetPosition.x, y: targetPosition.y || 0, z: targetPosition.z } : null,
     };
   }
@@ -498,26 +499,17 @@ export class LockstepManager {
         }
         break;
 
-      case CommandType.ABILITY:
-        if (units.length > 0) {
-          const abilityIndex = cmd.data?.abilityIndex;
-          if (abilityIndex !== undefined) {
-            // Commander abilities
-            if (units[0].commanderAbilities && units[0].isAbilityReady) {
-              units[0].useAbility(abilityIndex, cmd.target);
-            } else if (units[0].canUseAbility && units[0].canUseAbility()) {
-              game.combatSystem.executeAbility(units[0], cmd.target);
-            }
-          } else {
-            // Generic ability
-            for (const unit of units) {
-              if (unit.canUseAbility && unit.canUseAbility()) {
-                game.combatSystem.executeAbility(unit, cmd.target);
-              }
-            }
-          }
+      case CommandType.ABILITY: {
+        const abilityIndex=cmd.data?.abilityIndex;
+        const point=cmd.target?new Vector3(cmd.target.x,cmd.target.y||0,cmd.target.z):null;
+        if(units[0]?.commanderAbilities&&units[0].isAbilityReady&&abilityIndex!==undefined){
+          units[0].useAbility(abilityIndex,point);
+        }else{
+          const target=game.entities.find(e=>e.id===cmd.data?.targetEntityId&&e.alive);
+          for(const unit of units)if(unit.canUseAbility?.())game.combatSystem.executeAbility(unit,point,target);
         }
         break;
+      }
 
       case CommandType.RESEARCH:
         if (buildings.length > 0 && cmd.data?.researchId) {
