@@ -1,3 +1,4 @@
+import {abilityFeedback} from './AbilityFeedback.js';
 import {PRODUCTION_HOTKEYS} from './ProductionShortcuts.js';
 import {productionPrice} from '../systems/ProductionPricing.js';
 import { commandIcon, unitIcon } from './UIIcons.js';
@@ -62,17 +63,12 @@ export class CommandCard {
       {key:'V',label:'Stance',action:()=>dispatch('v')},
     ];
 
-    // Type-specific commands
-    if (primaryType === 'infantry') {
-      buttons.push({ icon: '\uD83D\uDCA3', key: 'G', label: 'Grenade', action: () => this._triggerAbility(units) });
-      buttons.push({ icon: '\u2B05', key: 'R', label: 'Retreat', action: () => this._triggerRetreat(units) });
-    } else if (primaryType === 'tank') {
-      buttons.push({ icon: '\uD83D\uDEE1', key: 'G', label: 'Siege', action: () => this._triggerAbility(units) });
-      buttons.push({ icon: '\u2B05', key: 'R', label: 'Retreat', action: () => this._triggerRetreat(units) });
-    } else if (primaryType === 'engineer') {
-      buttons.push({ icon: '\uD83D\uDD27', key: 'G', label: 'Repair', action: () => this._triggerAbility(units) });
-      buttons.push({ icon: '\u2B05', key: 'R', label: 'Retreat', action: () => this._triggerRetreat(units) });
-    } else if (primaryType === 'commander') {
+    const feedback = abilityFeedback(units,game);
+    if (primaryType !== 'commander' && feedback) {
+      buttons.push({key:'G',label:feedback.name,status:feedback.status,
+        description:feedback.description,disabled:feedback.disabled,action:()=>this._triggerAbility(units)});
+    }
+    if (primaryType === 'commander') {
       const cmd = units[0];
       if (cmd.commanderAbilities) {
         for (let i = 0; i < Math.min(3, cmd.commanderAbilities.length); i++) {
@@ -93,13 +89,8 @@ export class CommandCard {
           }});
         }
       }
-    } else {
-      // Generic unit - add ability if has one
-      if (units[0].ability) {
-        buttons.push({ icon: '\u26A1', key: 'G', label: 'Ability', action: () => this._triggerAbility(units) });
-      }
-      buttons.push({ icon: '\u2B05', key: 'R', label: 'Retreat', action: () => this._triggerRetreat(units) });
     }
+    buttons.push({key:'R',label:'Retreat',action:()=>this._triggerRetreat(units)});
 
     // Fill up to 12 slots (3x4 grid)
     while (buttons.length < 12) {
@@ -112,9 +103,11 @@ export class CommandCard {
       if (buttons[i]) {
         const b = buttons[i];
         btn.innerHTML = `<span class="cc-icon">${commandIcon(b.label, b.icon)}</span><span class="cc-label">${b.label.split(" (")[0]}</span><span class="cc-key">${b.key}</span>`;
-        btn.title = `${b.label} [${b.key}]`;
-        btn.setAttribute('aria-label', b.label);
-        btn.addEventListener('click', b.action);
+        btn.title = `${b.label} [${b.key}]${b.description ? " — " + b.description : ""}`;
+        btn.setAttribute('aria-label', b.status ? `${b.label}, ${b.status}` : b.label);
+        if(b.status){const status=document.createElement('span');status.className='cc-ability-status';status.textContent=b.status;btn.appendChild(status);}
+        btn.disabled=!!b.disabled;
+        if(!b.disabled)btn.addEventListener('click', b.action);
       } else {
         btn.disabled = true;
         btn.innerHTML = '';

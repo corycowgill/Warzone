@@ -1624,3 +1624,17 @@ body.spectate-mode .construction-launcher { display:none; }
   outline: 3px solid #83b7d2;
   outline-offset: 4px;
 }
+
+.cc-btn:has(.cc-ability-status) { padding-bottom: 15px; }
+.cc-ability-status {
+  position: absolute;
+  bottom: 2px;
+  left: 2px;
+  right: 2px;
+  font: 9px "Segoe UI", sans-serif;
+  line-height: 11px;
+  text-align: center;
+  color: #cfaa67;
+  white-space: nowrap;
+}
+.cc-btn:disabled .cc-ability-status { color: #bccac9; }
